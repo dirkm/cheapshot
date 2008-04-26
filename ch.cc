@@ -73,5 +73,16 @@ int main()
   dump_type(DIAG_DELTA_NEG(1));
   std::cout << "--------\n";
   dump_type(DIAG_DELTA_NEG(4));
-
+  std::cout << "--------\n";
+  dump_type(get_diag_delta(1ULL<<(8*(8-(1)))));
+  std::cout << "--------\n";
+  dump_type(get_diag_delta(0x80ULL<<(8*(8-(1)))));
+  std::cout << "--------\n";
+  dump_type(get_diag_delta(0x10ULL<<8));
+  std::cout << "--------\n";
+  dump_type(DiagSum0);
+  std::cout << "--------\n";
+  dump_type(DIAG_SUM_NEG(6));
+  std::cout << "--------\n";
+  dump_type(get_diag_sum(1));
 }
