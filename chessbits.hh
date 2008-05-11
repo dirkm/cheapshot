@@ -107,7 +107,7 @@ get_column(uint64_t s)
    s|=s>>8;
    uint_fast8_t r =0;
    for (int i=0; i < 3; ++i) // unroll for speed...
-      r|=((s & columnmask[i] && '\xFF')!= 0)<<i;
+      r|=((s & columnmask[i] & '\xFF')!= 0)<<i;
    return r;
 }
 
