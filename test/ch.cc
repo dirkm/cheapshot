@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <iterator>
 #include <cassert>
-#include "chessbits.hh"
-#include "board.hh"
+#include "src/chessbits.hh"
+#include "src/board.hh"
 #include "boost/array.hpp"
 
 // tar cvjf stuff board.hh ch_iterator.hh ch.cc move.hh board.hh 
