@@ -1,5 +1,5 @@
-#ifndef BOARD_HH
-#define BOARD_HH
+#ifndef CHEAPSHOT_BOARD_HH
+#define CHEAPSHOT_BOARD_HH
 
 #include "cheapshot/iterator.hh"
 #include "cheapshot/bitops.hh"

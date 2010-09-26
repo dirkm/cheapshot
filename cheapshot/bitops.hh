@@ -1,5 +1,5 @@
-#ifndef MOVE_HH
-#define MOVE_HH
+#ifndef CHEAPSHOT_MOVE_HH
+#define CHEAPSHOT_MOVE_HH
 
 #include <cstdint>
 #include <cassert>

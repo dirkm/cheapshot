@@ -1,5 +1,5 @@
-#ifndef CH_ITERATOR_HH
-#define CH_ITERATOR_HH
+#ifndef CHEAPSHOT_ITERATOR_HH
+#define CHEAPSHOT_ITERATOR_HH
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/transform_iterator.hpp>
