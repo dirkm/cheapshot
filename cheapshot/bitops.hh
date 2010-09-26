@@ -108,7 +108,7 @@ get_column(uint64_t s)
    s|=s>>16;
    s|=s>>8;
    uint_fast8_t r =0;
-   for (int i=0; i < 3; ++i) // unroll for speed...
+   for (int i=0; i < 3; ++i)
       r|=((s & columnmask[i] & '\xFF')!= 0)<<i;
    return r;
 }
@@ -120,7 +120,7 @@ get_row(uint64_t s)
    assert(is_single_bit(s));
    const uint64_t rowmask[] = {0xFF00FF00FF00FF00ULL, 0xFFFF0000FFFF0000ULL,0xFFFFFFFF00000000ULL};
    uint_fast8_t r =0;
-   for (int i=0; i < 3; ++i) // unroll for speed...
+   for (int i=0; i < 3; ++i)
       r|=((s & rowmask[i])!= 0)<<i;
    return r;
 }
@@ -187,64 +187,61 @@ move_pawn_mask(uint64_t s)
    return s;
 }
 
+// s: moving piece
+// movement: movement in a single direction (for pawns, bishops, rooks, queens)
+// obstacles: own pieces plus opposing pieces (apart from the moving piece itself) 
 inline
 uint64_t
-move_rook_mask(uint64_t s)
+sliding_move_limits(uint64_t s,uint64_t movement,uint64_t obstacles)
 {
    assert(is_single_bit(s));
-   uint64_t result=COLUMN(get_column(s));
-   result|=ROW(get_row(s));
-   result^=s;
-   return result;
-}
+   assert((s&obstacles)==0);
 
-// s piece
-// m move
-// o opposition
-
-inline
-uint64_t
-move_limits(uint64_t s,uint64_t m, uint64_t o)
-{
    uint64_t smaller=get_smaller(s);
    uint64_t bigger=get_bigger(s);
 
-   uint64_t blocking_bottom=smaller&o&m;
+   uint64_t blocking_bottom=smaller&(obstacles&movement);
    uint64_t bl=get_highest_bit(blocking_bottom);
    uint64_t bottom_mask=(bl==0)?-1ULL:get_bigger_equal(bl);
 
-   uint64_t blocking_top=bigger&o&m;
+   uint64_t blocking_top=bigger&(obstacles&movement);
    uint64_t tr=get_lowest_bit(blocking_top);
    uint64_t top_mask=(tr==0)?-1ULL:get_smaller_equal(tr);
 
    uint64_t result=bottom_mask&top_mask;
-   result&=m;
-//   std::cout << std::hex << "s " << s << " smaller " << smaller << " bigger "
-//      	    << bigger << " bl " << bl << " tr "  << tr << " m " << m
-//       	    << " bottom_mask " << bottom_mask << " top_mask " << top_mask
-//       	    << " result " << result << std::endl;
-//   dump_type(result);
-//   std::cout << "--------" << std::endl;
-//   dump_type(bottom_mask);
-//   std::cout << "--------" << std::endl;
-//   dump_type(top_mask);
-
+   result&=movement;
    return result;
 }
 
 inline
 uint64_t
-move_rook_mask_limits(uint64_t s, uint64_t o)
+move_rook_mask_limits(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
    // vertical change
    uint64_t c=COLUMN(get_column(s));
-   uint64_t result=move_limits(s,c,o);
+   c^=s;
+   uint64_t result=sliding_move_limits(s,c,obstacles);
    // horizontal change
    uint64_t r=ROW(get_row(s));
-   result|=move_limits(s,r,o);
-   result^=s;
-   //dump_type(result);
+   r^=s;
+   result|=sliding_move_limits(s,r,obstacles);
+   return result;
+}
+
+inline
+uint64_t
+move_bishop_mask_limits(uint64_t s, uint64_t obstacles)
+{
+   assert(is_single_bit(s));
+   // vertical change
+   uint64_t dd=get_diag_delta(s);
+   dd^=s;
+   uint64_t result=sliding_move_limits(s,dd,obstacles);
+   // horizontal change
+   uint64_t ds=get_diag_sum(s);
+   ds^=s;
+   result|=sliding_move_limits(s,ds,obstacles);
    return result;
 }
 

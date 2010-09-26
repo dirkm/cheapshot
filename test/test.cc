@@ -1,7 +1,7 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 
-#define BOOST_TEST_DYN_LINK 
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
 #include "boost/array.hpp"
 #include <boost/test/unit_test.hpp>
@@ -11,6 +11,8 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+
+#include <iostream>
 
 namespace
 {
@@ -101,6 +103,40 @@ BOOST_AUTO_TEST_CASE( root_moves_test )
    BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('A',1),ROWH(2)),((ROWH(1)^POSH('A',1))|POSH('A',2)));
    BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('D',3),ROWH(2)),((COLUMNH('D')|ROWH(3))&~(ROWH(1)|POSH('D',3))));
    BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('D',3),POSH('D',2)|POSH('D',4)),(POSH('D',2)|POSH('D',4)|ROWH(3))^POSH('D',3));
+   {
+      const char layout[]=
+         "..X.o...\n"
+         "..X.....\n"
+         "XXrXXXo.\n"
+         ".oX.oooo\n"
+         "..X.o...\n"
+         "..Xo....\n"
+         "..X.....\n"
+         "..o.....\n";
+      BOOST_CHECK_EQUAL(move_rook_mask_limits(
+                           scan_layout(layout,'r'),
+                           scan_layout(layout,'o'))&(~scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
+   }
+}
+
+BOOST_AUTO_TEST_CASE( bishop_moves_test )
+{
+   {
+      const char layout[]=
+         "X...X...\n"
+         ".X.X....\n"
+         "..b.....\n"
+         ".o.X....\n"
+         "....o...\n"
+         "........\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_bishop_mask_limits(
+                           scan_layout(layout,'b'),
+                           scan_layout(layout,'o')),
+                           scan_layout(layout,'X')|scan_layout(layout,'o'));
+   }
 }
 
 BOOST_AUTO_TEST_CASE( diagonals_test )
