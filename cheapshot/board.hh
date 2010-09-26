@@ -4,7 +4,7 @@
 #include "cheapshot/iterator.hh"
 #include "cheapshot/bitops.hh"
 
-#include "boost/array.hpp"
+#include <array>
 #include <cstdint>
 
 enum pieces
@@ -18,7 +18,7 @@ enum pieces
    nrpieces
 };
 
-typedef boost::array<uint64_t,nrpieces> SingleColorBoard;
+typedef std::array<uint64_t,nrpieces> SingleColorBoard;
 
 enum colors
 {
@@ -28,7 +28,7 @@ enum colors
 };
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
-typedef boost::array<SingleColorBoard,nrcolors> Board;
+typedef std::array<SingleColorBoard,nrcolors> Board;
 
 const SingleColorBoard init_white_board=
 {
@@ -65,12 +65,12 @@ get_initial_board()
    return b;
 }
 
-const boost::array<char,nrpieces> repr_pieces_white={'p','n','b','r','q','k'};
-const boost::array<char,nrpieces> repr_pieces_black={'P','N','B','R','Q','K'};
+const std::array<char,nrpieces> repr_pieces_white={'p','n','b','r','q','k'};
+const std::array<char,nrpieces> repr_pieces_black={'P','N','B','R','Q','K'};
 
 inline
 void
-fill_layout(const uint64_t& bm,boost::array<char,64>& repr,char piece)
+fill_layout(const uint64_t& bm,std::array<char,64>& repr,char piece)
 {
    for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
       repr[*it]=piece;
@@ -78,7 +78,7 @@ fill_layout(const uint64_t& bm,boost::array<char,64>& repr,char piece)
 
 inline
 void
-fill_layout_single_color(const SingleColorBoard& board,boost::array<char,64>& repr,const boost::array<char,nrpieces>& pieces)
+fill_layout_single_color(const SingleColorBoard& board,std::array<char,64>& repr,const std::array<char,nrpieces>& pieces)
 {
    const char* pi=pieces.begin();
    for(const uint64_t* bi=board.begin();bi!=board.end();++bi,++pi)
@@ -87,7 +87,7 @@ fill_layout_single_color(const SingleColorBoard& board,boost::array<char,64>& re
 
 inline
 std::ostream&
-print_layout(boost::array<char,64>& repr,std::ostream& os)
+print_layout(std::array<char,64>& repr,std::ostream& os)
 {
    for(int i=7;i>=0;--i)
    {
@@ -102,8 +102,8 @@ inline
 std::ostream&
 print_board(const Board& board, std::ostream& os)
 {
-   boost::array<char,64> repr;
-   repr.assign('.');
+   std::array<char,64> repr;
+   repr.fill('.');
    fill_layout_single_color(board[white],repr,repr_pieces_white);
    fill_layout_single_color(board[black],repr,repr_pieces_black);
    return print_layout(repr,os);
@@ -113,8 +113,8 @@ inline
 std::ostream&
 print_layout(uint64_t t, std::ostream& os)
 {
-   boost::array<char,64> repr;
-   repr.assign('.');
+   std::array<char,64> repr;
+   repr.fill('.');
    fill_layout(t,repr,'X');
    return print_layout(repr,os);
 }
@@ -142,7 +142,7 @@ scan_layout(const char* l, char piece)
 
 inline
 SingleColorBoard
-scan_board_single_color(const char* l, const boost::array<char,nrpieces>& pieces)
+scan_board_single_color(const char* l, const std::array<char,nrpieces>& pieces)
 {
    SingleColorBoard scb;
    const char* pi=pieces.begin();

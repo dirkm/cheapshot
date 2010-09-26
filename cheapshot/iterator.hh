@@ -42,10 +42,11 @@ private:
 
 typedef boost::function<uint_fast8_t (uint64_t)> BoardPosFunction;
  
+// TODO: change to single bit only
 inline
 uint_fast8_t getBoardPos(uint64_t lsb)
 {
-   const uint_fast8_t deBruijnBitPosition[64] =
+   const uint8_t deBruijnBitPosition[64] =
       {
          0,  1,  2, 53,  3,  7, 54, 27,
          4, 38, 41,  8, 34, 55, 48, 28,

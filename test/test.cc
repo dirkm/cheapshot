@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
    BOOST_CHECK_EQUAL(get_column(1ULL<<63),7);
 }
 
-BOOST_AUTO_TEST_CASE( root_moves_test )
+BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
    BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('A',1),ROWH(2)),((ROWH(1)^POSH('A',1))|POSH('A',2)));
    BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('D',3),ROWH(2)),((COLUMNH('D')|ROWH(3))&~(ROWH(1)|POSH('D',3))));
@@ -107,16 +107,16 @@ BOOST_AUTO_TEST_CASE( root_moves_test )
       const char layout[]=
          "..X.o...\n"
          "..X.....\n"
-         "XXrXXXo.\n"
+         "XXrXXXO.\n"
          ".oX.oooo\n"
          "..X.o...\n"
          "..Xo....\n"
          "..X.....\n"
-         "..o.....\n";
+         "..O.....\n";
       BOOST_CHECK_EQUAL(move_rook_mask_limits(
                            scan_layout(layout,'r'),
-                           scan_layout(layout,'o'))&(~scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_layout(layout,'o')|scan_layout(layout,'O')),
+                        scan_layout(layout,'X')|scan_layout(layout,'O'));
    }
 }
 
@@ -136,6 +136,88 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
                            scan_layout(layout,'b'),
                            scan_layout(layout,'o')),
                            scan_layout(layout,'X')|scan_layout(layout,'o'));
+   }
+}
+
+BOOST_AUTO_TEST_CASE( pawn_moves_test )
+{
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..o.....\n"
+         "..p.....\n"
+         "........\n"
+         "........\n";
+//      print_layout(move_pawn_mask_limits(
+//                           scan_layout(layout,'p'),
+//                           scan_layout(layout,'o')),std::cout);
+      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..X.....\n"
+         "..p.....\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..X.....\n"
+         "..X.....\n"
+         "..p.....\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "...o....\n"
+         "...Xo...\n"
+         "...p....\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "...o....\n"
+         "...p....\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')),
+                        scan_layout(layout,'X'));
    }
 }
 

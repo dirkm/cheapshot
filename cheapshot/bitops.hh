@@ -176,15 +176,13 @@ uint64_t get_diag_sum(uint64_t s)
    return get_diag_sum(get_column(s),get_row(s));
 }
 
-inline
-uint64_t
-move_pawn_mask(uint64_t s)
+uint64_t get_pawn_move(uint64_t s)
 {
    assert(is_single_bit(s));
-   if(s&ROW(2))
-      s+=rowchange;
-   s+=rowchange;
-   return s;
+   uint64_t r=(s<<rowchange);
+   if(s&ROW(1))
+      r+=(s<<(2*rowchange));
+   return r;
 }
 
 // s: moving piece
@@ -243,6 +241,27 @@ move_bishop_mask_limits(uint64_t s, uint64_t obstacles)
    ds^=s;
    result|=sliding_move_limits(s,ds,obstacles);
    return result;
+}
+
+inline
+uint64_t
+pawn_sliding_move_limits(uint64_t movement,uint64_t obstacles)
+{
+   uint64_t blocking_top=obstacles&movement;
+   uint64_t tr=get_lowest_bit(blocking_top);
+   uint64_t top_mask=(tr==0)?-1ULL:get_smaller(tr);
+   movement&=top_mask;
+   return movement;
+}
+
+inline
+uint64_t
+move_pawn_mask_limits(uint64_t s,uint64_t obstacles)
+{
+   assert(is_single_bit(s));
+   assert((s&obstacles)==0);
+   uint64_t movement=get_pawn_move(s);
+   return pawn_sliding_move_limits(movement,obstacles);
 }
 
 #endif
