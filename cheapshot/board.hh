@@ -1,57 +1,51 @@
 #ifndef BOARD_HH
 #define BOARD_HH
 
-#include <stdint.h>
-#include "ch_iterator.hh"
+#include "cheapshot/iterator.hh"
+#include "cheapshot/bitops.hh"
+
 #include "boost/array.hpp"
-#include "chessbits.hh"
+#include <cstdint>
 
 enum pieces
-  {
-    pawn,
-    knight,
-    bishop,
-    rook,
-    queen,
-    king,
-    nrpieces
-  };
+{
+   pawn,
+   knight,
+   bishop,
+   rook,
+   queen,
+   king,
+   nrpieces
+};
 
-// total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
-
-typedef boost::array<uint64_t,nrpieces> ColorBoard;
+typedef boost::array<uint64_t,nrpieces> SingleColorBoard;
 
 enum colors
-  {
-    white,
-    black,
-    nrcolors
-  };
+{
+   white,
+   black,
+   nrcolors
+};
 
-typedef boost::array<ColorBoard,nrcolors> Board;
+// total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
+typedef boost::array<SingleColorBoard,nrcolors> Board;
 
-//const uint64_t DiagSum0=mirror(DiagDelta0);
-
-
-const ColorBoard init_wb=
-  {
-    ROWH(2), // p
-    POSH('B',1)|POSH('G',1), // n
-    POSH('C',1)|POSH('F',1), // b
-    POSH('A',1)|POSH('H',1), // r
-    POSH('D',1), // q
-    POSH('E',1) // k
-  };
-
-// template<typename T, int N>
-// T* end(T (&ar)[N]){return ar+N;}
+const SingleColorBoard init_white_board=
+{
+   ROWH(2), // p
+   POSH('B',1)|POSH('G',1), // n
+   POSH('C',1)|POSH('F',1), // b
+   POSH('A',1)|POSH('H',1), // r
+   POSH('D',1), // q
+   POSH('E',1) // k
+};
 
 inline
 void
-mirror(ColorBoard& board)
+mirror(SingleColorBoard& board)
 {
-  for(uint64_t* bm=board.begin();bm!=board.end();++bm)
-    {
+   for(uint64_t* bm=board.begin();bm!=board.end();++bm)
+   {
       uint64_t& v=*bm;
       // swap bytes
       v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
@@ -59,61 +53,111 @@ mirror(ColorBoard& board)
       v = ((v >> 16) & 0xFFFF0000FFFF0000ULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
       // swap 4-byte long pairs
       v = (v >> 32) | (v << 32);
-    }
+   }
+}
+
+inline
+Board 
+get_initial_board()
+{
+   Board b={init_white_board,init_white_board};
+   mirror(b[black]);
+   return b;
 }
 
 const boost::array<char,nrpieces> repr_pieces_white={'p','n','b','r','q','k'};
 const boost::array<char,nrpieces> repr_pieces_black={'P','N','B','R','Q','K'};
 
-inline 
+inline
 void
-fill_type(const uint64_t& bm,boost::array<char,64>& repr,char piece)
+fill_layout(const uint64_t& bm,boost::array<char,64>& repr,char piece)
 {
-  for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
-    repr[*it]=piece;
-  
+   for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
+      repr[*it]=piece;
 }
 
 inline
 void
-fill_board(const ColorBoard& board,boost::array<char,64>& repr,const boost::array<char,nrpieces>& pieces)
+fill_layout_single_color(const SingleColorBoard& board,boost::array<char,64>& repr,const boost::array<char,nrpieces>& pieces)
 {
-  const char* pi=pieces.begin();
-  for(const uint64_t* bi=board.begin();bi!=board.end();++bi,++pi)
-    fill_type(*bi,repr,*pi);
+   const char* pi=pieces.begin();
+   for(const uint64_t* bi=board.begin();bi!=board.end();++bi,++pi)
+      fill_layout(*bi,repr,*pi);
 }
 
 inline
-void
-print_repr(boost::array<char,64>& repr)
+std::ostream&
+print_layout(boost::array<char,64>& repr,std::ostream& os)
 {
-  for(int i=7;i>=0;--i)
-    {
+   for(int i=7;i>=0;--i)
+   {
       for(int j=i*8;j<(i+1)*8;++j)
-        std::cout<<repr[j];
-      std::cout << "\n";
-    }
+         os <<repr[j];
+      os << "\n";
+   }
+   return os;
 }
 
 inline
-void 
-dump_board(const Board& board)
+std::ostream&
+print_board(const Board& board, std::ostream& os)
 {
-  boost::array<char,64> repr;
-  repr.assign('.');
-  fill_board(board[white],repr,repr_pieces_white);
-  fill_board(board[black],repr,repr_pieces_black);
-  print_repr(repr);
+   boost::array<char,64> repr;
+   repr.assign('.');
+   fill_layout_single_color(board[white],repr,repr_pieces_white);
+   fill_layout_single_color(board[black],repr,repr_pieces_black);
+   return print_layout(repr,os);
 }
 
 inline
-void
-dump_type(uint64_t t)
+std::ostream&
+print_layout(uint64_t t, std::ostream& os)
 {
-  boost::array<char,64> repr;
-  repr.assign('.');
-  fill_type(t,repr,'X');
-  print_repr(repr);
+   boost::array<char,64> repr;
+   repr.assign('.');
+   fill_layout(t,repr,'X');
+   return print_layout(repr,os);
+}
+
+inline
+uint64_t
+scan_layout(const char* l, char piece)
+{
+   uint64_t r=0;
+   for(int j=0;j<8;++j)
+   {
+      r<<=8;
+      uint8_t s=0;
+      for(int i=0;i<8;++i,++l)
+      {
+         if(*l==piece)
+            s+=(1<<i);
+      }
+      assert(*l=='\n');
+      ++l;
+      r+=s;
+   }
+   return r;
+}
+
+inline
+SingleColorBoard
+scan_board_single_color(const char* l, const boost::array<char,nrpieces>& pieces)
+{
+   SingleColorBoard scb;
+   const char* pi=pieces.begin();
+   for(uint64_t* bi=scb.begin();bi!=scb.end();++bi,++pi)
+      *bi=scan_layout(l,*pi);
+   return scb;
+}
+
+inline
+Board
+scan_board(const char* l)
+{
+   Board b={scan_board_single_color(l,repr_pieces_white),
+            scan_board_single_color(l,repr_pieces_black)};
+   return b;
 }
 
 #endif

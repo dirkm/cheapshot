@@ -1,7 +1,8 @@
 #ifndef MOVE_HH
 #define MOVE_HH
 
-//#include "board.hh"
+#include <cstdint>
+#include <cassert>
 
 #define POS(C,R) 1ULL<<((R)*8+(C))
 #define POSH(C,R) POS(((C)-'A'),((R)-1))
@@ -96,6 +97,7 @@ get_bigger_equal(uint64_t s)
    return get_smaller(s)^-1ULL;
 }
 
+// probably better done using deBruyn
 inline
 uint_fast8_t
 get_column(uint64_t s)
@@ -135,12 +137,13 @@ const uint64_t DiagSum0=(0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80
 //   return p>>7;
 //}
 
+// positif means to the right of the main dialog (longest one in the middle)
 #define DIAG_DELTA_POS(D) (DiagDelta0>>(8*D))
+// positif means to the left of the main dialog (longest one in the middle)
 #define DIAG_DELTA_NEG(D) (DiagDelta0<<(8*D))
 
 #define DIAG_SUM_POS(D) (DiagSum0<<(8*D))
 #define DIAG_SUM_NEG(D) (DiagSum0>>(8*D))
-
 
 // c=get_column(s);
 // r=get_row(s);

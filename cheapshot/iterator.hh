@@ -5,39 +5,39 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/function.hpp>
 
-class piece_iterator
-  : public boost::iterator_facade<piece_iterator,const uint64_t,std::output_iterator_tag>
+class bit_iterator
+   : public boost::iterator_facade<bit_iterator,const uint64_t,std::output_iterator_tag>
 {
 public:
-  piece_iterator(uint64_t val):
-    m_v(val)
-  {
-    ++*this;
-  }
+   bit_iterator(uint64_t val):
+      m_v(val)
+   {
+      ++*this;
+   }
 
-  piece_iterator():
-    m_v(0),
-    m_lsb(0)
-  {
-  }
+   bit_iterator():
+      m_v(0),
+      m_lsb(0)
+   {
+   }
 
-  bool equal(piece_iterator const& other) const
-  {
-    // only useful with an end iterator
-    return (m_lsb==other.m_lsb);
-  }
+   bool equal(bit_iterator const& other) const
+   {
+      // only useful with an end iterator
+      return (m_lsb==other.m_lsb);
+   }
 
-  void increment() 
-  { 
-    m_lsb=m_v; // intermediate copy
-    m_v &= m_v - 1; // clear the least significant bit
-    m_lsb^=m_v;
-  }
+   void increment() 
+   { 
+      m_lsb=m_v; // intermediate copy
+      m_v &= m_v - 1; // clear the least significant bit
+      m_lsb^=m_v;
+   }
 
-  const uint64_t& dereference() const { return m_lsb; }
+   const uint64_t& dereference() const { return m_lsb; }
 private:
-  uint64_t m_v;
-  uint64_t m_lsb;
+   uint64_t m_v; // layout of the board
+   uint64_t m_lsb; // current least significant bit, (the piece currently pointed to)
 };
 
 typedef boost::function<uint_fast8_t (uint64_t)> BoardPosFunction;
@@ -59,13 +59,13 @@ uint_fast8_t getBoardPos(uint64_t lsb)
    return deBruijnBitPosition[((lsb&-lsb)*0x022fdd63cc95386d) >> 58];
 }
 
-typedef boost::transform_iterator<BoardPosFunction, piece_iterator> board_iterator;
+typedef boost::transform_iterator<BoardPosFunction, bit_iterator> board_iterator;
 
 inline
 board_iterator
 make_board_iterator(uint64_t val)
 {
-  return board_iterator(piece_iterator(val),&getBoardPos);
+   return board_iterator(bit_iterator(val),&getBoardPos);
 }
 
 #endif

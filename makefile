@@ -3,9 +3,9 @@
 #
 include makefile.inc
 
-
 EXEC := 
 cleanfiles :=
+clean_default := *.o *.a *.so *.so.* *.d
 
 default: progs
 
@@ -47,3 +47,6 @@ files:
 	@echo $(EXEC)
 
 makefile: makefile.inc
+
+test: test/test
+	$^
