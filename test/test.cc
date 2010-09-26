@@ -1,3 +1,5 @@
+// #include <iostream>
+
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 
@@ -11,8 +13,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-
-#include <iostream>
 
 namespace
 {
@@ -219,6 +219,41 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
    }
+}
+
+BOOST_AUTO_TEST_CASE( pawn_capture_test )
+{
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..oO....\n"
+         "..p.....\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(get_pawn_captures(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')|scan_layout(layout,'O')),
+                        scan_layout(layout,'O'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "OoOo....\n"
+         ".po.....\n"
+         "..o.....\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(get_pawn_captures(
+                           scan_layout(layout,'p'),
+                           scan_layout(layout,'o')|scan_layout(layout,'O')),
+                        scan_layout(layout,'O'));
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE( diagonals_test )

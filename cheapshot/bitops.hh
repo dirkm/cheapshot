@@ -50,7 +50,6 @@ inline
 uint64_t
 get_highest_bit(uint64_t p)
 {
-   uint64_t pin=p;
    --p;
    p|=p>>1;
    p|=p>>2;
@@ -179,10 +178,22 @@ uint64_t get_diag_sum(uint64_t s)
 uint64_t get_pawn_move(uint64_t s)
 {
    assert(is_single_bit(s));
+   assert(!(s&ROW(7))); // pawns are not supposed to be on the last row
    uint64_t r=(s<<rowchange);
    if(s&ROW(1))
       r+=(s<<(2*rowchange));
    return r;
+}
+
+// if obstacles include our own pieces, they have to be excluded explicitly afterward
+// not including en-passant
+uint64_t get_pawn_captures(uint64_t s, uint64_t obstacles)
+{
+   assert(is_single_bit(s));
+   assert(!(s&ROW(7))); // pawns are not supposed to be on the last row
+   uint64_t next_row=ROW(get_row(s)+1);
+   uint64_t possible_pawn_captures=((s<<(rowchange-1))|(s<<(rowchange+1)))&next_row;
+   return possible_pawn_captures&obstacles;
 }
 
 // s: moving piece
