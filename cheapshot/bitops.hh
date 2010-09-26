@@ -186,7 +186,7 @@ uint64_t get_pawn_move(uint64_t s)
 }
 
 // if obstacles include our own pieces, they have to be excluded explicitly afterward
-// not including en-passant
+// not including en-passant captures
 uint64_t get_pawn_captures(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
@@ -194,6 +194,49 @@ uint64_t get_pawn_captures(uint64_t s, uint64_t obstacles)
    uint64_t next_row=ROW(get_row(s)+1);
    uint64_t possible_pawn_captures=((s<<(rowchange-1))|(s<<(rowchange+1)))&next_row;
    return possible_pawn_captures&obstacles;
+}
+
+         // "........\n"
+         // "..x.x...\n"
+         // ".x...x..\n"
+         // "...N....\n"
+         // ".x...x..\n"
+         // "..x.x...\n"
+         // "........\n"
+         // "........\n"
+inline
+uint64_t 
+get_vertical_band(uint8_t c,uint8_t halfwidth)
+{
+   uint8_t start=(c<halfwidth)?0:c-halfwidth;
+   uint8_t stop=((c+halfwidth)>7)?7:c+halfwidth;
+   uint64_t r=0;
+   for(;start<=stop;++start)
+      r|=COLUMN(start);
+   return r;
+}
+
+inline
+uint64_t 
+get_horizontal_band(uint8_t row,uint8_t halfwidth)
+{
+   uint8_t start=(row<halfwidth)?0:row-halfwidth;
+   uint8_t stop=((row+halfwidth)>7)?7:row+halfwidth;
+   uint64_t r=0;
+   for(;start<=stop;++start)
+      r|=ROW(start);
+   return r;
+}
+
+inline
+uint64_t 
+get_knight_moves(uint64_t s)
+{
+   // this is terrible
+   uint8_t c=get_column(s);
+   uint8_t r=get_row(s);
+   return (get_horizontal_band(r,2)&get_vertical_band(c,2))&
+      (~(COLUMN(c)|ROW(r)|get_diag_delta(c,r)|get_diag_sum(c,r)));
 }
 
 // s: moving piece

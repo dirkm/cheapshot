@@ -1,4 +1,4 @@
-// #include <iostream>
+#include <iostream>
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
@@ -136,6 +136,49 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
                            scan_layout(layout,'b'),
                            scan_layout(layout,'o')),
                            scan_layout(layout,'X')|scan_layout(layout,'o'));
+   }
+}
+
+BOOST_AUTO_TEST_CASE( knight_moves_test )
+{
+   {
+      const char layout[]=
+         "........\n"
+         "...X.X..\n"
+         "..X...X.\n"
+         "....n...\n"
+         "..X...X.\n"
+         "...X.X..\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+                                         scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".X......\n"
+         "..X.....\n"
+         "n.......\n";
+      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+                                         scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         ".....X..\n"
+         ".......n\n"
+         ".....X..\n"
+         "......X.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+                                         scan_layout(layout,'X'));
    }
 }
 
