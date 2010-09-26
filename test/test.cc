@@ -5,13 +5,16 @@
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
-#include "boost/array.hpp"
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
+#include <boost/timer.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <ctime>
+#include <sys/times.h>
 #include <iterator>
 
 namespace
@@ -516,6 +519,29 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
                   , 'X'),DiagSum0);
 
    BOOST_CHECK(get_initial_board()==scan_board(initial_layout));
+}
+
+BOOST_AUTO_TEST_CASE( time_column_and_row_test )
+{
+   boost::timer t;
+   volatile uint64_t s=(1ULL<<(8*(8-(1))));
+   volatile uint8_t c;
+   volatile uint8_t r;
+   tms start_cpu;   
+   std::clock_t start_time = times(&start_cpu);
+   for(long i=0;i<100000000;++i)
+   {
+      c=get_column(s);
+      r=get_row(s);
+   }
+   tms end_cpu;
+   std::clock_t end_time = times(&end_cpu);    
+   float ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
+   std::cout << " column/row calculation" << std::endl
+             << " Real Time: " << (end_time - start_time)/ticks_per_sec
+             << " User Time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
+             << " System Time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
+             << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()
