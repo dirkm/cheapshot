@@ -182,6 +182,36 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
    }
 }
 
+BOOST_AUTO_TEST_CASE( king_moves_test )
+{
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".XXX....\n"
+         ".XkX....\n"
+         ".XXX....\n";
+      BOOST_CHECK_EQUAL(get_king_moves(scan_layout(layout,'k')),
+                        scan_layout(layout,'X'));
+   }
+   {
+      const char layout[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".XXX....\n"
+         ".XkX....\n";
+      BOOST_CHECK_EQUAL(get_king_moves(scan_layout(layout,'k')),
+                        scan_layout(layout,'X'));
+   }
+}
+
 BOOST_AUTO_TEST_CASE( pawn_moves_test )
 {
    {

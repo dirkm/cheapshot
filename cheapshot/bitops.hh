@@ -215,10 +215,20 @@ uint64_t
 get_knight_moves(uint64_t s)
 {
    // this is terrible
+   // could maybe be used to precompute a table
    uint8_t c=get_column(s);
    uint8_t r=get_row(s);
    return (get_horizontal_band(r,2)&get_vertical_band(c,2))&
       (~(COLUMN(c)|ROW(r)|get_diag_delta(c,r)|get_diag_sum(c,r)));
+}
+
+inline
+uint64_t 
+get_king_moves(uint64_t s)
+{
+   uint8_t c=get_column(s);
+   uint8_t r=get_row(s);
+   return get_horizontal_band(r,1)&get_vertical_band(c,1)&~s;
 }
 
 // s: moving piece
@@ -268,11 +278,11 @@ uint64_t
 move_bishop_mask_limits(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
-   // vertical change
+
    uint64_t dd=get_diag_delta(s);
    dd^=s;
    uint64_t result=sliding_move_limits(s,dd,obstacles);
-   // horizontal change
+
    uint64_t ds=get_diag_sum(s);
    ds^=s;
    result|=sliding_move_limits(s,ds,obstacles);
