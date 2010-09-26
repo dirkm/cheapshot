@@ -17,8 +17,6 @@ const uint64_t Col0=0x0101010101010101ULL;
 
 const uint64_t rowchange=0x8;
 
-// moves of a single pawn (no capture)
-
 // p position
 // s single
 
@@ -96,7 +94,8 @@ get_bigger_equal(uint64_t s)
    return get_smaller(s)^-1ULL;
 }
 
-// probably better done using deBruyn
+// using deBruyn-tables is probably more efficient
+
 inline
 uint_fast8_t
 get_column(uint64_t s)
@@ -130,12 +129,6 @@ const uint64_t DiagDelta0=(1ULL<<(9*0))|(1ULL<<(9*1))|(1ULL<<(9*2))|(1ULL<<(9*3)
 const uint64_t DiagSum0=(0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80ULL<<(7*3))|
 			(0x80ULL<<(7*4))|(0x80ULL<<(7*5))|(0x80ULL<<(7*6))|(0x80ULL<<(7*7));
 
-//inline 
-//uint8_t set_if_not_negative(int8_t p)
-//{
-//   return p>>7;
-//}
-
 // positif means to the right of the main dialog (longest one in the middle)
 #define DIAG_DELTA_POS(D) (DiagDelta0>>(8*D))
 // positif means to the left of the main dialog (longest one in the middle)
@@ -143,9 +136,6 @@ const uint64_t DiagSum0=(0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80
 
 #define DIAG_SUM_POS(D) (DiagSum0<<(8*D))
 #define DIAG_SUM_NEG(D) (DiagSum0>>(8*D))
-
-// c=get_column(s);
-// r=get_row(s);
 
 uint64_t get_diag_delta(uint8_t c, uint8_t r)
 {
@@ -196,14 +186,6 @@ uint64_t get_pawn_captures(uint64_t s, uint64_t obstacles)
    return possible_pawn_captures&obstacles;
 }
 
-         // "........\n"
-         // "..x.x...\n"
-         // ".x...x..\n"
-         // "...N....\n"
-         // ".x...x..\n"
-         // "..x.x...\n"
-         // "........\n"
-         // "........\n"
 inline
 uint64_t 
 get_vertical_band(uint8_t c,uint8_t halfwidth)
@@ -241,7 +223,7 @@ get_knight_moves(uint64_t s)
 
 // s: moving piece
 // movement: movement in a single direction (for pawns, bishops, rooks, queens)
-// obstacles: own pieces plus opposing pieces (apart from the moving piece itself) 
+// obstacles: own pieces plus opposing pieces (except the moving piece itself) 
 inline
 uint64_t
 sliding_move_limits(uint64_t s,uint64_t movement,uint64_t obstacles)

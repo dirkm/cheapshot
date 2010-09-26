@@ -1,6 +1,3 @@
-#
-# Include autoconf generated information
-#
 include makefile.inc
 
 EXEC := 

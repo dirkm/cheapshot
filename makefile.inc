@@ -1,6 +1,6 @@
 CPP := g++
 
-CFLAGS := -g -I. -std=c++0x
+CFLAGS := -g -O2 -I. -std=c++0x
 CPPFLAGS := ${CFLAGS} 
 LIBS :=
 LDFLAGS :=
