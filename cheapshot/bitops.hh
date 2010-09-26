@@ -1,5 +1,5 @@
-#ifndef CHEAPSHOT_MOVE_HH
-#define CHEAPSHOT_MOVE_HH
+#ifndef CHEAPSHOT_BITOPS_HH
+#define CHEAPSHOT_BITOPS_HH
 
 #include <cstdint>
 #include <cassert>
@@ -57,7 +57,7 @@ get_highest_bit(uint64_t p)
    p|=p>>32;
    ++p;
    assert(is_max_single_bit(p));
-   return p;
+   return p>>1; // can probably be improved upon
 }
 
 // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -257,19 +257,44 @@ sliding_move_limits(uint64_t s,uint64_t movement,uint64_t obstacles)
    return result;
 }
 
+// precomputed column, row
+inline
+uint64_t
+move_rook_mask_limits(uint64_t s, uint8_t c, uint8_t r, uint64_t obstacles)
+{
+   // vertical change
+   uint64_t col=COLUMN(c);
+   col^=s;
+   uint64_t result=sliding_move_limits(s,col,obstacles);
+   // horizontal change
+   uint64_t row=ROW(r);
+   row^=s;
+   result|=sliding_move_limits(s,row,obstacles);
+   return result;
+}
+
 inline
 uint64_t
 move_rook_mask_limits(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
-   // vertical change
-   uint64_t c=COLUMN(get_column(s));
-   c^=s;
-   uint64_t result=sliding_move_limits(s,c,obstacles);
-   // horizontal change
-   uint64_t r=ROW(get_row(s));
-   r^=s;
-   result|=sliding_move_limits(s,r,obstacles);
+   uint8_t c=get_column(s);
+   uint8_t r=get_row(s);
+   return move_rook_mask_limits(s,c,r,obstacles);
+}
+
+// precomputed column, row
+inline
+uint64_t
+move_bishop_mask_limits(uint64_t s, uint8_t c, uint8_t r,uint64_t obstacles)
+{
+   uint64_t dd=get_diag_delta(c,r);
+   dd^=s;
+   uint64_t result=sliding_move_limits(s,dd,obstacles);
+
+   uint64_t ds=get_diag_sum(c,r);
+   ds^=s;
+   result|=sliding_move_limits(s,ds,obstacles);
    return result;
 }
 
@@ -278,15 +303,27 @@ uint64_t
 move_bishop_mask_limits(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
+   uint8_t c=get_column(s);
+   uint8_t r=get_row(s);
+   
+   return move_bishop_mask_limits(s,c,r,obstacles);
+}
 
-   uint64_t dd=get_diag_delta(s);
-   dd^=s;
-   uint64_t result=sliding_move_limits(s,dd,obstacles);
+inline
+uint64_t
+move_queen_mask_limits(uint64_t s, uint8_t c, uint8_t r,uint64_t obstacles)
+{
+   return move_rook_mask_limits(s,c,r,obstacles)|move_bishop_mask_limits(s,c,r,obstacles);
+}
 
-   uint64_t ds=get_diag_sum(s);
-   ds^=s;
-   result|=sliding_move_limits(s,ds,obstacles);
-   return result;
+inline
+uint64_t
+move_queen_mask_limits(uint64_t s, uint64_t obstacles)
+{
+   assert(is_single_bit(s));
+   uint8_t c=get_column(s);
+   uint8_t r=get_row(s);
+   return move_queen_mask_limits(s,c,r,obstacles);
 }
 
 inline

@@ -1,7 +1,7 @@
-// #include <iostream>
+#include <iostream>
 
-#include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
+#include "cheapshot/bitops.hh"
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
@@ -89,6 +89,11 @@ BOOST_AUTO_TEST_CASE( init_board_test )
    BOOST_CHECK( ots.is_equal(initial_layout));
 }
 
+BOOST_AUTO_TEST_CASE( highest_bit_test )
+{
+   BOOST_CHECK_EQUAL(get_highest_bit(0xF123),0x8000);
+}
+
 BOOST_AUTO_TEST_CASE( row_and_column_test )
 {
    BOOST_CHECK_EQUAL(get_row(1ULL<<63),7);
@@ -111,8 +116,8 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          ".oX.oooo\n"
          "..X.o...\n"
          "..Xo....\n"
-         "..X.....\n"
-         "..O.....\n";
+         "..O.....\n"
+         "..o.....\n";
       BOOST_CHECK_EQUAL(move_rook_mask_limits(
                            scan_layout(layout,'r'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
@@ -136,6 +141,29 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
                            scan_layout(layout,'b'),
                            scan_layout(layout,'o')),
                            scan_layout(layout,'X')|scan_layout(layout,'o'));
+   }
+}
+
+BOOST_AUTO_TEST_CASE( queen_moves_test )
+{
+   {
+      const char layout[]=
+         "X.XoX...\n"
+         ".XXX....\n"
+         "XXqXXXXX\n"
+         ".OXX....\n"
+         "..X.O...\n"
+         "..O.....\n"
+         "..o.....\n"
+         "........\n";
+      // print_layout(move_queen_mask_limits(
+      //                 scan_layout(layout,'q'),
+      //                 scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
+
+      BOOST_CHECK_EQUAL(move_queen_mask_limits(
+                           scan_layout(layout,'q'),
+                           scan_layout(layout,'o')|scan_layout(layout,'O')),
+                           scan_layout(layout,'X')|scan_layout(layout,'O'));
    }
 }
 
