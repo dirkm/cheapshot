@@ -2,6 +2,7 @@
 
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
+#include "cheapshot/extra_bitops.hh"
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
@@ -29,6 +30,12 @@ namespace
       "........\n"
       "pppppppp\n"
       "rnbqkbnr\n";
+
+   const uint64_t DiagDelta0=((1ULL<<(9*0))|(1ULL<<(9*1))|(1ULL<<(9*2))|(1ULL<<(9*3)))|
+      ((1ULL<<(9*4))|(1ULL<<(9*5))|(1ULL<<(9*6))|(1ULL<<(9*7)));
+
+   const uint64_t DiagSum0=((0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80ULL<<(7*3)))|
+      ((0x80ULL<<(7*4))|(0x80ULL<<(7*5))|(0x80ULL<<(7*6))|(0x80ULL<<(7*7)));
 }
 
 using namespace cheapshot;
@@ -96,7 +103,8 @@ BOOST_AUTO_TEST_CASE( init_board_test )
 
 BOOST_AUTO_TEST_CASE( highest_bit_test )
 {
-   BOOST_CHECK_EQUAL(get_highest_bit(0xF123),0x8000);
+   BOOST_CHECK_EQUAL(get_highest_bit(0xF123ULL),0x8000ULL);
+   BOOST_CHECK_EQUAL(get_highest_bit(0x1ULL),0x1ULL);
 }
 
 BOOST_AUTO_TEST_CASE( row_and_column_test )
@@ -110,9 +118,9 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
-   BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('A',1),ROWH(2)),((ROWH(1)^POSH('A',1))|POSH('A',2)));
-   BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('D',3),ROWH(2)),((COLUMNH('D')|ROWH(3))&~(ROWH(1)|POSH('D',3))));
-   BOOST_CHECK_EQUAL(move_rook_mask_limits(POSH('D',3),POSH('D',2)|POSH('D',4)),(POSH('D',2)|POSH('D',4)|ROWH(3))^POSH('D',3));
+   BOOST_CHECK_EQUAL(slide_rook(POSH('A',1),ROWH(2)),((ROWH(1)^POSH('A',1))|POSH('A',2)));
+   BOOST_CHECK_EQUAL(slide_rook(POSH('D',3),ROWH(2)),((COLUMNH('D')|ROWH(3))&~(ROWH(1)|POSH('D',3))));
+   BOOST_CHECK_EQUAL(slide_rook(POSH('D',3),POSH('D',2)|POSH('D',4)),(POSH('D',2)|POSH('D',4)|ROWH(3))^POSH('D',3));
    {
       const char layout[]=
          "..X.o...\n"
@@ -123,10 +131,10 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          "..Xo....\n"
          "..O.....\n"
          "..o.....\n";
-      print_layout(move_rook_mask_limits(
-                      scan_layout(layout,'r'),
-                      scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
-      BOOST_CHECK_EQUAL(move_rook_mask_limits(
+      // print_layout(slide_rook(
+      //                 scan_layout(layout,'r'),
+      //                 scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
+      BOOST_CHECK_EQUAL(slide_rook(
                            scan_layout(layout,'r'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
                         scan_layout(layout,'X')|scan_layout(layout,'O'));
@@ -145,7 +153,7 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
          "........\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(move_bishop_mask_limits(
+      BOOST_CHECK_EQUAL(slide_bishop(
                            scan_layout(layout,'b'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X')|scan_layout(layout,'o'));
@@ -164,11 +172,11 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
          "..O.....\n"
          "..o.....\n"
          "........\n";
-      // print_layout(move_queen_mask_limits(
+      // print_layout(slide_queen(
       //                 scan_layout(layout,'q'),
       //                 scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
 
-      BOOST_CHECK_EQUAL(move_queen_mask_limits(
+      BOOST_CHECK_EQUAL(slide_queen(
                            scan_layout(layout,'q'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
                         scan_layout(layout,'X')|scan_layout(layout,'O'));
@@ -260,10 +268,10 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
          "..p.....\n"
          "........\n"
          "........\n";
-//      print_layout(move_pawn_mask_limits(
+//      print_layout(slide_pawn(
 //                           scan_layout(layout,'p'),
 //                           scan_layout(layout,'o')),std::cout);
-      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+      BOOST_CHECK_EQUAL(slide_pawn(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
@@ -278,7 +286,7 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
          "..p.....\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+      BOOST_CHECK_EQUAL(slide_pawn(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
@@ -293,7 +301,7 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
          "..X.....\n"
          "..p.....\n"
          "........\n";
-      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+      BOOST_CHECK_EQUAL(slide_pawn(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
@@ -308,7 +316,7 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
          "...Xo...\n"
          "...p....\n"
          "........\n";
-      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+      BOOST_CHECK_EQUAL(slide_pawn(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
@@ -323,7 +331,7 @@ BOOST_AUTO_TEST_CASE( pawn_moves_test )
          "...o....\n"
          "...p....\n"
          "........\n";
-      BOOST_CHECK_EQUAL(move_pawn_mask_limits(
+      BOOST_CHECK_EQUAL(slide_pawn(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')),
                         scan_layout(layout,'X'));
@@ -397,7 +405,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DIAG_DELTA_POS(1),ots);
+      print_layout(DiagDelta0>>8,ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       ".......X\n"
@@ -412,7 +420,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DIAG_DELTA_NEG(4),ots);
+      print_layout(DiagDelta0<<32,ots);
       BOOST_CHECK( ots.is_equal(
                       "...X....\n"
                       "..X.....\n"
@@ -482,7 +490,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DIAG_SUM_NEG(6),ots);
+      print_layout(DiagSum0>>(8*6),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "........\n"

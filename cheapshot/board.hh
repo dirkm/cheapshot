@@ -43,8 +43,7 @@ const SingleColorBoard init_white_board=
    POSH('E',1) // k
 };
 
-inline
-void
+inline void
 mirror(SingleColorBoard& board)
 {
    for(uint64_t* bm=board.begin();bm!=board.end();++bm)
@@ -59,8 +58,7 @@ mirror(SingleColorBoard& board)
    }
 }
 
-inline
-Board 
+inline Board 
 get_initial_board()
 {
    Board b={init_white_board,init_white_board};
@@ -71,16 +69,14 @@ get_initial_board()
 const std::array<char,nrpieces> repr_pieces_white={'p','n','b','r','q','k'};
 const std::array<char,nrpieces> repr_pieces_black={'P','N','B','R','Q','K'};
 
-inline
-void
+inline void
 fill_layout(const uint64_t& bm,std::array<char,64>& repr,char piece)
 {
    for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
       repr[*it]=piece;
 }
 
-inline
-void
+inline void
 fill_layout_single_color(const SingleColorBoard& board,std::array<char,64>& repr,const std::array<char,nrpieces>& pieces)
 {
    const char* pi=pieces.begin();
@@ -88,8 +84,7 @@ fill_layout_single_color(const SingleColorBoard& board,std::array<char,64>& repr
       fill_layout(*bi,repr,*pi);
 }
 
-inline
-std::ostream&
+inline std::ostream&
 print_layout(std::array<char,64>& repr,std::ostream& os)
 {
    for(int i=7;i>=0;--i)
@@ -101,8 +96,7 @@ print_layout(std::array<char,64>& repr,std::ostream& os)
    return os;
 }
 
-inline
-std::ostream&
+inline std::ostream&
 print_board(const Board& board, std::ostream& os)
 {
    std::array<char,64> repr;
@@ -112,8 +106,7 @@ print_board(const Board& board, std::ostream& os)
    return print_layout(repr,os);
 }
 
-inline
-std::ostream&
+inline std::ostream&
 print_layout(uint64_t t, std::ostream& os,char c='X')
 {
    std::array<char,64> repr;
@@ -122,8 +115,7 @@ print_layout(uint64_t t, std::ostream& os,char c='X')
    return print_layout(repr,os);
 }
 
-inline
-uint64_t
+inline uint64_t
 scan_layout(const char* l, char piece)
 {
    uint64_t r=0;
@@ -143,8 +135,7 @@ scan_layout(const char* l, char piece)
    return r;
 }
 
-inline
-SingleColorBoard
+inline SingleColorBoard
 scan_board_single_color(const char* l, const std::array<char,nrpieces>& pieces)
 {
    SingleColorBoard scb;
@@ -154,8 +145,7 @@ scan_board_single_color(const char* l, const std::array<char,nrpieces>& pieces)
    return scb;
 }
 
-inline
-Board
+inline Board
 scan_board(const char* l)
 {
    Board b={scan_board_single_color(l,repr_pieces_white),
