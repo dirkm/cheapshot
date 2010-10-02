@@ -45,5 +45,5 @@ files:
 
 makefile: makefile.inc
 
-test: test/test
+tests: test/test
 	$^

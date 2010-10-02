@@ -31,6 +31,8 @@ namespace
       "rnbqkbnr\n";
 }
 
+using namespace cheapshot;
+
 BOOST_AUTO_TEST_SUITE(piece_moves)
 
 BOOST_AUTO_TEST_CASE( bit_iterator_test )
@@ -99,11 +101,11 @@ BOOST_AUTO_TEST_CASE( highest_bit_test )
 
 BOOST_AUTO_TEST_CASE( row_and_column_test )
 {
-   BOOST_CHECK_EQUAL(get_row(1ULL<<63),7);
-   BOOST_CHECK_EQUAL(get_row(1ULL<<1),0);
+   BOOST_CHECK_EQUAL(get_row_number(1ULL<<63),7);
+   BOOST_CHECK_EQUAL(get_row_number(1ULL<<1),0);
    BOOST_CHECK_EQUAL(get_smaller(8),7);
-   BOOST_CHECK_EQUAL(get_column(1ULL<<1),1);
-   BOOST_CHECK_EQUAL(get_column(1ULL<<63),7);
+   BOOST_CHECK_EQUAL(get_column_number(1ULL<<1),1);
+   BOOST_CHECK_EQUAL(get_column_number(1ULL<<63),7);
 }
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
@@ -121,6 +123,9 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          "..Xo....\n"
          "..O.....\n"
          "..o.....\n";
+      print_layout(move_rook_mask_limits(
+                      scan_layout(layout,'r'),
+                      scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
       BOOST_CHECK_EQUAL(move_rook_mask_limits(
                            scan_layout(layout,'r'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
@@ -143,7 +148,7 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
       BOOST_CHECK_EQUAL(move_bishop_mask_limits(
                            scan_layout(layout,'b'),
                            scan_layout(layout,'o')),
-                           scan_layout(layout,'X')|scan_layout(layout,'o'));
+                        scan_layout(layout,'X')|scan_layout(layout,'o'));
    }
 }
 
@@ -166,7 +171,7 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
       BOOST_CHECK_EQUAL(move_queen_mask_limits(
                            scan_layout(layout,'q'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
-                           scan_layout(layout,'X')|scan_layout(layout,'O'));
+                        scan_layout(layout,'X')|scan_layout(layout,'O'));
    }
 }
 
@@ -183,7 +188,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "........\n"
          "........\n";
       BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
-                                         scan_layout(layout,'X'));
+                        scan_layout(layout,'X'));
    }
    {
       const char layout[]=
@@ -196,7 +201,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "..X.....\n"
          "n.......\n";
       BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
-                                         scan_layout(layout,'X'));
+                        scan_layout(layout,'X'));
    }
    {
       const char layout[]=
@@ -209,7 +214,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "........\n"
          "........\n";
       BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
-                                         scan_layout(layout,'X'));
+                        scan_layout(layout,'X'));
    }
 }
 
@@ -531,8 +536,8 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    std::clock_t start_time = times(&start_cpu);
    for(long i=0;i<100000000;++i)
    {
-      c=get_column(s);
-      r=get_row(s);
+      c=get_column_number(s);
+      r=get_row_number(s);
    }
    tms end_cpu;
    std::clock_t end_time = times(&end_cpu);    

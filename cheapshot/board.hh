@@ -7,6 +7,9 @@
 #include <array>
 #include <cstdint>
 
+namespace cheapshot
+{
+
 enum pieces
 {
    pawn,
@@ -111,11 +114,11 @@ print_board(const Board& board, std::ostream& os)
 
 inline
 std::ostream&
-print_layout(uint64_t t, std::ostream& os)
+print_layout(uint64_t t, std::ostream& os,char c='X')
 {
    std::array<char,64> repr;
    repr.fill('.');
-   fill_layout(t,repr,'X');
+   fill_layout(t,repr,c);
    return print_layout(repr,os);
 }
 
@@ -159,5 +162,7 @@ scan_board(const char* l)
             scan_board_single_color(l,repr_pieces_black)};
    return b;
 }
+
+} // cheapshot
 
 #endif
