@@ -15,7 +15,7 @@ There is no AI yet. You might want to check back in a couple of years.
 
 The excellent [makefiles](http://locklessinc.com/articles/makefile_tricks/) from lockless.
 
-[Bit Twiddling Hacks](http://graphics.stanford.edu/~seander/bithacks.html) for inspiration for bitboard-arythmetic.
+[Bit Twiddling Hacks](http://graphics.stanford.edu/~seander/bithacks.html) for inspiration for bitboard-arithmetic.
 
 ## LICENSE
 
