@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <ctime>
 #include <sys/times.h>
 #include <iterator>
@@ -36,6 +37,34 @@ namespace
 
    const uint64_t DiagSum0=((0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80ULL<<(7*3)))|
       ((0x80ULL<<(7*4))|(0x80ULL<<(7*5))|(0x80ULL<<(7*6))|(0x80ULL<<(7*7)));
+
+   class TimeOperation
+   {
+   public:
+      TimeOperation():
+         start_time(times(&start_cpu))
+      {
+      }
+
+      void time_report(const char* descr, int ops)
+      {
+         tms end_cpu;
+         std::clock_t end_time = times(&end_cpu);    
+         float ops_sec=ops/((end_time - start_time)/ticks_per_sec);
+         std::cout << descr << std::endl
+                   << " Real Time: " << (end_time - start_time)/ticks_per_sec
+                   << " User Time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
+                   << " System Time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
+                   << " ops/sec: " << ops_sec
+                   << std::endl;
+      }
+   private:
+      tms start_cpu;      
+      std::clock_t start_time;
+      static const float ticks_per_sec;
+   };
+
+   const float TimeOperation::ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
 }
 
 using namespace cheapshot;
@@ -101,10 +130,13 @@ BOOST_AUTO_TEST_CASE( init_board_test )
    BOOST_CHECK( ots.is_equal(initial_layout));
 }
 
-BOOST_AUTO_TEST_CASE( highest_bit_test )
+BOOST_AUTO_TEST_CASE( primitive_test )
 {
    BOOST_CHECK_EQUAL(get_highest_bit(0xF123ULL),0x8000ULL);
    BOOST_CHECK_EQUAL(get_highest_bit(0x1ULL),0x1ULL);
+   BOOST_CHECK_EQUAL(get_highest_bit(0x0ULL),0x0ULL);
+   BOOST_CHECK_EQUAL(get_exclusive_left(0x1ULL),0x0ULL);
+   BOOST_CHECK_EQUAL(get_exclusive_left(0x2ULL),0x0101010101010101ULL);
 }
 
 BOOST_AUTO_TEST_CASE( row_and_column_test )
@@ -540,21 +572,44 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    volatile uint64_t s=(1ULL<<(8*(8-(1))));
    volatile uint8_t c;
    volatile uint8_t r;
-   tms start_cpu;   
-   std::clock_t start_time = times(&start_cpu);
-   for(long i=0;i<100000000;++i)
+   TimeOperation time_op;
+   const long ops=100000000;
+   for(long i=0;i<ops;++i)
    {
       c=get_column_number(s);
       r=get_row_number(s);
    }
-   tms end_cpu;
-   std::clock_t end_time = times(&end_cpu);    
-   float ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
-   std::cout << " column/row calculation" << std::endl
-             << " Real Time: " << (end_time - start_time)/ticks_per_sec
-             << " User Time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
-             << " System Time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
-             << std::endl;
+   time_op.time_report("column/row calculation",ops);
 }
+
+BOOST_AUTO_TEST_CASE( time_queen_move )
+{
+   boost::timer t;
+   volatile uint64_t s=(1ULL<<(4*(8-(4))));
+   volatile uint64_t r;
+   TimeOperation time_op;
+   const long ops=10000000;
+   for(long i=0;i<ops;++i)
+   {
+      uint64_t obstacles=random()&~s;
+      r=slide_queen(s,obstacles);
+   }
+   time_op.time_report("queen move",ops);
+}
+
+BOOST_AUTO_TEST_CASE( time_knight_move )
+{
+   boost::timer t;
+   volatile uint64_t s=(1ULL<<(4*(8-(4))));
+   volatile uint64_t r;
+   TimeOperation time_op;
+   const long ops=100000000;
+   for(long i=0;i<ops;++i)
+   {
+      r=get_knight_moves(s);
+   }
+   time_op.time_report("knight move",ops);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

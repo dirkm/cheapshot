@@ -5,6 +5,9 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/function.hpp>
 
+namespace cheapshot
+{
+
 class bit_iterator
    : public boost::iterator_facade<bit_iterator,const uint64_t,std::output_iterator_tag>
 {
@@ -27,8 +30,8 @@ public:
       return (m_lsb==other.m_lsb);
    }
 
-   void increment() 
-   { 
+   void increment()
+   {
       m_lsb=m_v; // intermediate copy
       m_v &= m_v - 1; // clear the least significant bit
       m_lsb^=m_v;
@@ -41,10 +44,9 @@ private:
 };
 
 typedef boost::function<uint_fast8_t (uint64_t)> BoardPosFunction;
- 
-// TODO: change to single bit only
+
 inline
-uint_fast8_t getBoardPos(uint64_t lsb)
+uint_fast8_t get_board_pos(uint64_t s)
 {
    const uint8_t deBruijnBitPosition[64] =
       {
@@ -57,7 +59,7 @@ uint_fast8_t getBoardPos(uint64_t lsb)
          51, 25, 36, 32, 60, 20, 57, 16,
          50, 31, 19, 15, 30, 14, 13, 12,
       };
-   return deBruijnBitPosition[((lsb&-lsb)*0x022fdd63cc95386d) >> 58];
+   return deBruijnBitPosition[(s*0x022fdd63cc95386d) >> 58];
 }
 
 typedef boost::transform_iterator<BoardPosFunction, bit_iterator> board_iterator;
@@ -66,7 +68,9 @@ inline
 board_iterator
 make_board_iterator(uint64_t val)
 {
-   return board_iterator(bit_iterator(val),&getBoardPos);
+   return board_iterator(bit_iterator(val),&get_board_pos);
+}
+
 }
 
 #endif

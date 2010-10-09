@@ -14,18 +14,18 @@ namespace cheapshot
 // s single piece (single bit set in uint64_t)
 
 // move: movement of a piece without taking obstacles in account
-// slide: move until an obstacle is met 
+// slide: move until an obstacle is met
 
 // this file is built-up from lowlevel to highlevel
 // piece-moves are found towards the bottom of the file
 
-CONSTEXPR inline bool 
+CONSTEXPR inline bool
 is_max_single_bit(uint64_t p)
 {
    return !(p & (p - 1));
 }
 
-CONSTEXPR inline bool 
+CONSTEXPR inline bool
 is_single_bit(uint64_t p)
 {
    return is_max_single_bit(p) && p;
@@ -73,12 +73,12 @@ enum direction_up
 
 template<direction_up D>
 CONSTEXPR inline uint64_t
-get_primitive_moves(uint64_t s)
+get_primitive_moves(uint64_t p)
 {
-   s|=s<<(1*D);
-   s|=s<<(2*D);
-   s|=s<<(4*D);
-   return s;
+   p|=p<<(1*D);
+   p|=p<<(2*D);
+   p|=p<<(4*D);
+   return p;
 }
 
 enum direction_down
@@ -91,12 +91,12 @@ enum direction_down
 
 template<direction_down D>
 CONSTEXPR inline uint64_t
-get_primitive_moves(uint64_t s)
+get_primitive_moves(uint64_t p)
 {
-   s|=s>>(1*D);
-   s|=s>>(2*D);
-   s|=s>>(4*D);
-   return s;
+   p|=p>>(1*D);
+   p|=p>>(2*D);
+   p|=p>>(4*D);
+   return p;
 }
 
 // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -179,7 +179,7 @@ get_row(uint64_t s)
 CONSTEXPR inline uint64_t
 get_columns(uint64_t p)
 {
-   return 
+   return
       get_primitive_moves<bottom>(p)|
       get_primitive_moves<top>(p);
 }
@@ -196,12 +196,14 @@ get_column(uint64_t s)
 CONSTEXPR inline uint64_t
 get_exclusive_left(uint64_t s)
 {
-   uint64_t r=get_row(s);
-   uint64_t row_left=(s-1)&r;
-   return get_columns(row_left);
+   assert(is_single_bit(s));
+   uint64_t bs=get_primitive_moves<bottom>(s);
+   uint64_t row_left=(bs-1)&ROW(0);
+   uint64_t r=get_primitive_moves<top>(row_left);
+   return r;
 }
 
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_diag_delta(uint64_t s,uint64_t left)
 {
    assert(is_single_bit(s));
@@ -213,7 +215,7 @@ get_diag_delta(uint64_t s,uint64_t left)
    return sl|sr;
 }
 
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_diag_sum(uint64_t s,uint64_t left)
 {
    assert(is_single_bit(s));
@@ -225,19 +227,19 @@ get_diag_sum(uint64_t s,uint64_t left)
    return sl|sr;
 }
 
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_diag_delta(uint64_t s)
 {
    return get_diag_delta(s,get_exclusive_left(s));
 }
 
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_diag_sum(uint64_t s)
 {
    return get_diag_sum(s,get_exclusive_left(s));
 }
 
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_pawn_move(uint64_t s)
 {
    assert(is_single_bit(s));
@@ -249,7 +251,7 @@ get_pawn_move(uint64_t s)
 
 // if obstacles include our own pieces, they have to be excluded explicitly afterward
 // not including en-passant captures
-CONSTEXPR inline uint64_t 
+CONSTEXPR inline uint64_t
 get_pawn_captures(uint64_t s, uint64_t obstacles)
 {
    assert(is_single_bit(s));
@@ -301,8 +303,8 @@ slide(uint64_t s,uint64_t movement,uint64_t obstacles)
    uint64_t bigger=get_bigger(s);
 
    uint64_t blocking_bottom=smaller&(obstacles&movement);
-   uint64_t bl=get_highest_bit(blocking_bottom);
-   uint64_t bottom_mask=get_bigger_equal_special_0(bl);
+   uint64_t bottom_left=get_highest_bit(blocking_bottom);
+   uint64_t bottom_mask=get_bigger_equal_special_0(bottom_left);
 
    uint64_t blocking_top=bigger&(obstacles&movement);
    uint64_t top_right=get_lowest_bit(blocking_top);
@@ -330,6 +332,7 @@ slide_rook(uint64_t s, uint64_t obstacles)
 CONSTEXPR inline uint64_t
 slide_bishop(uint64_t s, uint64_t obstacles)
 {
+   assert(is_single_bit(s));
    uint64_t left=get_exclusive_left(s);
    uint64_t dd=get_diag_delta(s,left);
    dd^=s;

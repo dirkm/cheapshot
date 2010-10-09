@@ -44,9 +44,9 @@ const SingleColorBoard init_white_board=
 };
 
 inline void
-mirror(SingleColorBoard& board)
+mirror(SingleColorBoard& scb)
 {
-   for(uint64_t* bm=board.begin();bm!=board.end();++bm)
+   for(auto bm=scb.begin();bm!=scb.end();++bm)
    {
       uint64_t& v=*bm;
       // swap bytes
@@ -58,7 +58,14 @@ mirror(SingleColorBoard& board)
    }
 }
 
-inline Board 
+inline void
+mirror(Board& board)
+{
+   for(auto scb=board.begin();scb!=board.end();++scb)
+      mirror(*scb);
+}
+
+inline Board
 get_initial_board()
 {
    Board b={init_white_board,init_white_board};
@@ -80,7 +87,7 @@ inline void
 fill_layout_single_color(const SingleColorBoard& board,std::array<char,64>& repr,const std::array<char,nrpieces>& pieces)
 {
    const char* pi=pieces.begin();
-   for(const uint64_t* bi=board.begin();bi!=board.end();++bi,++pi)
+   for(auto bi=board.begin();bi!=board.end();++bi,++pi)
       fill_layout(*bi,repr,*pi);
 }
 
@@ -140,7 +147,7 @@ scan_board_single_color(const char* l, const std::array<char,nrpieces>& pieces)
 {
    SingleColorBoard scb;
    const char* pi=pieces.begin();
-   for(uint64_t* bi=scb.begin();bi!=scb.end();++bi,++pi)
+   for(auto bi=scb.begin();bi!=scb.end();++bi,++pi)
       *bi=scan_layout(l,*pi);
    return scb;
 }
