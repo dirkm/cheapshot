@@ -30,7 +30,7 @@ include $(scan_subdirs)
 
 cleanfiles += $(EXEC)
 
-create_d = $(SHELL) -ec 'gcc -MM $(CPPFLAGS) $< | sed -n "H;$$ {g;s@.*:\(.*\)@$< := \$$\(wildcard\1\)\n$*.o $@: $$\($<\)@;p}" > $@'
+create_d = $(SHELL) -ec '$(CPP) -MM $(CPPFLAGS) $< | sed -n "H;$$ {g;s@.*:\(.*\)@$< := \$$\(wildcard\1\)\n$*.o $@: $$\($<\)@;p}" > $@'
 
 %.cc.d: %.cc
 	$(create_d)

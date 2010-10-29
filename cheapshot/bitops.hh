@@ -41,24 +41,20 @@ get_lowest_bit(uint64_t p)
 }
 
 // 0 in case of 0
-// 1 in case of 1??
+// 1 in case of 1
 
 CONSTEXPR inline uint64_t
 get_highest_bit(uint64_t p)
 {
-   uint64_t bit0=p&0x1ULL;
-   p>>=1;
-   p|=bit0; // can probably be improved upon
-   --p;
-   p|=p>>1;
-   p|=p>>2;
-   p|=p>>4;
-   p|=p>>8;
-   p|=p>>16;
-   p|=p>>32;
-   ++p;
-   assert(is_max_single_bit(p));
-   return p;
+    p|=(p>>1);
+    p|=(p>>2);
+    p|=(p>>4);
+    p|=(p>>8);
+    p|=(p>>16);
+    p|=(p>>32);
+    uint64_t r=p-(p>>1);
+    assert(is_max_single_bit(r));
+    return r;
 }
 
 // simple functions which ignores flipping from left to right on the board
@@ -190,8 +186,6 @@ get_column(uint64_t s)
    assert(is_single_bit(s));
    return get_columns(s);
 }
-
-// get all columns to the left of s, excluding s
 
 CONSTEXPR inline uint64_t
 get_exclusive_left(uint64_t s)

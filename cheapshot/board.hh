@@ -65,7 +65,7 @@ mirror(Board& board)
       mirror(*scb);
 }
 
-inline Board
+CONSTEXPR inline Board
 get_initial_board()
 {
    Board b={init_white_board,init_white_board};
@@ -122,7 +122,7 @@ print_layout(uint64_t t, std::ostream& os,char c='X')
    return print_layout(repr,os);
 }
 
-inline uint64_t
+CONSTEXPR inline uint64_t
 scan_layout(const char* l, char piece)
 {
    uint64_t r=0;

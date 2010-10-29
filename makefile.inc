@@ -1,8 +1,9 @@
 #; -*-makefile-*-
-CPP := g++
+CPP := g++-4.5
+#CPP := g++
 
-CFLAGS := -O3 -g -I. -std=c++0x -march=native -mtune=native
-#CFLAGS := -g -O2 -I. -std=c++0x
+#CFLAGS := -O3 -g -I. -std=c++0x -march=native -mtune=native
+CFLAGS :=  -g -I. -std=c++0x -march=native -mtune=native
 CPPFLAGS := ${CFLAGS} 
 LIBS :=
 LDFLAGS :=

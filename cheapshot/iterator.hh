@@ -3,7 +3,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/transform_iterator.hpp>
-#include <boost/function.hpp>
+#include <tuple>
 
 namespace cheapshot
 {
@@ -43,7 +43,7 @@ private:
    uint64_t m_lsb; // current least significant bit, (the piece currently pointed to)
 };
 
-typedef boost::function<uint_fast8_t (uint64_t)> BoardPosFunction;
+typedef uint_fast8_t (*BoardPosFunction)(uint64_t);
 
 inline
 uint_fast8_t get_board_pos(uint64_t s)
@@ -62,6 +62,7 @@ uint_fast8_t get_board_pos(uint64_t s)
    return deBruijnBitPosition[(s*0x022fdd63cc95386d) >> 58];
 }
 
+// using board_iterator=boost::transform_iterator<BoardPosFunction, bit_iterator>;
 typedef boost::transform_iterator<BoardPosFunction, bit_iterator> board_iterator;
 
 inline
@@ -71,6 +72,58 @@ make_board_iterator(uint64_t val)
    return board_iterator(bit_iterator(val),&get_board_pos);
 }
 
-}
+template<typename Cont>
+struct nested_iterator_guesser
+{
+   typedef typename Cont::value_type::const_iterator type;
+};
 
+template<typename C>
+struct nested_iterator_guesser<C*>
+{
+   typedef typename C::const_iterator type;
+};
+
+template<typename OuterIt, typename InnerIt=
+         typename nested_iterator_guesser<OuterIt>::type > 
+class nested_iterator
+   : public boost::iterator_facade<
+   nested_iterator<OuterIt,InnerIt>,
+   const std::tuple<OuterIt, InnerIt>,std::output_iterator_tag>
+{
+public:
+   nested_iterator(OuterIt itout, OuterIt itOutEnd):
+      m_itOutEnd(itOutEnd)
+   {
+      std::get<0>(m_v)=itout;
+      if(itout!=m_itOutEnd)
+         std::get<1>(m_v)=itout->begin();
+   }
+
+   bool equal(const nested_iterator& other) const
+   {
+      return (std::get<0>(m_v)==std::get<0>(other.m_v)) &&
+         ((std::get<0>(m_v)==m_itOutEnd)||(std::get<1>(m_v)==std::get<1>(other.m_v)));
+   }
+
+   void increment()
+   {
+      ++std::get<1>(m_v);
+      if(std::get<1>(m_v)==std::get<0>(m_v)->end())
+      {
+         ++std::get<0>(m_v);
+         if(std::get<0>(m_v)!=m_itOutEnd)
+            std::get<1>(m_v)=std::get<0>(m_v)->begin();
+      }
+   }
+
+   const std::tuple<OuterIt,InnerIt>& dereference() const { return m_v; }
+   typedef OuterIt outer_iterator;
+   typedef InnerIt inner_iterator;
+private:
+   std::tuple<OuterIt,InnerIt> m_v;
+   const OuterIt m_itOutEnd;
+};
+
+}
 #endif

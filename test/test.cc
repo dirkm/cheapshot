@@ -49,7 +49,7 @@ namespace
       void time_report(const char* descr, int ops)
       {
          tms end_cpu;
-         std::clock_t end_time = times(&end_cpu);    
+         std::clock_t end_time = times(&end_cpu);
          float ops_sec=ops/((end_time - start_time)/ticks_per_sec);
          std::cout << descr << std::endl
                    << " Real Time: " << (end_time - start_time)/ticks_per_sec
@@ -59,7 +59,7 @@ namespace
                    << std::endl;
       }
    private:
-      tms start_cpu;      
+      tms start_cpu;
       std::clock_t start_time;
       static const float ticks_per_sec;
    };
@@ -589,9 +589,9 @@ BOOST_AUTO_TEST_CASE( time_queen_move )
    volatile uint64_t r;
    TimeOperation time_op;
    const long ops=10000000;
+   volatile uint64_t obstacles=random()&~s;
    for(long i=0;i<ops;++i)
    {
-      uint64_t obstacles=random()&~s;
       r=slide_queen(s,obstacles);
    }
    time_op.time_report("queen move",ops);
@@ -611,5 +611,43 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
    time_op.time_report("knight move",ops);
 }
 
+namespace
+{
+   typedef nested_iterator<const std::vector<char>*> NIt;
+   
+   char get_nested_iter_value(const NIt::value_type& v)
+   {
+      return *std::get<1>(v);
+   }
+}
+
+BOOST_AUTO_TEST_CASE( nested_iterator_test )
+{
+   std::array<std::vector<char>,2 > test_array;
+
+   test_array[0]={'a','b','c','d'}; 
+   test_array[1]={'e','f','g'};
+   typedef nested_iterator<const std::vector<char>*> NIt;
+   NIt nested_iter(test_array.begin(),test_array.end());
+   const NIt nested_iter_end(test_array.end(),test_array.end());
+   BOOST_CHECK(nested_iter==nested_iter);
+   BOOST_CHECK(nested_iter!=nested_iter_end);
+   // while(nested_iter!=nested_iter_end)
+   // {
+   //    std::cout << *std::get<1>(*nested_iter) << std::endl;
+   //    ++nested_iter;
+   // }
+   auto el_iter=boost::make_transform_iterator(nested_iter,get_nested_iter_value);
+   auto el_iter_end=boost::make_transform_iterator(nested_iter_end,get_nested_iter_value);
+   // while(el_iter!=el_iter_end)
+   // {
+   //    std::cout << *el_iter << std::endl;
+   //    ++el_iter;
+   // }
+   std::copy(el_iter,el_iter_end,std::ostream_iterator<char>(std::cout,", "));
+   BOOST_CHECK(std::equal(el_iter,el_iter_end,"abcdefg"));
+   BOOST_CHECK(!std::equal(el_iter,el_iter_end,"bbcdefg"));
+   BOOST_CHECK(!std::equal(el_iter,el_iter_end,"abcdeff"));
+}
 
 BOOST_AUTO_TEST_SUITE_END()
