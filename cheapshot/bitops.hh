@@ -53,6 +53,7 @@ get_highest_bit(uint64_t p)
     p|=(p>>16);
     p|=(p>>32);
     uint64_t r=p-(p>>1);
+    // did not get ffsll to work
     assert(is_max_single_bit(r));
     return r;
 }
