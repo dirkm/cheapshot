@@ -14,7 +14,7 @@ namespace cheapshot
 
 // using deBruyn-tables is probably more efficient
 
-CONSTEXPR inline uint_fast8_t
+inline uint_fast8_t
 get_row_number(uint64_t s)
 {
    assert(is_single_bit(s));
@@ -25,26 +25,26 @@ get_row_number(uint64_t s)
    return r;
 }
 
-CONSTEXPR inline uint_fast8_t
+inline uint_fast8_t
 get_column_number(uint64_t s)
 {
    const uint_fast8_t columnmask[]={0xAA,0xCC,0xF0};
    assert(is_single_bit(s));
-   s=get_primitive_moves<bottom>(s);
+   s=get_aliasing_moves<bottom>(s);
    uint_fast8_t r =0;
    for (int i=0; i < 3; ++i)
       r|=((s & columnmask[i] & '\xFF')!= 0)<<i;
    return r;
 }
 
-CONSTEXPR inline uint64_t
+inline uint64_t
 get_horizontal_band(uint8_t row,uint8_t halfwidth)
 {
    uint8_t start=(row<halfwidth)?0:row-halfwidth;
    uint8_t stop=((row+halfwidth)>7)?7:row+halfwidth;
    uint64_t r=0;
    for(;start<=stop;++start)
-      r|=ROW(start);
+      r|=row_with_number(start);
    return r;
 }
 

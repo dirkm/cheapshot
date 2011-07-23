@@ -3,6 +3,7 @@
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
 #include "cheapshot/extra_bitops.hh"
+// #include "cheapshot/engine.hh"
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
@@ -150,9 +151,12 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
-   BOOST_CHECK_EQUAL(slide_rook(POSH('A',1),ROWH(2)),((ROWH(1)^POSH('A',1))|POSH('A',2)));
-   BOOST_CHECK_EQUAL(slide_rook(POSH('D',3),ROWH(2)),((COLUMNH('D')|ROWH(3))&~(ROWH(1)|POSH('D',3))));
-   BOOST_CHECK_EQUAL(slide_rook(POSH('D',3),POSH('D',2)|POSH('D',4)),(POSH('D',2)|POSH('D',4)|ROWH(3))^POSH('D',3));
+   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('A',1),row_with_algebraic_number(2)),
+                     ((row_with_algebraic_number(1)^algebraic_position('A',1))|algebraic_position('A',2)));
+   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('D',3),row_with_algebraic_number(2)),
+                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&~(row_with_algebraic_number(1)|algebraic_position('D',3))));
+   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('D',3),algebraic_position('D',2)|algebraic_position('D',4)),
+                     (algebraic_position('D',2)|algebraic_position('D',4)|row_with_algebraic_number(3))^algebraic_position('D',3));
    {
       const char layout[]=
          "..X.o...\n"
