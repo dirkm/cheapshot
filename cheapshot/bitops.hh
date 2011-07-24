@@ -20,17 +20,18 @@ namespace cheapshot
 
 // move: movement of a piece without taking obstacles in account
 // slide: move until an obstacle is met
+// jump: knights jump
 
 // this file is built-up from lowlevel (top of the file) to highlevel (bottom of the file) functions.
 // piece-moves are found towards the bottom of the file
 
-   constexpr inline bool
+   constexpr bool
    is_max_single_bit(uint64_t p)
    {
       return !(p & (p - 1));
    }
 
-   constexpr inline bool
+   constexpr bool
    is_single_bit(uint64_t p)
    {
       return is_max_single_bit(p) && p;
@@ -38,32 +39,82 @@ namespace cheapshot
 
 // 0 in case of p==0
 
-   constexpr inline uint64_t
+   constexpr uint64_t
    get_lowest_bit(uint64_t p)
    {
       return p&(~p+1);
    }
 
-   constexpr uint64_t fill_right_up(uint64_t p, int n=6, int step=1, int i = 0)
+   constexpr uint64_t 
+   fill_right_up(uint64_t p, int n=6, int step=1, int i = 0)
    {
       return (i<n)?fill_right_up(p|p<<(step*(1<<i)),n,step,i+1):p;
    }
 
-   constexpr uint64_t fill_left_down(uint64_t p, int n=6, int step=1, int i = 0)
+   constexpr uint64_t 
+   fill_left_down(uint64_t p, int n=6, int step=1, int i = 0)
    {
       return (i<n)?fill_left_down(p|p>>(step*(1<<i)),n,step,i+1):p;
    }
 
-   constexpr uint64_t highest_bit_strip_lower_bits_helper(uint64_t p)
+   namespace detail
    {
-      return p-(p>>1);
+      // b00111111 -> b00100000
+      constexpr uint64_t 
+      strip_lower_bits_when_lower_completely_set(uint64_t p)
+      {
+         return p-(p>>1);
+      }
    }
 
-   constexpr uint64_t get_highest_bit(uint64_t p)
+   constexpr uint64_t 
+   get_highest_bit(uint64_t p)
    {
-      return highest_bit_strip_lower_bits_helper(fill_left_down(p));
+      return detail::strip_lower_bits_when_lower_completely_set(fill_left_down(p));
    }
-   
+
+// get all bits from the lower left (row-wise) to the point where the piece is placed
+//  the function accepts 0 and returns "all bits set"
+
+   constexpr uint64_t
+   get_smaller(uint64_t s)
+   {
+      // assert(is_max_single_bit(s));
+      return s-1;
+   }
+
+//  the function accepts 0 and returns "all bits set"
+   constexpr uint64_t
+   get_smaller_equal(uint64_t s)
+   {
+      // assert(is_max_single_bit(s));
+      return (s-1)|s;
+   }
+
+   constexpr uint64_t
+   get_bigger(uint64_t s)
+   {
+      // assert(is_single_bit(s));
+      return ~get_smaller_equal(s);
+   }
+
+   constexpr uint64_t
+   get_bigger_equal(uint64_t s)
+   {
+      // assert(is_single_bit(s));
+      return ~get_smaller(s);
+   }
+
+//  the function accepts 0 and returns "all bits set"
+   constexpr uint64_t
+   get_bigger_equal_special_0(uint64_t s)
+   {
+      // assert(is_max_single_bit(s));
+      return get_bigger_equal(get_highest_bit(s|1ULL)); // TODO: improvable?
+   }
+
+   // sliding moves in each direction
+   // aliasing means "flipping" from left to right on the board is ignored when moving
    enum direction_up
    {
       top=8,
@@ -72,10 +123,8 @@ namespace cheapshot
       top_right=9
    };
 
-// simple functions which ignore flipping from left to right on the board, when calculating
-
    template<direction_up D>
-   constexpr inline uint64_t
+   constexpr uint64_t
    get_aliasing_moves(uint64_t p)
    {
       return fill_right_up(p,3,D)|p;
@@ -90,124 +139,42 @@ namespace cheapshot
    };
 
    template<direction_down D>
-   constexpr inline uint64_t
+   constexpr uint64_t
    get_aliasing_moves(uint64_t p)
    {
       return fill_left_down(p,3,D)|p;
    }
-
-// get all bits from the lower left (row-wise) to the point where the piece is placed
-// suffix special_0 means:
-//  the function accepts 0 at input
-//  some defined value is returned
-
-// return all if 0 at input
-   uint64_t
-   get_smaller_special_0(uint64_t s)
-   {
-      assert(is_max_single_bit(s));
-      return s-1;
-      // return is_max_single_bit(s)?s-1:throw std::runtime_error("input should be a single bit");
-      // assert(is_max_single_bit(s));
-      // return s-1;
-   }
-
-   inline uint64_t
-   get_smaller(uint64_t s)
-   {
-      assert(is_single_bit(s));
-      return get_smaller_special_0(s);
-   }
-
-// return all if 0 at input
-   inline uint64_t
-   get_smaller_equal_special_0(uint64_t s)
-   {
-      assert(is_max_single_bit(s));
-      return (s-1)|s;
-   }
-
-   inline uint64_t
-   get_smaller_equal(uint64_t s)
-   {
-      assert(is_single_bit(s));
-      return get_smaller_equal_special_0(s);
-   }
-
-   inline uint64_t
-   get_bigger(uint64_t s)
-   {
-      assert(is_single_bit(s));
-      return ~get_smaller_equal(s);
-   }
-
-   inline uint64_t
-   get_bigger_equal(uint64_t s)
-   {
-      assert(is_single_bit(s));
-      return ~get_smaller(s);
-   }
-
-   inline uint64_t
-   get_bigger_equal_special_0(uint64_t s)
-   {
-      assert(is_max_single_bit(s));
-      s=get_highest_bit(s|1ULL); // TODO: improvable?
-      return get_bigger_equal(s);
-   }
-
-   constexpr uint64_t Row0=0x00000000000000FFULL;
-   constexpr uint64_t Col0=0x0101010101010101ULL;
-
-// macros as a temporary workaround until C++0x constexpr is working
-
-   inline constexpr
-   uint64_t position(uint8_t column, uint8_t row)
+   
+   // helpers to get patterns based on column-row coordinates
+   
+   constexpr uint64_t 
+   position(uint8_t column, uint8_t row)
    {
       return 1ULL<<((row)*8+(column));
    }
-
-   inline constexpr
-   uint64_t algebraic_position(char column, uint8_t row)
-   {
-      return position(column-'A',row-1);
-   }
    
-   inline constexpr
-   uint64_t row_with_number(uint8_t row_number)
+   constexpr uint64_t 
+   row_with_number(uint8_t row_number)
    {
-      return Row0<<(row_number*8);
+      return get_aliasing_moves<right>(1ULL)<<(row_number*8);
    }
 
-   inline constexpr
-   uint64_t row_with_algebraic_number(uint8_t alrow)
+   constexpr uint64_t 
+   column_with_number(uint8_t column_number)
    {
-      return row_with_number(alrow-1);
+      return get_aliasing_moves<top>(1ULL)<<(column_number);
    }
 
-   inline constexpr
-   uint64_t column_with_number(uint8_t column_number)
-   {
-      return Col0<<(column_number);
-   }
-
-   inline constexpr
-   uint64_t column_with_algebraic_number(uint8_t col)
-   {
-      return column_with_number(col-'A');
-   }
-
-   inline uint64_t
+   constexpr uint64_t
    get_row(uint64_t s)
    {
-      assert(is_single_bit(s));
-      s=get_aliasing_moves<left>(s);
-      s&=column_with_number(0);
-      s=get_aliasing_moves<right>(s);
-      return s;
+      // assert(is_single_bit(s));
+      return get_aliasing_moves<right>(
+         get_aliasing_moves<left>(s)&
+         column_with_number(0));
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_columns(uint64_t p)
    {
       return
@@ -215,21 +182,40 @@ namespace cheapshot
          get_aliasing_moves<top>(p);
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_column(uint64_t s)
    {
-      assert(is_single_bit(s));
+      // assert(is_single_bit(s));
       return get_columns(s);
    }
 
-   inline uint64_t
+   // helpers to get patterns based on column-row coordinates in algebraic notation
+
+   constexpr uint64_t 
+   algebraic_position(char column, uint8_t row)
+   {
+      return position(column-'A',row-1);
+   }
+
+   constexpr uint64_t 
+   row_with_algebraic_number(uint8_t alrow)
+   {
+      return row_with_number(alrow-1);
+   }
+
+   constexpr uint64_t 
+   column_with_algebraic_number(uint8_t col)
+   {
+      return column_with_number(col-'A');
+   }
+
+   constexpr uint64_t
    get_exclusive_left(uint64_t s)
    {
-      assert(is_single_bit(s));
-      uint64_t bs=get_aliasing_moves<bottom>(s);
-      uint64_t row_left=(bs-1)&row_with_number(0);
-      uint64_t r=get_aliasing_moves<top>(row_left);
-      return r;
+      // assert(is_single_bit(s));
+      return get_aliasing_moves<top>(
+         (get_aliasing_moves<bottom>(s)-1)
+         &row_with_number(0));
    }
 
    inline uint64_t
@@ -351,7 +337,7 @@ namespace cheapshot
 
       uint64_t blocking_top=bigger&(obstacles&movement);
       uint64_t top_right=get_lowest_bit(blocking_top);
-      uint64_t top_mask=get_smaller_equal_special_0(top_right);
+      uint64_t top_mask=get_smaller_equal(top_right);
 
       uint64_t result=bottom_mask&top_mask;
       result&=movement;
@@ -398,7 +384,7 @@ namespace cheapshot
    {
       uint64_t blocking_top=obstacles&movement;
       uint64_t tr=get_lowest_bit(blocking_top);
-      uint64_t top_mask=get_smaller_special_0(tr);
+      uint64_t top_mask=get_smaller(tr);
       movement&=top_mask;
       return movement;
    }
