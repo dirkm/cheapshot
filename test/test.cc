@@ -219,6 +219,13 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
    }
 }
 
+BOOST_AUTO_TEST_CASE( vertical_band_test )
+{
+   BOOST_CHECK_EQUAL(detail::aliased_expand(column_with_number(3),1),column_with_number(2)|column_with_number(3)|column_with_number(4));
+   BOOST_CHECK_EQUAL(get_vertical_band(4ULL,1),column_with_number(1)|column_with_number(2)|column_with_number(3));
+   BOOST_CHECK_EQUAL(get_vertical_band(1ULL,2),column_with_number(0)|column_with_number(1)|column_with_number(2));
+}
+
 BOOST_AUTO_TEST_CASE( knight_moves_test )
 {
    {
@@ -231,7 +238,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "...X.X..\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
    {
@@ -244,7 +251,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          ".X......\n"
          "..X.....\n"
          "n.......\n";
-      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
    {
@@ -257,7 +264,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "........\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_knight_moves(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
 }
@@ -610,7 +617,7 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
    const long ops=100000000;
    for(long i=0;i<ops;++i)
    {
-      r=get_knight_moves(s);
+      r=get_knight_jumps(s);
    }
    time_op.time_report("knight move",ops);
 }

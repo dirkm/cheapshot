@@ -45,32 +45,45 @@ namespace cheapshot
       return p&(~p+1);
    }
 
-   constexpr uint64_t 
-   fill_right_up(uint64_t p, int n=6, int step=1, int i = 0)
-   {
-      return (i<n)?fill_right_up(p|p<<(step*(1<<i)),n,step,i+1):p;
-   }
-
-   constexpr uint64_t 
-   fill_left_down(uint64_t p, int n=6, int step=1, int i = 0)
-   {
-      return (i<n)?fill_left_down(p|p>>(step*(1<<i)),n,step,i+1):p;
-   }
-
    namespace detail
+   // not considered as part of the API, because too specific, dangerous, or prone to change
    {
+      constexpr uint64_t
+      fill_right_up(uint64_t p, int n=6, int step=1, int i = 0)
+      {
+         return (i<n)?fill_right_up(p|p<<(step*(1<<i)),n,step,i+1):p;
+      }
+
+      constexpr uint64_t
+      fill_left_down(uint64_t p, int n=6, int step=1, int i = 0)
+      {
+         return (i<n)?fill_left_down(p|p>>(step*(1<<i)),n,step,i+1):p;
+      }
+
+      constexpr uint64_t
+      aliased_diffuse(uint64_t p, int s)
+      {
+         return (p<<s)|(p>>s);
+      }
+
+      constexpr uint64_t
+      aliased_expand(uint64_t p, int s)
+      {
+         return p|aliased_diffuse(p,s);
+      }
+
       // b00111111 -> b00100000
-      constexpr uint64_t 
+      constexpr uint64_t
       strip_lower_bits_when_lower_completely_set(uint64_t p)
       {
          return p-(p>>1);
       }
    }
 
-   constexpr uint64_t 
+   constexpr uint64_t
    get_highest_bit(uint64_t p)
    {
-      return detail::strip_lower_bits_when_lower_completely_set(fill_left_down(p));
+      return detail::strip_lower_bits_when_lower_completely_set(detail::fill_left_down(p));
    }
 
 // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -127,8 +140,8 @@ namespace cheapshot
    constexpr uint64_t
    get_aliasing_moves(uint64_t p)
    {
-      return fill_right_up(p,3,D)|p;
-   } 
+      return detail::fill_right_up(p,3,D)|p;
+   }
 
    enum direction_down
    {
@@ -142,24 +155,24 @@ namespace cheapshot
    constexpr uint64_t
    get_aliasing_moves(uint64_t p)
    {
-      return fill_left_down(p,3,D)|p;
+      return detail::fill_left_down(p,3,D)|p;
    }
-   
+
    // helpers to get patterns based on column-row coordinates
-   
-   constexpr uint64_t 
+
+   constexpr uint64_t
    position(uint8_t column, uint8_t row)
    {
       return 1ULL<<((row)*8+(column));
    }
-   
-   constexpr uint64_t 
+
+   constexpr uint64_t
    row_with_number(uint8_t row_number)
    {
       return get_aliasing_moves<right>(1ULL)<<(row_number*8);
    }
 
-   constexpr uint64_t 
+   constexpr uint64_t
    column_with_number(uint8_t column_number)
    {
       return get_aliasing_moves<top>(1ULL)<<(column_number);
@@ -191,129 +204,133 @@ namespace cheapshot
 
    // helpers to get patterns based on column-row coordinates in algebraic notation
 
-   constexpr uint64_t 
+   constexpr uint64_t
    algebraic_position(char column, uint8_t row)
    {
       return position(column-'A',row-1);
    }
 
-   constexpr uint64_t 
+   constexpr uint64_t
    row_with_algebraic_number(uint8_t alrow)
    {
       return row_with_number(alrow-1);
    }
 
-   constexpr uint64_t 
+   constexpr uint64_t
    column_with_algebraic_number(uint8_t col)
    {
       return column_with_number(col-'A');
    }
+
+   // specialized patterns for piece moves
 
    constexpr uint64_t
    get_exclusive_left(uint64_t s)
    {
       // assert(is_single_bit(s));
       return get_aliasing_moves<top>(
-         (get_aliasing_moves<bottom>(s)-1)
-         &row_with_number(0));
+         (get_aliasing_moves<bottom>(s)-1)&row_with_number(0));
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_diag_delta(uint64_t s,uint64_t left)
    {
-      assert(is_single_bit(s));
-      uint64_t sl=get_aliasing_moves<bottom_left>(s);
-      sl&=left;
-      uint64_t sr=get_aliasing_moves<top_right>(s);
-      uint64_t right=~left;
-      sr&=right;
-      return sl|sr;
+      // assert(is_single_bit(s));
+      return
+         (get_aliasing_moves<bottom_left>(s)&left)|
+         (get_aliasing_moves<top_right>(s)&~left); // right=~left
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_diag_sum(uint64_t s,uint64_t left)
    {
-      assert(is_single_bit(s));
-      uint64_t sl=get_aliasing_moves<top_left>(s);
-      sl&=left;
-      uint64_t sr=get_aliasing_moves<bottom_right>(s);
-      uint64_t right=~left;
-      sr&=right;
-      return sl|sr;
+      // assert(is_single_bit(s));
+      return
+         (get_aliasing_moves<top_left>(s)&left)|
+         (get_aliasing_moves<bottom_right>(s)&~left); // right=~left
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_diag_delta(uint64_t s)
    {
       return get_diag_delta(s,get_exclusive_left(s));
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_diag_sum(uint64_t s)
    {
       return get_diag_sum(s,get_exclusive_left(s));
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_pawn_move(uint64_t s)
    {
-      assert(is_single_bit(s));
-      assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      uint64_t r=(s<<8);
-      r|=(s&row_with_number(1))<<16;
-      return r;
+      // assert(is_single_bit(s));
+      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
+      return (s<<8)|(s&row_with_number(1))<<16;
    }
 
 // if obstacles include our own pieces, they have to be excluded explicitly afterward
 // not including en-passant captures
-   inline uint64_t
+   constexpr uint64_t
    get_pawn_captures(uint64_t s, uint64_t obstacles)
    {
-      assert(is_single_bit(s));
-      assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      uint64_t next_row=get_row(s<<8);
-      uint64_t possible_pawn_captures=((s<<7)|(s<<9))&next_row;
-      return possible_pawn_captures&obstacles;
+      // assert(is_single_bit(s));
+      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
+      return
+         ((s<<7)|(s<<9)) & // possible_pawn_captures
+         get_row(s<<8) & // next row
+         obstacles;
    }
 
-   inline uint64_t
+   namespace detail
+   {
+      constexpr uint64_t
+      aliased_band_expand(uint64_t band,int n=1, int i = 0)
+      {
+         return i!=n?
+            detail::aliased_band_expand(detail::aliased_expand(band,1),n,i+1):
+            band;
+      }
+   }
+
+   constexpr uint64_t
    get_vertical_band(uint64_t s,uint8_t halfwidth)
    {
-      assert(is_single_bit(s));
-      s=get_aliasing_moves<bottom>(s);
-      for(int i=0;i<halfwidth;++i)
-         s|=(s<<1)|(s>>1);
-      s&=row_with_number(0);
-      s=get_aliasing_moves<top>(s);
-      return s;
+      // assert(is_single_bit(s));
+      return
+         get_aliasing_moves<top>(
+            (detail::aliased_band_expand(get_aliasing_moves<bottom>(s),halfwidth)&
+             row_with_number(0)));
    }
 
-   inline uint64_t
-   get_knight_moves(uint64_t s)
+   constexpr uint64_t
+   get_knight_jumps(uint64_t s)
    {
-      uint64_t s1=s<<2|s>>2;
-      uint64_t s2=s<<1|s>>1;
-      return get_vertical_band(s,2)&(s1<<8|s1>>8|s2<<16|s2>>16);
+      return
+         get_vertical_band(s,2) &
+         (detail::aliased_diffuse(detail::aliased_diffuse(s,2),8)|
+          detail::aliased_diffuse(detail::aliased_diffuse(s,1),16));
    }
 
 // helper to get uniform interface
-   inline uint64_t
+   constexpr uint64_t
    jump_knight(uint64_t s, uint64_t /*obstacles*/)
    {
-      return get_knight_moves(s);
+      return get_knight_jumps(s);
    }
 
-   inline uint64_t
+   constexpr uint64_t
    get_king_moves(uint64_t s)
    {
-      uint64_t m=s;
-      m|=m<<1|m>>1;
-      m|=m<<8|m>>8;
-      return (m&get_vertical_band(s,1))&~s;
+      return
+         detail::aliased_expand(detail::aliased_expand(s,1),8)&
+         get_vertical_band(s,1)&
+         ~s;
    }
 
 // helper to get uniform interface
-   inline uint64_t
+   constexpr uint64_t
    move_king(uint64_t s, uint64_t /*obstacles*/)
    {
       return get_king_moves(s);
