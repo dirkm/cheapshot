@@ -126,27 +126,27 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
 BOOST_AUTO_TEST_CASE( init_board_test )
 {
    boost::test_tools::output_test_stream ots;
-   Board b= get_initial_board();
+   Board b= initial_board();
    print_board(b,ots);
    BOOST_CHECK( ots.is_equal(initial_layout));
 }
 
 BOOST_AUTO_TEST_CASE( primitive_test )
 {
-   BOOST_CHECK_EQUAL(get_highest_bit(0xF123ULL),0x8000ULL);
-   BOOST_CHECK_EQUAL(get_highest_bit(0x1ULL),0x1ULL);
-   BOOST_CHECK_EQUAL(get_highest_bit(0x0ULL),0x0ULL);
-   BOOST_CHECK_EQUAL(get_exclusive_left(0x1ULL),0x0ULL);
-   BOOST_CHECK_EQUAL(get_exclusive_left(0x2ULL),0x0101010101010101ULL);
+   BOOST_CHECK_EQUAL(highest_bit(0xF123ULL),0x8000ULL);
+   BOOST_CHECK_EQUAL(highest_bit(0x1ULL),0x1ULL);
+   BOOST_CHECK_EQUAL(highest_bit(0x0ULL),0x0ULL);
+   BOOST_CHECK_EQUAL(exclusive_left(0x1ULL),0x0ULL);
+   BOOST_CHECK_EQUAL(exclusive_left(0x2ULL),0x0101010101010101ULL);
 }
 
 BOOST_AUTO_TEST_CASE( row_and_column_test )
 {
-   BOOST_CHECK_EQUAL(get_row_number(1ULL<<63),7);
-   BOOST_CHECK_EQUAL(get_row_number(1ULL<<1),0);
-   BOOST_CHECK_EQUAL(get_smaller(8),7);
-   BOOST_CHECK_EQUAL(get_column_number(1ULL<<1),1);
-   BOOST_CHECK_EQUAL(get_column_number(1ULL<<63),7);
+   BOOST_CHECK_EQUAL(row_number(1ULL<<63),7);
+   BOOST_CHECK_EQUAL(row_number(1ULL<<1),0);
+   BOOST_CHECK_EQUAL(smaller(8),7);
+   BOOST_CHECK_EQUAL(column_number(1ULL<<1),1);
+   BOOST_CHECK_EQUAL(column_number(1ULL<<63),7);
 }
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
@@ -221,12 +221,12 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
 
 BOOST_AUTO_TEST_CASE( vertical_band_test )
 {
-   BOOST_CHECK_EQUAL(detail::aliased_expand(column_with_number(3),1),column_with_number(2)|column_with_number(3)|column_with_number(4));
-   BOOST_CHECK_EQUAL(get_vertical_band(4ULL,1),column_with_number(1)|column_with_number(2)|column_with_number(3));
-   BOOST_CHECK_EQUAL(get_vertical_band(1ULL,2),column_with_number(0)|column_with_number(1)|column_with_number(2));
+   BOOST_CHECK_EQUAL(detail::aliased_widen(column_with_number(3),1),column_with_number(2)|column_with_number(3)|column_with_number(4));
+   BOOST_CHECK_EQUAL(vertical_band(4ULL,1),column_with_number(1)|column_with_number(2)|column_with_number(3));
+   BOOST_CHECK_EQUAL(vertical_band(1ULL,2),column_with_number(0)|column_with_number(1)|column_with_number(2));
 }
 
-BOOST_AUTO_TEST_CASE( knight_moves_test )
+BOOST_AUTO_TEST_CASE( jump_knight_test )
 {
    {
       const char layout[]=
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "...X.X..\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
    {
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          ".X......\n"
          "..X.....\n"
          "n.......\n";
-      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
    {
@@ -264,12 +264,12 @@ BOOST_AUTO_TEST_CASE( knight_moves_test )
          "........\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_knight_jumps(scan_layout(layout,'n')),
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
                         scan_layout(layout,'X'));
    }
 }
 
-BOOST_AUTO_TEST_CASE( king_moves_test )
+BOOST_AUTO_TEST_CASE( move_king_test )
 {
    {
       const char layout[]=
@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE( king_moves_test )
          ".XXX....\n"
          ".XkX....\n"
          ".XXX....\n";
-      BOOST_CHECK_EQUAL(get_king_moves(scan_layout(layout,'k')),
+      BOOST_CHECK_EQUAL(move_king_simple(scan_layout(layout,'k')),
                         scan_layout(layout,'X'));
    }
    {
@@ -294,12 +294,12 @@ BOOST_AUTO_TEST_CASE( king_moves_test )
          "........\n"
          ".XXX....\n"
          ".XkX....\n";
-      BOOST_CHECK_EQUAL(get_king_moves(scan_layout(layout,'k')),
+      BOOST_CHECK_EQUAL(move_king_simple(scan_layout(layout,'k')),
                         scan_layout(layout,'X'));
    }
 }
 
-BOOST_AUTO_TEST_CASE( pawn_moves_test )
+BOOST_AUTO_TEST_CASE( slide_pawn_test )
 {
    {
       const char layout[]=
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE( pawn_capture_test )
          "..p.....\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_pawn_captures(
+      BOOST_CHECK_EQUAL(pawn_captures(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
                         scan_layout(layout,'O'));
@@ -408,7 +408,7 @@ BOOST_AUTO_TEST_CASE( pawn_capture_test )
          ".po.....\n"
          "..o.....\n"
          "........\n";
-      BOOST_CHECK_EQUAL(get_pawn_captures(
+      BOOST_CHECK_EQUAL(pawn_captures(
                            scan_layout(layout,'p'),
                            scan_layout(layout,'o')|scan_layout(layout,'O')),
                         scan_layout(layout,'O'));
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(get_smaller(1ULL<<(8*(8-(1)))),ots);
+      print_layout(smaller(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "XXXXXXXX\n"
@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(get_diag_delta(1ULL<<(8*(8-(1)))),ots);
+      print_layout(diag_delta(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "X.......\n"
                       "........\n"
@@ -491,7 +491,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(get_diag_delta(0x80ULL<<(8*(8-(1)))),ots);
+      print_layout(diag_delta(0x80ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       ".......X\n"
                       "......X.\n"
@@ -505,7 +505,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(get_diag_delta(0x10ULL<<(8*(8-(1)))),ots);
+      print_layout(diag_delta(0x10ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "....X...\n"
                       "...X....\n"
@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(get_diag_sum(1<<15),ots);
+      print_layout(diag_sum(1<<15),ots);
       BOOST_CHECK( ots.is_equal(
                       ".X......\n"
                       "..X.....\n"
@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
                   ".......X\n"
                   , 'X'),DiagSum0);
 
-   BOOST_CHECK(get_initial_board()==scan_board(initial_layout));
+   BOOST_CHECK(initial_board()==scan_board(initial_layout));
 }
 
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )
@@ -587,8 +587,8 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    const long ops=100000000;
    for(long i=0;i<ops;++i)
    {
-      c=get_column_number(s);
-      r=get_row_number(s);
+      c=column_number(s);
+      r=row_number(s);
    }
    time_op.time_report("column/row calculation",ops);
 }
@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
    const long ops=100000000;
    for(long i=0;i<ops;++i)
    {
-      r=get_knight_jumps(s);
+      r=jump_knight_simple(s);
    }
    time_op.time_report("knight move",ops);
 }
@@ -626,7 +626,7 @@ namespace
 {
    typedef nested_iterator<const std::vector<char>*> NIt;
    
-   char get_nested_iter_value(const NIt::value_type& v)
+   char nested_iter_value(const NIt::value_type& v)
    {
       return *std::get<1>(v);
    }
@@ -648,8 +648,8 @@ BOOST_AUTO_TEST_CASE( nested_iterator_test )
    //    std::cout << *std::get<1>(*nested_iter) << std::endl;
    //    ++nested_iter;
    // }
-   auto el_iter=boost::make_transform_iterator(nested_iter,get_nested_iter_value);
-   auto el_iter_end=boost::make_transform_iterator(nested_iter_end,get_nested_iter_value);
+   auto el_iter=boost::make_transform_iterator(nested_iter,nested_iter_value);
+   auto el_iter_end=boost::make_transform_iterator(nested_iter_end,nested_iter_value);
    // while(el_iter!=el_iter_end)
    // {
    //    std::cout << *el_iter << std::endl;

@@ -14,7 +14,7 @@ namespace cheapshot
 
    typedef std::array<uint64_t,(std::size_t)pieces::count> SingleColorBoard;
 
-   uint64_t get_piece_map(const SingleColorBoard& scb)
+   uint64_t piece_map(const SingleColorBoard& scb)
    {
       uint64_t r=0;
       for(auto scbit=scb.begin();scbit!=scb.end();++scbit)
@@ -60,7 +60,7 @@ namespace cheapshot
    }
 
    inline Board
-   get_initial_board()
+   initial_board()
    {
       Board b={init_white_board,init_white_board};
       mirror(b[(std::size_t)colors::black]);

@@ -30,7 +30,7 @@ include $(scan_subdirs)
 
 cleanfiles += $(EXEC)
 
-create_d = $(SHELL) -ec '$(CPP) -MM $(CPPFLAGS) $< | sed -n "H;$$ {g;s@.*:\(.*\)@$< := \$$\(wildcard\1\)\n$*.o $@: $$\($<\)@;p}" > $@'
+create_d = $(SHELL) -ec '$(CXX) -MM $(CPPFLAGS) $< | sed -n "H;$$ {g;s@.*:\(.*\)@$< := \$$\(wildcard\1\)\n$*.o $@: $$\($<\)@;p}" > $@'
 
 %.cc.d: %.cc
 	$(create_d)
@@ -45,5 +45,12 @@ files:
 
 makefile: makefile.inc
 
-tests: test/test
+.PHONY: test
+test: unittest static_test 
+
+.PHONY: unittest
+unittest: test/test
 	$^
+
+.PHONY: static_test
+static_test: $(call depend, test/static_test.cc) test/static_test.o
