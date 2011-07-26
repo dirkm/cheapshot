@@ -364,47 +364,51 @@ namespace cheapshot
          slide(s,row(s)^s,obstacles); // horizontal
    }
 
-   inline uint64_t
+   namespace detail
+   {
+      constexpr uint64_t
+      slide_bishop_optimised(uint64_t s, uint64_t obstacles,uint64_t left)
+      {
+         return 
+            slide(s,diag_delta(s,left)^s,obstacles)|
+            slide(s,diag_sum(s,left)^s,obstacles);
+      }
+   }
+
+   constexpr uint64_t
    slide_bishop(uint64_t s, uint64_t obstacles)
    {
-      assert(is_single_bit(s));
-      uint64_t left=exclusive_left(s);
-      uint64_t dd=diag_delta(s,left);
-      dd^=s;
-      uint64_t result=slide(s,dd,obstacles);
-      uint64_t ds=diag_sum(s,left);
-      ds^=s;
-      result|=slide(s,ds,obstacles);
-      return result;
+      // assert(is_single_bit(s));
+      return 
+         detail::slide_bishop_optimised(s,obstacles,exclusive_left(s));
    }
 
-   inline uint64_t
+   constexpr uint64_t
    slide_queen(uint64_t s, uint64_t obstacles)
    {
-      assert(is_single_bit(s));
-      return slide_rook(s,obstacles)|slide_bishop(s,obstacles);
+      // assert(is_single_bit(s));
+      return 
+         slide_rook(s,obstacles)|
+         slide_bishop(s,obstacles);
    }
 
-   inline uint64_t
+   constexpr uint64_t
    slide_optimised_for_pawns(uint64_t movement,uint64_t obstacles)
    {
-      uint64_t blocking_top=obstacles&movement;
-      uint64_t tr=lowest_bit(blocking_top);
-      uint64_t top_mask=smaller(tr);
-      movement&=top_mask;
-      return movement;
+      return smaller(
+         lowest_bit(
+            obstacles&movement // blocking_top
+            ))&movement;
    }
 
-   inline uint64_t
+   constexpr uint64_t
    slide_pawn(uint64_t s,uint64_t obstacles)
    {
-      assert(is_single_bit(s));
-      assert((s&obstacles)==0);
-      uint64_t movement=pawn_move(s);
-      return slide_optimised_for_pawns(movement,obstacles);
+      return 
+         slide_optimised_for_pawns(pawn_move(s),obstacles);
    }
 
-   inline uint64_t
+   constexpr uint64_t
    pawn_slide_and_captures(uint64_t s,uint64_t obstacles)
    {
       return slide_pawn(s,obstacles)|pawn_captures(s,obstacles);
