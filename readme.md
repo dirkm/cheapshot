@@ -7,7 +7,8 @@ Is is meant to be a chess-engine written in C++0x, and should take advantage of 
 
 In order to build, boost (system-layout) is required.
 
-Currently, I am working on board setup, and piece-moves. 
+Basic piece-moves is done. 
+Currently, I am working on a routine to walk plies. 
 
 There is no AI yet. You might want to check back in a couple of years.
 

@@ -13,16 +13,16 @@ namespace cheapshot
    constexpr piece_representation repr_pieces_black={'P','N','B','R','Q','K'};
 
    inline void
-   fill_canvas(const uint64_t& bm,canvas& repr,char piece)
+   fill_canvas(const uint64_t& bm,canvas& c,char piece)
    {
-      for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
-         repr[*it]=piece;
+      for(auto it=make_board_iterator(bm);it!=board_iterator();++it)
+         c[*it]=piece;
    }
 
    inline void
    fill_canvas_single_color(const SingleColorBoard& board,canvas& c,piece_representation p)
    {
-      const char* pi=p.begin();
+      auto pi=p.begin();
       for(auto bi=board.begin();bi!=board.end();++bi,++pi)
          fill_canvas(*bi,c,*pi);
    }
@@ -50,12 +50,12 @@ namespace cheapshot
    }
 
    inline std::ostream&
-   print_canvas(uint64_t t, std::ostream& os,char c='X')
+   print_canvas(uint64_t t, std::ostream& os,char p='X')
    {
-      canvas repr;
-      repr.fill('.');
-      fill_canvas(t,repr,c);
-      return print_canvas(repr,os);
+      canvas c;
+      c.fill('.');
+      fill_canvas(t,c,p);
+      return print_canvas(c,os);
    }
 
    inline uint64_t

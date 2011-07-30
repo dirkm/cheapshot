@@ -30,9 +30,8 @@ namespace cheapshot
    inline void
    mirror(SingleColorBoard& scb)
    {
-      for(auto bm=scb.begin();bm!=scb.end();++bm)
+      for(uint64_t& v: scb)
       {
-         uint64_t& v=*bm;
          // swap bytes
          v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
          // swap 2-byte long pairs
@@ -45,8 +44,8 @@ namespace cheapshot
    inline void
    mirror(Board& board)
    {
-      for(auto scb=board.begin();scb!=board.end();++scb)
-         mirror(*scb);
+      for(SingleColorBoard& scb: board)
+         mirror(scb);
    }
 
    inline Board
@@ -60,8 +59,8 @@ namespace cheapshot
    uint64_t obstacles(const SingleColorBoard& scb)
    {
       uint64_t r=0;
-      for(auto scbit=scb.begin();scbit!=scb.end();++scbit)
-         r|=*scbit;
+      for(uint64_t p: scb)
+         r|=p;
       return r;
    }
 } // cheapshot

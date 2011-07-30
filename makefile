@@ -45,12 +45,11 @@ files:
 
 makefile: makefile.inc
 
-.PHONY: test
-test: unittest static_test 
+.PHONY: test unittest ct_test
 
-.PHONY: unittest
+test: unittest ct_test 
+
 unittest: test/test
 	$^
 
-.PHONY: static_test
-static_test: $(call depend, test/static_test.cc) test/static_test.o
+ct_test: $(call depend, test/ct_test.cc) test/ct_test.o
