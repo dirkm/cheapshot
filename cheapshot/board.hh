@@ -1,11 +1,9 @@
 #ifndef CHEAPSHOT_BOARD_HH
 #define CHEAPSHOT_BOARD_HH
 
-#include "cheapshot/iterator.hh"
 #include "cheapshot/bitops.hh"
 
 #include <array>
-#include <cstdint>
 
 namespace cheapshot
 {
@@ -14,27 +12,19 @@ namespace cheapshot
 
    typedef std::array<uint64_t,(std::size_t)pieces::count> SingleColorBoard;
 
-   uint64_t piece_map(const SingleColorBoard& scb)
-   {
-      uint64_t r=0;
-      for(auto scbit=scb.begin();scbit!=scb.end();++scbit)
-         r|=*scbit;
-      return r;
-   }
-
    enum class colors: std::size_t { white, black, count };
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    typedef std::array<SingleColorBoard,(std::size_t)colors::count> Board;
 
-   const SingleColorBoard init_white_board=
+   constexpr SingleColorBoard init_white_board=
    {
       row_with_algebraic_number(2), // p
-      algebraic_position('B',1)|algebraic_position('G',1), // n
-      algebraic_position('C',1)|algebraic_position('F',1), // b
-      algebraic_position('A',1)|algebraic_position('H',1), // r
-      algebraic_position('D',1), // q
-      algebraic_position('E',1) // k
+      algpos('B',1)|algpos('G',1), // n
+      algpos('C',1)|algpos('F',1), // b
+      algpos('A',1)|algpos('H',1), // r
+      algpos('D',1), // q
+      algpos('E',1) // k
    };
 
    inline void
@@ -67,93 +57,13 @@ namespace cheapshot
       return b;
    }
 
-   const std::array<char,(std::size_t)pieces::count> repr_pieces_white={'p','n','b','r','q','k'};
-   const std::array<char,(std::size_t)pieces::count> repr_pieces_black={'P','N','B','R','Q','K'};
-
-   inline void
-   fill_layout(const uint64_t& bm,std::array<char,64>& repr,char piece)
-   {
-      for(board_iterator it=make_board_iterator(bm);it!=board_iterator();++it)
-         repr[*it]=piece;
-   }
-
-   inline void
-   fill_layout_single_color(const SingleColorBoard& board,std::array<char,64>& repr,const std::array<char,(std::size_t)pieces::count>& p)
-   {
-      const char* pi=p.begin();
-      for(auto bi=board.begin();bi!=board.end();++bi,++pi)
-         fill_layout(*bi,repr,*pi);
-   }
-
-   inline std::ostream&
-   print_layout(std::array<char,64>& repr,std::ostream& os)
-   {
-      for(int i=7;i>=0;--i)
-      {
-         for(int j=i*8;j<(i+1)*8;++j)
-            os <<repr[j];
-         os << "\n";
-      }
-      return os;
-   }
-
-   inline std::ostream&
-   print_board(const Board& board, std::ostream& os)
-   {
-      std::array<char,64> repr;
-      repr.fill('.');
-      fill_layout_single_color(board[(std::size_t)colors::white],repr,repr_pieces_white);
-      fill_layout_single_color(board[(std::size_t)colors::black],repr,repr_pieces_black);
-      return print_layout(repr,os);
-   }
-
-   inline std::ostream&
-   print_layout(uint64_t t, std::ostream& os,char c='X')
-   {
-      std::array<char,64> repr;
-      repr.fill('.');
-      fill_layout(t,repr,c);
-      return print_layout(repr,os);
-   }
-
-   inline uint64_t
-   scan_layout(const char* l, char piece)
+   uint64_t obstacles(const SingleColorBoard& scb)
    {
       uint64_t r=0;
-      for(int j=0;j<8;++j)
-      {
-         r<<=8;
-         uint8_t s=0;
-         for(int i=0;i<8;++i,++l)
-         {
-            if(*l==piece)
-               s+=(1<<i);
-         }
-         assert(*l=='\n');
-         ++l;
-         r+=s;
-      }
+      for(auto scbit=scb.begin();scbit!=scb.end();++scbit)
+         r|=*scbit;
       return r;
    }
-
-   inline SingleColorBoard
-   scan_board_single_color(const char* l, const std::array < char,(std::size_t)pieces::count > & piece_symbols)
-   {
-      SingleColorBoard scb;
-      const char* pi=piece_symbols.begin();
-      for(auto bi=scb.begin();bi!=scb.end();++bi,++pi)
-         *bi=scan_layout(l,*pi);
-      return scb;
-   }
-   
-   inline Board
-   scan_board(const char* l)
-   {
-      Board b={scan_board_single_color(l,repr_pieces_white),
-               scan_board_single_color(l,repr_pieces_black)};
-      return b;
-   }
-   
 } // cheapshot
 
 #endif

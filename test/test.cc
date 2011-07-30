@@ -1,9 +1,11 @@
 #include <iostream>
 
-#include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
+#include "cheapshot/board.hh"
+#include "cheapshot/board_io.hh"
+#include "cheapshot/engine.hh"
 #include "cheapshot/extra_bitops.hh"
-// #include "cheapshot/engine.hh"
+#include "cheapshot/iterator.hh"
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
@@ -22,8 +24,8 @@
 
 namespace
 {
-   const uint64_t full_board=~0ULL;
-   const char initial_layout[]=
+   constexpr uint64_t full_board=~0ULL;
+   constexpr char initial_canvas[]=
       "RNBQKBNR\n"
       "PPPPPPPP\n"
       "........\n"
@@ -32,12 +34,6 @@ namespace
       "........\n"
       "pppppppp\n"
       "rnbqkbnr\n";
-
-   const uint64_t DiagDelta0=((1ULL<<(9*0))|(1ULL<<(9*1))|(1ULL<<(9*2))|(1ULL<<(9*3)))|
-      ((1ULL<<(9*4))|(1ULL<<(9*5))|(1ULL<<(9*6))|(1ULL<<(9*7)));
-
-   const uint64_t DiagSum0=((0x80ULL<<(7*0))|(0x80ULL<<(7*1))|(0x80ULL<<(7*2))|(0x80ULL<<(7*3)))|
-      ((0x80ULL<<(7*4))|(0x80ULL<<(7*5))|(0x80ULL<<(7*6))|(0x80ULL<<(7*7)));
 
    class TimeOperation
    {
@@ -128,7 +124,7 @@ BOOST_AUTO_TEST_CASE( init_board_test )
    boost::test_tools::output_test_stream ots;
    Board b= initial_board();
    print_board(b,ots);
-   BOOST_CHECK( ots.is_equal(initial_layout));
+   BOOST_CHECK( ots.is_equal(initial_canvas));
 }
 
 BOOST_AUTO_TEST_CASE( primitive_test )
@@ -151,14 +147,14 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
-   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('A',1),row_with_algebraic_number(2)),
-                     ((row_with_algebraic_number(1)^algebraic_position('A',1))|algebraic_position('A',2)));
-   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('D',3),row_with_algebraic_number(2)),
-                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&~(row_with_algebraic_number(1)|algebraic_position('D',3))));
-   BOOST_CHECK_EQUAL(slide_rook(algebraic_position('D',3),algebraic_position('D',2)|algebraic_position('D',4)),
-                     (algebraic_position('D',2)|algebraic_position('D',4)|row_with_algebraic_number(3))^algebraic_position('D',3));
+   BOOST_CHECK_EQUAL(slide_rook(algpos('A',1),row_with_algebraic_number(2)),
+                     ((row_with_algebraic_number(1)^algpos('A',1))|algpos('A',2)));
+   BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),row_with_algebraic_number(2)),
+                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&~(row_with_algebraic_number(1)|algpos('D',3))));
+   BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),algpos('D',2)|algpos('D',4)),
+                     (algpos('D',2)|algpos('D',4)|row_with_algebraic_number(3))^algpos('D',3));
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "..X.o...\n"
          "..X.....\n"
          "XXrXXXO.\n"
@@ -167,20 +163,20 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          "..Xo....\n"
          "..O.....\n"
          "..o.....\n";
-      // print_layout(slide_rook(
-      //                 scan_layout(layout,'r'),
-      //                 scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
+      // print_canvas(slide_rook(
+      //                 scan_canvas(canvas,'r'),
+      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
       BOOST_CHECK_EQUAL(slide_rook(
-                           scan_layout(layout,'r'),
-                           scan_layout(layout,'o')|scan_layout(layout,'O')),
-                        scan_layout(layout,'X')|scan_layout(layout,'O'));
+                           scan_canvas(canvas,'r'),
+                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
+                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
    }
 }
 
 BOOST_AUTO_TEST_CASE( bishop_moves_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "X...X...\n"
          ".X.X....\n"
          "..b.....\n"
@@ -190,16 +186,16 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
          "........\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_bishop(
-                           scan_layout(layout,'b'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X')|scan_layout(layout,'o'));
+                           scan_canvas(canvas,'b'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X')|scan_canvas(canvas,'o'));
    }
 }
 
 BOOST_AUTO_TEST_CASE( queen_moves_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "X.XoX...\n"
          ".XXX....\n"
          "XXqXXXXX\n"
@@ -208,14 +204,14 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
          "..O.....\n"
          "..o.....\n"
          "........\n";
-      // print_layout(slide_queen(
-      //                 scan_layout(layout,'q'),
-      //                 scan_layout(layout,'o')|scan_layout(layout,'O')),std::cout);
+      // print_canvas(slide_queen(
+      //                 scan_canvas(canvas,'q'),
+      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
 
       BOOST_CHECK_EQUAL(slide_queen(
-                           scan_layout(layout,'q'),
-                           scan_layout(layout,'o')|scan_layout(layout,'O')),
-                        scan_layout(layout,'X')|scan_layout(layout,'O'));
+                           scan_canvas(canvas,'q'),
+                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
+                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
    }
 }
 
@@ -229,7 +225,7 @@ BOOST_AUTO_TEST_CASE( vertical_band_test )
 BOOST_AUTO_TEST_CASE( jump_knight_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "...X.X..\n"
          "..X...X.\n"
@@ -238,11 +234,11 @@ BOOST_AUTO_TEST_CASE( jump_knight_test )
          "...X.X..\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
-                        scan_layout(layout,'X'));
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_canvas(canvas,'n')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -251,11 +247,11 @@ BOOST_AUTO_TEST_CASE( jump_knight_test )
          ".X......\n"
          "..X.....\n"
          "n.......\n";
-      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
-                        scan_layout(layout,'X'));
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_canvas(canvas,'n')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          ".....X..\n"
          ".......n\n"
          ".....X..\n"
@@ -264,15 +260,15 @@ BOOST_AUTO_TEST_CASE( jump_knight_test )
          "........\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(jump_knight_simple(scan_layout(layout,'n')),
-                        scan_layout(layout,'X'));
+      BOOST_CHECK_EQUAL(jump_knight_simple(scan_canvas(canvas,'n')),
+                        scan_canvas(canvas,'X'));
    }
 }
 
 BOOST_AUTO_TEST_CASE( move_king_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -281,11 +277,11 @@ BOOST_AUTO_TEST_CASE( move_king_test )
          ".XXX....\n"
          ".XkX....\n"
          ".XXX....\n";
-      BOOST_CHECK_EQUAL(move_king_simple(scan_layout(layout,'k')),
-                        scan_layout(layout,'X'));
+      BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -294,15 +290,15 @@ BOOST_AUTO_TEST_CASE( move_king_test )
          "........\n"
          ".XXX....\n"
          ".XkX....\n";
-      BOOST_CHECK_EQUAL(move_king_simple(scan_layout(layout,'k')),
-                        scan_layout(layout,'X'));
+      BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
+                        scan_canvas(canvas,'X'));
    }
 }
 
 BOOST_AUTO_TEST_CASE( slide_pawn_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -311,16 +307,16 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
          "..p.....\n"
          "........\n"
          "........\n";
-//      print_layout(slide_pawn(
-//                           scan_layout(layout,'p'),
-//                           scan_layout(layout,'o')),std::cout);
+//      print_canvas(slide_pawn(
+//                           scan_canvas(canvas,'p'),
+//                           scan_canvas(canvas,'o')),std::cout);
       BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -330,12 +326,12 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
          "........\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -345,12 +341,12 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
          "..p.....\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -360,12 +356,12 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
          "...p....\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -375,16 +371,16 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
          "...p....\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')),
-                        scan_layout(layout,'X'));
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X'));
    }
 }
 
-BOOST_AUTO_TEST_CASE( pawn_capture_test )
+BOOST_AUTO_TEST_CASE( capture__with_pawn_test )
 {
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -393,13 +389,13 @@ BOOST_AUTO_TEST_CASE( pawn_capture_test )
          "..p.....\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(pawn_captures(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')|scan_layout(layout,'O')),
-                        scan_layout(layout,'O'));
+      BOOST_CHECK_EQUAL(capture_with_pawn(
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
+                        scan_canvas(canvas,'O'));
    }
    {
-      const char layout[]=
+      constexpr char canvas[]=
          "........\n"
          "........\n"
          "........\n"
@@ -408,10 +404,10 @@ BOOST_AUTO_TEST_CASE( pawn_capture_test )
          ".po.....\n"
          "..o.....\n"
          "........\n";
-      BOOST_CHECK_EQUAL(pawn_captures(
-                           scan_layout(layout,'p'),
-                           scan_layout(layout,'o')|scan_layout(layout,'O')),
-                        scan_layout(layout,'O'));
+      BOOST_CHECK_EQUAL(capture_with_pawn(
+                           scan_canvas(canvas,'p'),
+                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
+                        scan_canvas(canvas,'O'));
    }
 
 }
@@ -420,7 +416,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 {
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DiagDelta0,ots);
+      print_canvas(diag_delta(1ULL),ots);
       BOOST_CHECK( ots.is_equal(
                       ".......X\n"
                       "......X.\n"
@@ -434,7 +430,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(smaller(1ULL<<(8*(8-(1)))),ots);
+      print_canvas(smaller(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "XXXXXXXX\n"
@@ -448,7 +444,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DiagDelta0>>8,ots);
+      print_canvas(diag_delta(1ULL)>>8,ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       ".......X\n"
@@ -463,7 +459,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DiagDelta0<<32,ots);
+      print_canvas(diag_delta(1ULL)<<32,ots);
       BOOST_CHECK( ots.is_equal(
                       "...X....\n"
                       "..X.....\n"
@@ -477,7 +473,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(diag_delta(1ULL<<(8*(8-(1)))),ots);
+      print_canvas(diag_delta(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "X.......\n"
                       "........\n"
@@ -491,7 +487,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(diag_delta(0x80ULL<<(8*(8-(1)))),ots);
+      print_canvas(diag_delta(0x80ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       ".......X\n"
                       "......X.\n"
@@ -505,7 +501,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(diag_delta(0x10ULL<<(8*(8-(1)))),ots);
+      print_canvas(diag_delta(0x10ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "....X...\n"
                       "...X....\n"
@@ -519,7 +515,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DiagSum0,ots);
+      print_canvas(diag_sum(1ULL<<7),ots);
       BOOST_CHECK( ots.is_equal(
                       "X.......\n"
                       ".X......\n"
@@ -533,7 +529,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(DiagSum0>>(8*6),ots);
+      print_canvas(diag_sum(1ULL<<7)>>(8*6),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "........\n"
@@ -547,7 +543,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_layout(diag_sum(1<<15),ots);
+      print_canvas(diag_sum(1<<15),ots);
       BOOST_CHECK( ots.is_equal(
                       ".X......\n"
                       "..X.....\n"
@@ -564,7 +560,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 BOOST_AUTO_TEST_CASE( scan_board_test )
 {
    BOOST_CHECK_EQUAL(
-      scan_layout("X.......\n"
+      scan_canvas("X.......\n"
                   ".X......\n"
                   "..X.....\n"
                   "...X....\n"
@@ -572,9 +568,9 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
                   ".....X..\n"
                   "......X.\n"
                   ".......X\n"
-                  , 'X'),DiagSum0);
+                  , 'X'),diag_sum(1ULL<<7));
 
-   BOOST_CHECK(initial_board()==scan_board(initial_layout));
+   BOOST_CHECK(initial_board()==scan_board(initial_canvas));
 }
 
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )
@@ -625,7 +621,7 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
 namespace
 {
    typedef nested_iterator<const std::vector<char>*> NIt;
-   
+
    char nested_iter_value(const NIt::value_type& v)
    {
       return *std::get<1>(v);
@@ -636,7 +632,7 @@ BOOST_AUTO_TEST_CASE( nested_iterator_test )
 {
    std::array<std::vector<char>,2 > test_array;
 
-   test_array[0]={'a','b','c','d'}; 
+   test_array[0]={'a','b','c','d'};
    test_array[1]={'e','f','g'};
    typedef nested_iterator<const std::vector<char>*> NIt;
    NIt nested_iter(test_array.begin(),test_array.end());

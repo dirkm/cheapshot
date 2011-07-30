@@ -19,7 +19,7 @@ namespace cheapshot
 // s single piece (single bit set in uint64_t)
 
 // move: movement of a piece without taking obstacles in account
-// slide: move until an obstacle is met
+// slide: move until an obstacle is met (captures included - even captures of own pieces)
 // jump: knights jump
 
 // aliased: wrapping from right to left - every 8 steps - is ignored, and the callers problem.
@@ -205,7 +205,7 @@ namespace cheapshot
    // helpers to get patterns based on column-row coordinates in algebraic notation
 
    constexpr uint64_t
-   algebraic_position(char column, uint8_t row)
+   algpos(char column, uint8_t row)
    {
       return position(column-'A',row-1);
    }
@@ -263,7 +263,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   pawn_move(uint64_t s)
+   move_pawn(uint64_t s)
    {
       // assert(is_single_bit(s));
       // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
@@ -273,7 +273,7 @@ namespace cheapshot
 // if obstacles include our own pieces, they have to be excluded explicitly afterward
 // not including en-passant captures
    constexpr uint64_t
-   pawn_captures(uint64_t s, uint64_t obstacles)
+   capture_with_pawn(uint64_t s, uint64_t obstacles)
    {
       // assert(is_single_bit(s));
       // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
@@ -355,7 +355,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_rook(uint64_t s, uint64_t obstacles)
+   slide_rook(uint64_t s, uint64_t obstacles) 
    {
       // assert(is_single_bit(s));
       // vertical change
@@ -405,13 +405,13 @@ namespace cheapshot
    slide_pawn(uint64_t s,uint64_t obstacles)
    {
       return 
-         slide_optimised_for_pawns(pawn_move(s),obstacles);
+         slide_optimised_for_pawns(move_pawn(s),obstacles);
    }
 
    constexpr uint64_t
-   pawn_slide_and_captures(uint64_t s,uint64_t obstacles)
+   slide_and_capture_with_pawn(uint64_t s,uint64_t obstacles)
    {
-      return slide_pawn(s,obstacles)|pawn_captures(s,obstacles);
+      return slide_pawn(s,obstacles)|capture_with_pawn(s,obstacles);
    }
 
 } // cheapshot
