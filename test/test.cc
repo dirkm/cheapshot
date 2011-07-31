@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
 BOOST_AUTO_TEST_CASE( init_board_test )
 {
    boost::test_tools::output_test_stream ots;
-   Board b= initial_board();
+   board b= initial_board();
    print_board(b,ots);
    BOOST_CHECK( ots.is_equal(initial_canvas));
 }
@@ -170,9 +170,28 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
    BOOST_CHECK_EQUAL(slide_rook(algpos('A',1),row_with_algebraic_number(2)),
                      ((row_with_algebraic_number(1)^algpos('A',1))|algpos('A',2)));
    BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),row_with_algebraic_number(2)),
-                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&~(row_with_algebraic_number(1)|algpos('D',3))));
+                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&
+                      ~(row_with_algebraic_number(1)|algpos('D',3))));
    BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),algpos('D',2)|algpos('D',4)),
                      (algpos('D',2)|algpos('D',4)|row_with_algebraic_number(3))^algpos('D',3));
+   {
+      constexpr char canvas[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".......O\n"
+         ".......X\n"
+         ".......X\n"
+         "XXXXXXXr\n";
+      // print_canvas(slide_rook(
+      //                 scan_canvas(canvas,'r'),
+      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
+      BOOST_CHECK_EQUAL(slide_rook(
+                           scan_canvas(canvas,'r'),
+                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
+                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
+   }
    {
       constexpr char canvas[]=
          "..X.o...\n"
@@ -579,18 +598,106 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 
 BOOST_AUTO_TEST_CASE( scan_board_test )
 {
-   BOOST_CHECK_EQUAL(
-      scan_canvas("X.......\n"
-                  ".X......\n"
-                  "..X.....\n"
-                  "...X....\n"
-                  "....X...\n"
-                  ".....X..\n"
-                  "......X.\n"
-                  ".......X\n"
-                  , 'X'),diag_sum(1ULL<<7));
-
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
+}
+
+BOOST_AUTO_TEST_CASE( plie_iterator_test )
+{
+   {
+      board b=scan_board(
+         "RNBQKBNR\n"
+         "PPPPPPPP\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "...p....\n"
+         "........\n");
+      board_metrics bm(b);
+      plie_iterator plie_it(b[0],bm);
+      uint64_t r=0;
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            p.origin=b[0][(std::size_t)piece::pawn];
+            BOOST_CHECK_EQUAL(r&(*p.destination),0);
+            r|=(*p.destination);
+         });
+      boost::test_tools::output_test_stream ots;
+      print_canvas(r,ots);
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "...X....\n"
+                     "...X....\n"
+                     "........\n"
+                     "........\n"));
+   }
+   {
+      board b=scan_board(
+         "RNBQKBNR\n"
+         "PP.P.PPP\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..P.P...\n"
+         "...p....\n"
+         "........\n");
+      board_metrics bm(b);
+      plie_iterator plie_it(b[0],bm);
+      uint64_t r=0;
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            p.origin=b[0][(std::size_t)piece::pawn];
+            BOOST_CHECK_EQUAL(r&(*p.destination),0);
+            r|=(*p.destination);
+         });
+      boost::test_tools::output_test_stream ots;
+      print_canvas(r,ots);
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "...X....\n"
+                     "..XXX...\n"
+                     "........\n"
+                     "........\n"));
+   }
+   {
+      board b=scan_board(
+         "RNBQKBNR\n"
+         "PPPPPP.P\n"
+         ".......p\n"
+         ".......p\n"
+         ".......p\n"
+         "........\n"
+         "........\n"
+         "r......r\n");
+      board_metrics bm(b);
+      plie_iterator plie_it(b[0],bm);
+      uint64_t r=0;
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            BOOST_CHECK(p.current==piece::rook);
+            r|=*(p.destination);
+         });
+      boost::test_tools::output_test_stream ots;
+      print_canvas(r,ots);
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X......X\n"
+                     "X......X\n"
+                     ".XXXXXX.\n"));
+   }
 }
 
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )

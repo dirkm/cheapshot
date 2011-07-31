@@ -6,7 +6,7 @@
 
 namespace cheapshot
 {
-   typedef std::array<char,(std::size_t)pieces::count> piece_representation;
+   typedef std::array<char,(std::size_t)piece::count> piece_representation;
    typedef std::array<char,64> canvas;
 
    constexpr piece_representation repr_pieces_white={'p','n','b','r','q','k'};
@@ -20,7 +20,7 @@ namespace cheapshot
    }
 
    inline void
-   fill_canvas_single_color(const SingleColorBoard& board,canvas& c,piece_representation p)
+   fill_canvas_single_color(const single_color_board& board,canvas& c,piece_representation p)
    {
       auto pi=p.begin();
       for(auto bi=board.begin();bi!=board.end();++bi,++pi)
@@ -40,7 +40,7 @@ namespace cheapshot
    }
 
    inline std::ostream&
-   print_board(const Board& board, std::ostream& os)
+   print_board(const board& board, std::ostream& os)
    {
       canvas repr;
       repr.fill('.');
@@ -78,20 +78,20 @@ namespace cheapshot
       return r;
    }
 
-   inline SingleColorBoard
+   inline single_color_board
    scan_board_single_color(const char* l, piece_representation repr)
    {
-      SingleColorBoard scb;
+      single_color_board scb;
       auto pi=repr.begin();
       for(auto bi=scb.begin();bi!=scb.end();++bi,++pi)
          *bi=scan_canvas(l,*pi);
       return scb;
    }
 
-   inline Board
+   inline board
    scan_board(const char* l)
    {
-      Board b={scan_board_single_color(l,repr_pieces_white),
+      board b={scan_board_single_color(l,repr_pieces_white),
                scan_board_single_color(l,repr_pieces_black)};
       return b;
    }

@@ -33,7 +33,7 @@ namespace cheapshot
       void increment()
       {
          m_lsb=m_v; // intermediate copy
-         m_v &= m_v - 1; // clear the least significant bit
+         m_v&=m_v-1; // clear the least significant bit
          m_lsb^=m_v;
       }
 

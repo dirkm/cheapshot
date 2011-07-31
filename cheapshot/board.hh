@@ -6,18 +6,24 @@
 #include <array>
 
 namespace cheapshot
-{
+{   
+   enum class piece: std::size_t { pawn, knight, bishop, rook, queen, king, count };
 
-   enum class pieces: std::size_t { pawn, knight, bishop, rook, queen, king, count };
+   inline piece operator++( piece &rs) 
+   {
+      rs=piece((std::size_t)rs+1);
+      return rs;
+   }
 
-   typedef std::array<uint64_t,(std::size_t)pieces::count> SingleColorBoard;
+   typedef std::array<uint64_t,(std::size_t)piece::count> single_color_board;
 
    enum class colors: std::size_t { white, black, count };
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
-   typedef std::array<SingleColorBoard,(std::size_t)colors::count> Board;
+   // extended format
+   typedef std::array<single_color_board,(std::size_t)colors::count> board;
 
-   constexpr SingleColorBoard init_white_board=
+   constexpr single_color_board init_white_board=
    {
       row_with_algebraic_number(2), // p
       algpos('B',1)|algpos('G',1), // n
@@ -28,7 +34,7 @@ namespace cheapshot
    };
 
    inline void
-   mirror(SingleColorBoard& scb)
+   mirror(single_color_board& scb)
    {
       for(uint64_t& v: scb)
       {
@@ -42,27 +48,30 @@ namespace cheapshot
    }
 
    inline void
-   mirror(Board& board)
+   mirror(board& board)
    {
-      for(SingleColorBoard& scb: board)
+      for(single_color_board& scb: board)
          mirror(scb);
    }
 
-   inline Board
+   inline board
    initial_board()
    {
-      Board b={init_white_board,init_white_board};
+      board b={init_white_board,init_white_board};
       mirror(b[(std::size_t)colors::black]);
       return b;
    }
 
-   uint64_t obstacles(const SingleColorBoard& scb)
+   uint64_t obstacles(const single_color_board& scb)
    {
       uint64_t r=0;
       for(uint64_t p: scb)
          r|=p;
       return r;
    }
+   // compressed format
+   
+   // hash-function 
 } // cheapshot
 
 #endif
