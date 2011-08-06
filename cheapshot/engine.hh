@@ -54,7 +54,7 @@ namespace cheapshot
    struct piece_moves
    {
       piece moved_piece;
-      bit_iterator origin; // TODO: bit iterator probably slow
+      bit_iterator origin;
       uint64_t destinations;
    };
 
@@ -106,9 +106,10 @@ namespace cheapshot
             while(ref.origin!=bit_iterator())
             {
                ref.destinations=metrics->moves(ref.moved_piece,*ref.origin);
-               if(ref.destinations!=0ULL)
+               if(ref.destinations!=0ULL) // TODO: this check does too much
                   return;
                ++ref.origin;
+               //return;
             }
             ++ref.moved_piece;
             if(ref.moved_piece==piece::count)
