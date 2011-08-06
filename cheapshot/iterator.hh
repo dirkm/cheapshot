@@ -1,46 +1,72 @@
 #ifndef CHEAPSHOT_ITERATOR_HH
 #define CHEAPSHOT_ITERATOR_HH
 
-#include <boost/iterator/iterator_facade.hpp>
+#include "cheapshot/bitops.hh"
 #include <boost/iterator/transform_iterator.hpp>
-#include <tuple>
 
 namespace cheapshot
 {
 
    class bit_iterator
-      : public boost::iterator_facade<bit_iterator,const uint64_t,std::output_iterator_tag>
+      : public std::iterator<
+      std::forward_iterator_tag,uint64_t, std::ptrdiff_t,uint64_t*,uint64_t /* value instead of ref*/>
+   // probably invalid in C++0x
    {
    public:
-      bit_iterator(uint64_t val):
+      constexpr explicit bit_iterator(uint64_t val):
          m_v(val)
+      {}
+
+      constexpr bit_iterator():
+         m_v(0)
+      {}
+
+      uint64_t
+      operator*() const
       {
-         ++*this;
+         return lowest_bit(m_v);
       }
 
-      bit_iterator():
-         m_v(0),
-         m_lsb(0)
+      uint64_t 
+      remaining() const
       {
+         return m_v;
+      }
+      
+      bit_iterator&
+      operator++()
+      {
+         increment();
+         return *this;
       }
 
-      bool equal(bit_iterator const& other) const
+      bit_iterator
+      operator++(int)
       {
-         // only useful with an end iterator
-         return (m_lsb==other.m_lsb);
+         bit_iterator tmp = *this;
+         increment();
+         return tmp;
       }
 
+      bool
+      operator==(const bit_iterator& i) const
+      { 
+         return m_v==i.m_v;
+      }
+
+      bool
+      operator!=(const bit_iterator& i) const
+      { 
+         return m_v!=i.m_v;
+      }
+
+   private:
       void increment()
       {
-         m_lsb=m_v; // intermediate copy
          m_v&=m_v-1; // clear the least significant bit
-         m_lsb^=m_v;
       }
-
-      const uint64_t& dereference() const { return m_lsb; }
    private:
-      uint64_t m_v; // layout of the board
-      uint64_t m_lsb; // current least significant bit, (the piece currently pointed to)
+      uint64_t m_v; // piece layout, gets zeroed out while incrementing
    };
 
    typedef uint_fast8_t (*BoardPosFunction)(uint64_t);
@@ -73,60 +99,5 @@ namespace cheapshot
    {
       return board_iterator(bit_iterator(val),&get_board_pos);
    }
-
-   // I Changed my mind, probably to be deleted
-   template<typename Cont>
-   struct nested_iterator_guesser
-   {
-      typedef typename Cont::value_type::const_iterator type;
-   };
-
-   template<typename C>
-   struct nested_iterator_guesser<C*>
-   {
-      typedef typename C::const_iterator type;
-   };
-
-   template<typename OuterIt, typename InnerIt=
-            typename nested_iterator_guesser<OuterIt>::type > 
-   class nested_iterator
-      : public boost::iterator_facade<
-      nested_iterator<OuterIt,InnerIt>,
-      const std::tuple<OuterIt, InnerIt>,std::output_iterator_tag>
-   {
-   public:
-      nested_iterator(OuterIt itout, OuterIt itOutEnd):
-         m_itOutEnd(itOutEnd)
-      {
-         std::get<0>(m_v)=itout;
-         if(itout!=m_itOutEnd)
-            std::get<1>(m_v)=itout->begin();
-      }
-
-      bool equal(const nested_iterator& other) const
-      {
-         return (std::get<0>(m_v)==std::get<0>(other.m_v)) &&
-            ((std::get<0>(m_v)==m_itOutEnd)||(std::get<1>(m_v)==std::get<1>(other.m_v)));
-      }
-
-      void increment()
-      {
-         ++std::get<1>(m_v);
-         if(std::get<1>(m_v)==std::get<0>(m_v)->end())
-         {
-            ++std::get<0>(m_v);
-            if(std::get<0>(m_v)!=m_itOutEnd)
-               std::get<1>(m_v)=std::get<0>(m_v)->begin();
-         }
-      }
-
-      const std::tuple<OuterIt,InnerIt>& dereference() const { return m_v; }
-      typedef OuterIt outer_iterator;
-      typedef InnerIt inner_iterator;
-   private:
-      std::tuple<OuterIt,InnerIt> m_v;
-      const OuterIt m_itOutEnd;
-   };
-
 } // cheapshot
 #endif

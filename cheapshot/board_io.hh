@@ -44,8 +44,8 @@ namespace cheapshot
    {
       canvas repr;
       repr.fill('.');
-      fill_canvas_single_color(board[(std::size_t)colors::white],repr,repr_pieces_white);
-      fill_canvas_single_color(board[(std::size_t)colors::black],repr,repr_pieces_black);
+      fill_canvas_single_color(board[idx(color::white)],repr,repr_pieces_white);
+      fill_canvas_single_color(board[idx(color::black)],repr,repr_pieces_black);
       return print_canvas(repr,os);
    }
 

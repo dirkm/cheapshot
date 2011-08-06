@@ -630,9 +630,9 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r,&b](piece_moves p){
-            p.origin=b[0][(std::size_t)piece::pawn];
-            BOOST_CHECK_EQUAL(r&p.destinations,0);
-            r|=p.destinations;
+            BOOST_CHECK_EQUAL(*p.origin,b[0][idx(piece::pawn)]);
+            BOOST_CHECK_EQUAL(r&p.destinations.remaining(),0);
+            r|=p.destinations.remaining();
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -662,9 +662,9 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r,&b](piece_moves p){
-            p.origin=b[0][(std::size_t)piece::pawn];
-            BOOST_CHECK_EQUAL(r&p.destinations,0);
-            r|=p.destinations;
+            BOOST_CHECK_EQUAL(*p.origin,b[0][idx(piece::pawn)]);
+            BOOST_CHECK_EQUAL(r&p.destinations.remaining(),0);
+            r|=p.destinations.remaining();
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -694,8 +694,8 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r,&b](piece_moves p){
-            BOOST_CHECK(p.moved_piece==piece::rook);
-            r|=p.destinations;
+            BOOST_CHECK((p.moved_piece==piece::rook)||(p.destinations==bit_iterator()));
+            r|=p.destinations.remaining();
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -725,8 +725,8 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r,&b](piece_moves p){
-            BOOST_CHECK(p.moved_piece==piece::rook);
-            r|=p.destinations;
+            BOOST_CHECK((p.moved_piece==piece::rook)||(p.destinations==bit_iterator()));
+            r|=p.destinations.remaining();
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -748,11 +748,11 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r](piece_moves p){
-            r[(std::size_t)p.moved_piece]|=p.destinations;
+            r[idx(p.moved_piece)]|=p.destinations.remaining();
          });
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[(std::size_t)piece::pawn],ots);
+         print_canvas(r[idx(piece::pawn)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -763,10 +763,10 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
                         "........\n"
                         "........\n"));
       }
-      BOOST_CHECK_EQUAL(r[(std::size_t)piece::knight],0);
+      BOOST_CHECK_EQUAL(r[idx(piece::knight)],0);
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[(std::size_t)piece::bishop],ots);
+         print_canvas(r[idx(piece::bishop)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -779,7 +779,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[(std::size_t)piece::rook],ots);
+         print_canvas(r[idx(piece::rook)],ots);
          BOOST_CHECK(ots.is_equal(
                         "X.......\n"
                         ".XXXXXXX\n"
@@ -792,7 +792,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[(std::size_t)piece::queen],ots);
+         print_canvas(r[idx(piece::queen)],ots);
          BOOST_CHECK(ots.is_equal(
                         "......X.\n"
                         "......X.\n"
@@ -805,7 +805,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[(std::size_t)piece::king],ots);
+         print_canvas(r[idx(piece::king)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -874,7 +874,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    board b=test_board1;
    volatile uint8_t r;
    TimeOperation time_op;
-   const long ops=2000000;
+   const long ops=3000000;
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
@@ -882,52 +882,11 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
       std::for_each
          (moves_it,moves_iterator(),
           [&r](piece_moves p){
-            r|=p.destinations;
+            r|=p.destinations.remaining();
          });
    }
    time_op.time_report("piece_moves walk",ops);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-BOOST_AUTO_TEST_SUITE(iterators_suite)
 
-namespace
-{
-   typedef nested_iterator<const std::vector<char>*> NIt;
-
-   char nested_iter_value(const NIt::value_type& v)
-   {
-      return *std::get<1>(v);
-   }
-}
-
-BOOST_AUTO_TEST_CASE( nested_iterator_test )
-{
-   std::array<std::vector<char>,2 > test_array;
-
-   test_array[0]={'a','b','c','d'};
-   test_array[1]={'e','f','g'};
-   typedef nested_iterator<const std::vector<char>*> NIt;
-   NIt nested_iter(test_array.begin(),test_array.end());
-   const NIt nested_iter_end(test_array.end(),test_array.end());
-   BOOST_CHECK(nested_iter==nested_iter);
-   BOOST_CHECK(nested_iter!=nested_iter_end);
-   // while(nested_iter!=nested_iter_end)
-   // {
-   //    std::cout << *std::get<1>(*nested_iter) << std::endl;
-   //    ++nested_iter;
-   // }
-   auto el_iter=boost::make_transform_iterator(nested_iter,nested_iter_value);
-   auto el_iter_end=boost::make_transform_iterator(nested_iter_end,nested_iter_value);
-   // while(el_iter!=el_iter_end)
-   // {
-   //    std::cout << *el_iter << std::endl;
-   //    ++el_iter;
-   // }
-   std::copy(el_iter,el_iter_end,std::ostream_iterator<char>(std::cout,", "));
-   BOOST_CHECK(std::equal(el_iter,el_iter_end,"abcdefg"));
-   BOOST_CHECK(!std::equal(el_iter,el_iter_end,"bbcdefg"));
-   BOOST_CHECK(!std::equal(el_iter,el_iter_end,"abcdeff"));
-}
-
-BOOST_AUTO_TEST_SUITE_END()

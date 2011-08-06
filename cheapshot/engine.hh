@@ -1,7 +1,8 @@
 #ifndef CHEAPSHOT_ENGINE_HH
 #define CHEAPSHOT_ENGINE_HH
 
-#include <array>
+#include <boost/iterator/iterator_facade.hpp>
+
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
 #include "cheapshot/iterator.hh"
@@ -27,7 +28,7 @@ namespace cheapshot
    constexpr MoveGenerator
    move_gen(piece p)
    {
-      return detail::move_generator[(std::size_t)p];
+      return detail::move_generator[idx(p)];
    }
 
 
@@ -55,7 +56,7 @@ namespace cheapshot
    {
       piece moved_piece;
       bit_iterator origin;
-      uint64_t destinations;
+      bit_iterator destinations;
    };
 
    class moves_iterator:
@@ -69,16 +70,16 @@ namespace cheapshot
       moves_iterator(const single_color_board& scbarg,const board_metrics& m):
          scb(&scbarg),
          metrics(&m),
-         ref({piece::pawn,iterator(piece::pawn),0ULL})
+         ref({piece::pawn,origin_iterator(piece::pawn)})
       {
-         next_piece();
+         first_match();
       }
 
       void
       increment()
       {
          ++ref.origin;
-         next_piece();
+         first_match();
       }
 
       moves_iterator():
@@ -99,31 +100,43 @@ namespace cheapshot
 
    private:
       void
-      next_piece()
+      first_match()
       {
          while(true)
          {
-            while(ref.origin!=bit_iterator())
+            if(ref.origin!=bit_iterator())
             {
-               ref.destinations=metrics->moves(ref.moved_piece,*ref.origin);
-               if(ref.destinations!=0ULL) // TODO: this check does too much
-                  return;
-               ++ref.origin;
-               //return;
+               ref.destinations=bit_iterator(metrics->moves(ref.moved_piece,*ref.origin));
+               return;
             }
             ++ref.moved_piece;
             if(ref.moved_piece==piece::count)
                break;
-            ref.origin=iterator(ref.moved_piece);
+            ref.origin=origin_iterator(ref.moved_piece);
          }
       }
 
       bit_iterator
-      iterator(piece p) const
+      origin_iterator(piece p) const
       {
-         return bit_iterator((*scb)[(std::size_t)p]);
+         return bit_iterator((*scb)[idx(p)]);
       }
    };
+
+   typedef uint64_t score;
+
+   void
+   make_move(board& b,const piece_moves& mv)
+   {
+      b[idx(color::white)][idx(mv.moved_piece)]^=(*mv.origin|*mv.destinations);
+      // TODO: remove oposing piece
+   }
+
+   score
+   handle_position(const board& b)
+   {
+      // TODO
+   }
 }
 
 #endif
