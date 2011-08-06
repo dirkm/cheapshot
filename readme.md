@@ -1,6 +1,6 @@
 # cheapshot :: chess engine
 
-## warning
+## Warning
 
 Cheapshot is in early construction phase, and has been for some time.
 Is is meant to be a chess-engine written in C++0x, and should take advantage of 64 bit arithmetic.

@@ -22,6 +22,8 @@
 #include <sys/times.h>
 #include <iterator>
 
+using namespace cheapshot;
+
 namespace
 {
    constexpr uint64_t full_board=~0ULL;
@@ -62,11 +64,21 @@ namespace
    };
 
    const float TimeOperation::ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
+
+// white to move mate in 5
+// http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
+   const board test_board1=scan_board(
+      "......RK\n"
+      "r......P\n"
+      "..PP....\n"
+      ".Pp..N..\n"
+      ".p..b.q.\n"
+      "N......p\n"
+      ".......k\n"
+      "R...Q...\n");
 }
 
-using namespace cheapshot;
-
-BOOST_AUTO_TEST_SUITE(piece_moves)
+BOOST_AUTO_TEST_SUITE(piece_moves_suite)
 
 BOOST_AUTO_TEST_CASE( bit_iterator_test )
 {
@@ -416,7 +428,7 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( capture__with_pawn_test )
+BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
 {
    {
       constexpr char canvas[]=
@@ -495,7 +507,6 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
                       ".X......\n"
                       ));
    }
-
    {
       boost::test_tools::output_test_stream ots;
       print_canvas(diag_delta(1ULL)<<32,ots);
@@ -599,22 +610,9 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 BOOST_AUTO_TEST_CASE( scan_board_test )
 {
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
-}
+} 
 
-// white to move mate in 5
-// http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
-const board test_board1=scan_board(
-   "......RK\n"
-   "r......P\n"
-   "..PP....\n"
-   ".Pp..N..\n"
-   ".p..b.q.\n"
-   "N......p\n"
-   ".......k\n"
-   "R...Q...\n");
- 
-
-BOOST_AUTO_TEST_CASE( plie_iterator_test )
+BOOST_AUTO_TEST_CASE( moves_iterator_test )
 {
    {
       board b=scan_board(
@@ -627,14 +625,14 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
          "...p....\n"
          "........\n");
       board_metrics bm(b);
-      plie_iterator plie_it(b[0],bm);
+      moves_iterator moves_it(b[0],bm);
       uint64_t r=0;
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
+         (moves_it,moves_iterator(),
+          [&r,&b](piece_moves p){
             p.origin=b[0][(std::size_t)piece::pawn];
-            BOOST_CHECK_EQUAL(r&(*p.destination),0);
-            r|=(*p.destination);
+            BOOST_CHECK_EQUAL(r&p.destinations,0);
+            r|=p.destinations;
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -659,14 +657,14 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
          "...p....\n"
          "........\n");
       board_metrics bm(b);
-      plie_iterator plie_it(b[0],bm);
+      moves_iterator moves_it(b[0],bm);
       uint64_t r=0;
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
+         (moves_it,moves_iterator(),
+          [&r,&b](piece_moves p){
             p.origin=b[0][(std::size_t)piece::pawn];
-            BOOST_CHECK_EQUAL(r&(*p.destination),0);
-            r|=(*p.destination);
+            BOOST_CHECK_EQUAL(r&p.destinations,0);
+            r|=p.destinations;
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -691,13 +689,13 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
          "........\n"
          "r......r\n");
       board_metrics bm(b);
-      plie_iterator plie_it(b[0],bm);
+      moves_iterator moves_it(b[0],bm);
       uint64_t r=0;
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
+         (moves_it,moves_iterator(),
+          [&r,&b](piece_moves p){
             BOOST_CHECK(p.moved_piece==piece::rook);
-            r|=*(p.destination);
+            r|=p.destinations;
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -722,13 +720,13 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
          "........\n"
          "r......r\n");
       board_metrics bm(b);
-      plie_iterator plie_it(b[0],bm);
+      moves_iterator moves_it(b[0],bm);
       uint64_t r=0;
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
+         (moves_it,moves_iterator(),
+          [&r,&b](piece_moves p){
             BOOST_CHECK(p.moved_piece==piece::rook);
-            r|=*(p.destination);
+            r|=p.destinations;
          });
       boost::test_tools::output_test_stream ots;
       print_canvas(r,ots);
@@ -745,12 +743,12 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
    {
       board b=test_board1;
       board_metrics bm(b);
-      plie_iterator plie_it(b[0],bm);
+      moves_iterator moves_it(b[0],bm);
       uint64_t r[count<piece>()]={0,0,0,0,0};
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
-            r[(std::size_t)p.moved_piece]|=*(p.destination);
+         (moves_it,moves_iterator(),
+          [&r](piece_moves p){
+            r[(std::size_t)p.moved_piece]|=p.destinations;
          });
       {
          boost::test_tools::output_test_stream ots;
@@ -821,6 +819,9 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
    }
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE(timings_suite)
+
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )
 {
    boost::timer t;
@@ -866,7 +867,7 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
    time_op.time_report("knight move",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_walk_plie_test )
+BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 {
    boost::timer t;
    volatile uint64_t s=(1ULL<<(8*(8-(1))));
@@ -877,16 +878,18 @@ BOOST_AUTO_TEST_CASE( time_walk_plie_test )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      volatile plie_iterator plie_it(b[0],bm);
+      volatile moves_iterator moves_it(b[0],bm);
       std::for_each
-         (plie_it,plie_iterator(),
-          [&r,&b](plie p){
-            r|=*(p.destination);
+         (moves_it,moves_iterator(),
+          [&r](piece_moves p){
+            r|=p.destinations;
          });
    }
-   time_op.time_report("plie walk",ops);
+   time_op.time_report("piece_moves walk",ops);
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE(iterators_suite)
 
 namespace
 {

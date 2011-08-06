@@ -34,8 +34,10 @@ main(int argc, const char* argv[])
 {
    if(argc<2||!std::strcmp("-h",argv[1])||!std::strcmp("--help",argv[1]))
    {
-      std::cerr << "usage: print_layout layout\n"
-                << "layout: uint64_t representation of a chess layout as used in cheapshot"
+      std::cerr << "usage: print_canvas canvas\n"
+         "prints a representation of the board in ASCII.\n"
+         "canvas: uint64_t representation of a chess canvas as used in cheapshot.\n"
+         "\tdecimal and hexadecimal (prefixed with 0x) input is accepted.\n"
                 << std::endl;
    }
    else
@@ -47,7 +49,7 @@ main(int argc, const char* argv[])
       catch(const std::exception& ex)
       {
          std::cerr << "ERROR: expected 64 bit unsigned integer at input\n"
-                   "message: '" << ex.what() << "'"
+            "message: '" << ex.what() << "'"
                    << std::endl;
          return 1;
       }

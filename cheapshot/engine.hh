@@ -51,25 +51,25 @@ namespace cheapshot
       }
    };
 
-   struct plie
+   struct piece_moves
    {
       piece moved_piece;
-      bit_iterator origin;
-      bit_iterator destination;
+      bit_iterator origin; // TODO: bit iterator probably slow
+      uint64_t destinations;
    };
 
-   class plie_iterator:
-      public boost::iterator_facade<plie_iterator,const plie&,std::output_iterator_tag>
+   class moves_iterator:
+      public boost::iterator_facade<moves_iterator,const piece_moves&,std::output_iterator_tag>
    {
    private:
       const single_color_board* scb;
       const board_metrics* metrics;
-      plie ref;
+      piece_moves ref;
    public:
-      plie_iterator(const single_color_board& scbarg,const board_metrics& m):
+      moves_iterator(const single_color_board& scbarg,const board_metrics& m):
          scb(&scbarg),
          metrics(&m),
-         ref({piece::pawn,iterator(piece::pawn),bit_iterator()})
+         ref({piece::pawn,iterator(piece::pawn),0ULL})
       {
          next_piece();
       }
@@ -77,24 +77,21 @@ namespace cheapshot
       void
       increment()
       {
-         ++ref.destination;
-         if(ref.destination!=bit_iterator())
-            return;
          ++ref.origin;
          next_piece();
       }
 
-      plie_iterator():
+      moves_iterator():
          ref({piece::count})
       {}
 
-      bool equal(const plie_iterator& other) const
+      bool equal(const moves_iterator& other) const
       {
          // only used against end-iterator
          return (ref.moved_piece==other.ref.moved_piece);
       }
 
-      const plie&
+      const piece_moves&
       dereference() const
       {
          return ref;
@@ -108,9 +105,8 @@ namespace cheapshot
          {
             while(ref.origin!=bit_iterator())
             {
-               ref.destination=bit_iterator(
-                  metrics->moves(ref.moved_piece,*ref.origin));
-               if(ref.destination!=bit_iterator())
+               ref.destinations=metrics->moves(ref.moved_piece,*ref.origin);
+               if(ref.destinations!=0ULL)
                   return;
                ++ref.origin;
             }
