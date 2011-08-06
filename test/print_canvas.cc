@@ -3,7 +3,8 @@
 #include <iostream>
 #include <cstring>
 
-inline std::uint64_t arg_to_uint64(const char* arg)
+inline std::uint64_t 
+arg_to_uint64(const char* arg)
 {
    constexpr char hexprefix[]="0x";
    constexpr std::size_t hexprefix_len=sizeof(hexprefix)-1;
@@ -28,7 +29,8 @@ inline std::uint64_t arg_to_uint64(const char* arg)
    return r;
 }
 
-int main(int argc, const char* argv[])
+int 
+main(int argc, const char* argv[])
 {
    if(argc<2||!std::strcmp("-h",argv[1])||!std::strcmp("--help",argv[1]))
    {

@@ -11,36 +11,49 @@ namespace cheapshot
 
    typedef uint64_t (*MoveGenerator)(uint64_t p,uint64_t obstacles);
 
-   constexpr std::array<MoveGenerator,(std::uint64_t)piece::count> piece_move_generators=
+   namespace detail
    {
-      slide_and_capture_with_pawn,
-      jump_knight,
-      slide_bishop,
-      slide_rook,
-      slide_queen,
-      move_king
-   };
+      constexpr MoveGenerator move_generator[count<piece>()]=
+      {
+         slide_and_capture_with_pawn,
+         jump_knight,
+         slide_bishop,
+         slide_rook,
+         slide_queen,
+         move_king
+      };
+   }
+
+   constexpr MoveGenerator
+   move_gen(piece p)
+   {
+      return detail::move_generator[(std::size_t)p];
+   }
+
 
    struct board_metrics
    {
       uint64_t own;
       uint64_t opposing;
       uint64_t all;
-      explicit board_metrics(const board& b):
+
+      explicit
+      board_metrics(const board& b):
          own(obstacles(b.front())),
          opposing(obstacles(b.back())),
          all(opposing|own)
       {}
 
-      uint64_t moves(MoveGenerator gen,uint64_t s) const
+      uint64_t
+      moves(piece p,uint64_t s) const
       {
-         return gen(s,all)&~own;
+         return move_gen(p)(s,all)&~own;
       }
    };
 
    struct plie
    {
-      piece current;
+      piece moved_piece;
       bit_iterator origin;
       bit_iterator destination;
    };
@@ -56,12 +69,13 @@ namespace cheapshot
       plie_iterator(const single_color_board& scbarg,const board_metrics& m):
          scb(&scbarg),
          metrics(&m),
-         ref({piece::pawn,bit_iterator(scbarg[(std::size_t)piece::pawn]),bit_iterator()})
+         ref({piece::pawn,iterator(piece::pawn),bit_iterator()})
       {
          next_piece();
       }
 
-      void increment()
+      void
+      increment()
       {
          ++ref.destination;
          if(ref.destination!=bit_iterator())
@@ -77,34 +91,40 @@ namespace cheapshot
       bool equal(const plie_iterator& other) const
       {
          // only used against end-iterator
-         return (ref.current==other.ref.current);
+         return (ref.moved_piece==other.ref.moved_piece);
       }
-      
-      const plie& dereference() const 
+
+      const plie&
+      dereference() const
       {
          return ref;
       }
 
    private:
-      void next_piece()
+      void
+      next_piece()
       {
          while(true)
          {
             while(ref.origin!=bit_iterator())
             {
                ref.destination=bit_iterator(
-                  metrics->moves(
-                     piece_move_generators[(std::size_t)ref.current],
-                     *ref.origin));
+                  metrics->moves(ref.moved_piece,*ref.origin));
                if(ref.destination!=bit_iterator())
                   return;
                ++ref.origin;
             }
-            ++ref.current;
-            if(ref.current==piece::count)
+            ++ref.moved_piece;
+            if(ref.moved_piece==piece::count)
                break;
-            ref.origin=bit_iterator((*scb)[(std::size_t)ref.current]);
+            ref.origin=iterator(ref.moved_piece);
          }
+      }
+
+      bit_iterator
+      iterator(piece p) const
+      {
+         return bit_iterator((*scb)[(std::size_t)p]);
       }
    };
 }

@@ -601,6 +601,19 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
 }
 
+// white to move mate in 5
+// http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
+const board test_board1=scan_board(
+   "......RK\n"
+   "r......P\n"
+   "..PP....\n"
+   ".Pp..N..\n"
+   ".p..b.q.\n"
+   "N......p\n"
+   ".......k\n"
+   "R...Q...\n");
+ 
+
 BOOST_AUTO_TEST_CASE( plie_iterator_test )
 {
    {
@@ -683,7 +696,7 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
       std::for_each
          (plie_it,plie_iterator(),
           [&r,&b](plie p){
-            BOOST_CHECK(p.current==piece::rook);
+            BOOST_CHECK(p.moved_piece==piece::rook);
             r|=*(p.destination);
          });
       boost::test_tools::output_test_stream ots;
@@ -697,6 +710,114 @@ BOOST_AUTO_TEST_CASE( plie_iterator_test )
                      "X......X\n"
                      "X......X\n"
                      ".XXXXXX.\n"));
+   }
+   {
+      board b=scan_board(
+         "RNBQKBNR\n"
+         "PPPPPP.P\n"
+         ".......p\n"
+         ".......p\n"
+         ".......p\n"
+         "........\n"
+         "........\n"
+         "r......r\n");
+      board_metrics bm(b);
+      plie_iterator plie_it(b[0],bm);
+      uint64_t r=0;
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            BOOST_CHECK(p.moved_piece==piece::rook);
+            r|=*(p.destination);
+         });
+      boost::test_tools::output_test_stream ots;
+      print_canvas(r,ots);
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X.......\n"
+                     "X......X\n"
+                     "X......X\n"
+                     ".XXXXXX.\n"));
+   }
+   {
+      board b=test_board1;
+      board_metrics bm(b);
+      plie_iterator plie_it(b[0],bm);
+      uint64_t r[count<piece>()]={0,0,0,0,0};
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            r[(std::size_t)p.moved_piece]|=*(p.destination);
+         });
+      {
+         boost::test_tools::output_test_stream ots;
+         print_canvas(r[(std::size_t)piece::pawn],ots);
+         BOOST_CHECK(ots.is_equal(
+                        "........\n"
+                        "........\n"
+                        "...X....\n"
+                        "........\n"
+                        ".......X\n"
+                        "........\n"
+                        "........\n"
+                        "........\n"));
+      }
+      BOOST_CHECK_EQUAL(r[(std::size_t)piece::knight],0);
+      {
+         boost::test_tools::output_test_stream ots;
+         print_canvas(r[(std::size_t)piece::bishop],ots);
+         BOOST_CHECK(ots.is_equal(
+                        "........\n"
+                        "........\n"
+                        "..X.....\n"
+                        "...X.X..\n"
+                        "........\n"
+                        "...X.X..\n"
+                        "..X...X.\n"
+                        ".X.....X\n"));
+      }
+      {
+         boost::test_tools::output_test_stream ots;
+         print_canvas(r[(std::size_t)piece::rook],ots);
+         BOOST_CHECK(ots.is_equal(
+                        "X.......\n"
+                        ".XXXXXXX\n"
+                        "X.......\n"
+                        "X.......\n"
+                        "X.......\n"
+                        "X.......\n"
+                        "........\n"
+                        "........\n"));
+      }
+      {
+         boost::test_tools::output_test_stream ots;
+         print_canvas(r[(std::size_t)piece::queen],ots);
+         BOOST_CHECK(ots.is_equal(
+                        "......X.\n"
+                        "......X.\n"
+                        "......X.\n"
+                        ".....XXX\n"
+                        ".....X.X\n"
+                        ".....XX.\n"
+                        "....X.X.\n"
+                        "...X..X.\n"));
+      }
+      {
+         boost::test_tools::output_test_stream ots;
+         print_canvas(r[(std::size_t)piece::king],ots);
+         BOOST_CHECK(ots.is_equal(
+                        "........\n"
+                        "........\n"
+                        "........\n"
+                        "........\n"
+                        "........\n"
+                        "......X.\n"
+                        "......X.\n"
+                        "......XX\n"));
+      }
    }
 }
 
@@ -744,6 +865,28 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
    }
    time_op.time_report("knight move",ops);
 }
+
+BOOST_AUTO_TEST_CASE( time_walk_plie_test )
+{
+   boost::timer t;
+   volatile uint64_t s=(1ULL<<(8*(8-(1))));
+   board b=test_board1;
+   volatile uint8_t r;
+   TimeOperation time_op;
+   const long ops=2000000;
+   for(long i=0;i<ops;++i)
+   {
+      board_metrics bm(b);
+      volatile plie_iterator plie_it(b[0],bm);
+      std::for_each
+         (plie_it,plie_iterator(),
+          [&r,&b](plie p){
+            r|=*(p.destination);
+         });
+   }
+   time_op.time_report("plie walk",ops);
+}
+
 
 namespace
 {

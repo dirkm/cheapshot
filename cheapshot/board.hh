@@ -7,7 +7,7 @@
 
 namespace cheapshot
 {   
-   enum class piece: std::size_t { pawn, knight, bishop, rook, queen, king, count };
+   enum class piece { pawn, knight, bishop, rook, queen, king, count };
 
    inline piece operator++( piece &rs) 
    {
@@ -15,13 +15,19 @@ namespace cheapshot
       return rs;
    }
 
-   typedef std::array<uint64_t,(std::size_t)piece::count> single_color_board;
+   enum class colors { white, black, count };
 
-   enum class colors: std::size_t { white, black, count };
+   template<typename T>
+   constexpr std::size_t count() 
+   {
+      return (std::size_t)T::count;
+   }
+
+   typedef std::array<uint64_t,count<piece>()> single_color_board;
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
-   typedef std::array<single_color_board,(std::size_t)colors::count> board;
+   typedef std::array<single_color_board,count<colors>()> board;
 
    constexpr single_color_board init_white_board=
    {

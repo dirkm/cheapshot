@@ -11,6 +11,7 @@
 # error "gcc 4.6 required"
 #endif
 
+
 namespace cheapshot
 {
 
