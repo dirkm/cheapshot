@@ -1,4 +1,11 @@
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
+#include <iterator>
+#include <sys/times.h>
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
@@ -12,15 +19,6 @@
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
-#include <boost/timer.hpp>
-
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <cstdlib>
-#include <ctime>
-#include <sys/times.h>
-#include <iterator>
 
 using namespace cheapshot;
 
@@ -824,7 +822,6 @@ BOOST_AUTO_TEST_SUITE(timings_suite)
 
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )
 {
-   boost::timer t;
    volatile uint64_t s=(1ULL<<(8*(8-(1))));
    volatile uint8_t c;
    volatile uint8_t r;
@@ -840,7 +837,6 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
 
 BOOST_AUTO_TEST_CASE( time_queen_move )
 {
-   boost::timer t;
    volatile uint64_t s=(1ULL<<(4*(8-(4))));
    volatile uint64_t r;
    TimeOperation time_op;
@@ -855,7 +851,6 @@ BOOST_AUTO_TEST_CASE( time_queen_move )
 
 BOOST_AUTO_TEST_CASE( time_knight_move )
 {
-   boost::timer t;
    volatile uint64_t s=(1ULL<<(4*(8-(4))));
    volatile uint64_t r;
    TimeOperation time_op;
@@ -869,7 +864,6 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 {
-   boost::timer t;
    volatile uint64_t s=(1ULL<<(8*(8-(1))));
    board b=test_board1;
    volatile uint8_t r;
@@ -889,4 +883,3 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

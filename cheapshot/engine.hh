@@ -9,7 +9,6 @@
 
 namespace cheapshot
 {
-
    typedef uint64_t (*MoveGenerator)(uint64_t p,uint64_t obstacles);
 
    namespace detail
@@ -23,6 +22,12 @@ namespace cheapshot
          slide_queen,
          move_king
       };
+
+      constexpr uint64_t weight[count<piece>()]=
+      {
+         1, 3, 3, 5, 9,
+         std::numeric_limits<uint64_t>::max()
+      };
    }
 
    constexpr MoveGenerator
@@ -31,6 +36,11 @@ namespace cheapshot
       return detail::move_generator[idx(p)];
    }
 
+   constexpr uint64_t
+   weight(piece p)
+   {
+      return detail::weight[idx(p)];
+   }
 
    struct board_metrics
    {
@@ -102,18 +112,14 @@ namespace cheapshot
       void
       first_match()
       {
-         while(true)
+         while(ref.origin==bit_iterator())
          {
-            if(ref.origin!=bit_iterator())
-            {
-               ref.destinations=bit_iterator(metrics->moves(ref.moved_piece,*ref.origin));
-               return;
-            }
             ++ref.moved_piece;
             if(ref.moved_piece==piece::count)
-               break;
+               return;
             ref.origin=origin_iterator(ref.moved_piece);
          }
+         ref.destinations=bit_iterator(metrics->moves(ref.moved_piece,*ref.origin));
       }
 
       bit_iterator
@@ -134,6 +140,18 @@ namespace cheapshot
 
    score
    handle_position(const board& b)
+   {
+      // TODO
+   }
+
+   void
+   move_castle(board& b)
+   {
+      // TODO
+   }
+
+   void
+   capture_en_passant(board& b)
    {
       // TODO
    }
