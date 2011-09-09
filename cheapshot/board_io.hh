@@ -13,14 +13,14 @@ namespace cheapshot
    constexpr piece_representation repr_pieces_black={'P','N','B','R','Q','K'};
 
    inline void
-   fill_canvas(const uint64_t& bm,canvas& c,char piece)
+   fill_canvas(const uint64_t& bm,canvas& c,char piece) noexcept
    {
       for(auto it=make_board_iterator(bm);it!=board_iterator();++it)
          c[*it]=piece;
    }
 
    inline void
-   fill_canvas_single_color(const single_color_board& board,canvas& c,piece_representation p)
+   fill_canvas_single_color(const single_color_board& board,canvas& c,piece_representation p) noexcept
    {
       auto pi=p.begin();
       for(auto bi=board.begin();bi!=board.end();++bi,++pi)
@@ -59,7 +59,7 @@ namespace cheapshot
    }
 
    inline uint64_t
-   scan_canvas(const char* l, char piece)
+   scan_canvas(const char* l, char piece) noexcept
    {
       uint64_t r=0;
       for(int j=0;j<8;++j)
@@ -79,7 +79,7 @@ namespace cheapshot
    }
 
    inline single_color_board
-   scan_board_single_color(const char* l, piece_representation repr)
+   scan_board_single_color(const char* l, piece_representation repr) noexcept
    {
       single_color_board scb;
       auto pi=repr.begin();
@@ -89,7 +89,7 @@ namespace cheapshot
    }
 
    inline board
-   scan_board(const char* l)
+   scan_board(const char* l) noexcept
    {
       board b={scan_board_single_color(l,repr_pieces_white),
                scan_board_single_color(l,repr_pieces_black)};

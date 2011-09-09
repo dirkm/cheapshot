@@ -56,31 +56,42 @@ namespace cheapshot
    };
 
    inline void
-   mirror(single_color_board& scb)
+   mirror_inplace(uint64_t& v)
    {
-      for(uint64_t& v: scb)
-      {
-         // swap bytes
-         v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
-         // swap 2-byte long pairs
-         v = ((v >> 16) & 0xFFFF0000FFFF0000ULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
-         // swap 4-byte long pairs
-         v = (v >> 32) | (v << 32);
-      }
+      // swap bytes
+      v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
+      // swap 2-byte long pairs
+      v = ((v >> 16) & 0xFFFF0000FFFF0000ULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
+      // swap 4-byte long pairs
+      v = (v >> 32) | (v << 32);
+   }
+
+   inline uint64_t
+   mirror(uint64_t v)
+   {
+      mirror_inplace(v);
+      return v;
    }
 
    inline void
-   mirror(board& board)
+   mirror_inplace(single_color_board& scb)
+   {
+      for(uint64_t& v: scb)
+         mirror_inplace(v);
+   }
+
+   inline void
+   mirror_inplace(board& board)
    {
       for(single_color_board& scb: board)
-         mirror(scb);
+         mirror_inplace(scb);
    }
 
    inline board
    initial_board()
    {
       board b={init_white_board,init_white_board};
-      mirror(b[idx(color::black)]);
+      mirror_inplace(b[idx(color::black)]);
       return b;
    }
 

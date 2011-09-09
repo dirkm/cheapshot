@@ -15,7 +15,7 @@ namespace cheapshot
    {
       constexpr MoveGenerator move_generator[count<piece>()]=
       {
-         slide_and_capture_with_pawn,
+         slide_and_capture_with_pawn_up,
          jump_knight,
          slide_bishop,
          slide_rook,
@@ -135,7 +135,8 @@ namespace cheapshot
    make_move(board& b,const piece_moves& mv)
    {
       b[idx(color::white)][idx(mv.moved_piece)]^=(*mv.origin|*mv.destinations);
-      // TODO: remove oposing piece
+      for(auto& v: b[idx(color::black)])
+         v&=~*mv.destinations;
    }
 
    score

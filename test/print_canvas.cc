@@ -19,7 +19,7 @@ arg_to_uint64(const char* arg)
    else
       base=10;
 
-   std:: size_t idx;
+   std::size_t idx;
    std::uint64_t r=std::stoull(arg,&idx,base);
 
    if(idx!=std::strlen(arg))

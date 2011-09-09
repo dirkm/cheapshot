@@ -344,121 +344,101 @@ BOOST_AUTO_TEST_CASE( move_king_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( slide_pawn_test )
+inline void
+slide_pawn_check(const char* canvas)
 {
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "..o.....\n"
-         "..p.....\n"
-         "........\n"
-         "........\n";
-//      print_canvas(slide_pawn(
-//                           scan_canvas(canvas,'p'),
-//                           scan_canvas(canvas,'o')),std::cout);
-      BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X'));
-   }
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "..X.....\n"
-         "..p.....\n"
-         "........\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X'));
-   }
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "..X.....\n"
-         "..X.....\n"
-         "..p.....\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X'));
-   }
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "...o....\n"
-         "...Xo...\n"
-         "...p....\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X'));
-   }
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "...o....\n"
-         "...p....\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(slide_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X'));
-   }
+   uint64_t pawns=scan_canvas(canvas,'p');
+   uint64_t opposing=scan_canvas(canvas,'o');
+   uint64_t result=scan_canvas(canvas,'X');
+   // print_canvas(slide_pawn_up(pawns,opposing,std::cout);
+   BOOST_CHECK_EQUAL(slide_pawn_up(pawns,opposing),result);
+   BOOST_CHECK_EQUAL(slide_pawn_down(mirror(pawns),mirror(opposing)),mirror(result));
 }
 
-BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
+BOOST_AUTO_TEST_CASE( slide_pawn_test )
 {
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "..oO....\n"
-         "..p.....\n"
-         "........\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(capture_with_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
-                        scan_canvas(canvas,'O'));
-   }
-   {
-      constexpr char canvas[]=
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "OoOo....\n"
-         ".po.....\n"
-         "..o.....\n"
-         "........\n";
-      BOOST_CHECK_EQUAL(capture_with_pawn(
-                           scan_canvas(canvas,'p'),
-                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
-                        scan_canvas(canvas,'O'));
-   }
+   slide_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..o.....\n"
+      "..p.....\n"
+      "........\n"
+      "........\n");
 
+   slide_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..X.....\n"
+      "..p.....\n"
+      "........\n"
+      "........\n");
+
+   slide_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..X.....\n"
+      "..X.....\n"
+      "..p.....\n"
+      "........\n");
+
+   slide_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "...o....\n"
+      "...Xo...\n"
+      "...p....\n"
+      "........\n");
+
+   slide_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "...o....\n"
+      "...p....\n"
+      "........\n");
+}
+
+inline void
+capture_pawn_check(const char* canvas)
+{
+   uint64_t pawns=scan_canvas(canvas,'p');
+   uint64_t captures=scan_canvas(canvas,'O');
+   uint64_t opposing=scan_canvas(canvas,'o')|captures;
+   BOOST_CHECK_EQUAL(capture_with_pawn_up(pawns,opposing),captures);
+   BOOST_CHECK_EQUAL(capture_with_pawn_down(mirror(pawns),mirror(opposing)),mirror(captures));
+}
+
+BOOST_AUTO_TEST_CASE( capture_with_pawn_up_test )
+{
+   capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..oO....\n"
+      "..p.....\n"
+      "........\n"
+      "........\n");
+
+   capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "OoOo....\n"
+      ".po.....\n"
+      "..o.....\n"
+      "........\n");
 }
 
 BOOST_AUTO_TEST_CASE( diagonals_test )
@@ -608,136 +588,65 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 BOOST_AUTO_TEST_CASE( scan_board_test )
 {
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
-} 
+}
+
+inline void
+moves_iterator_check(const char* board_layout, const char* captures)
+{
+   board b=scan_board(board_layout);
+   board_metrics bm(b);
+   moves_iterator moves_it(b[0],bm);
+   uint64_t r=0;
+   std::for_each
+      (moves_it,moves_iterator(),
+       [&r,&b](piece_moves p){
+         r|=p.destinations.remaining();
+      });
+   boost::test_tools::output_test_stream ots;
+   print_canvas(r,ots);
+   BOOST_CHECK(ots.is_equal(captures));
+}
 
 BOOST_AUTO_TEST_CASE( moves_iterator_test )
 {
-   {
-      board b=scan_board(
-         "RNBQKBNR\n"
-         "PPPPPPPP\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "...p....\n"
-         "........\n");
-      board_metrics bm(b);
-      moves_iterator moves_it(b[0],bm);
-      uint64_t r=0;
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r,&b](piece_moves p){
-            BOOST_CHECK_EQUAL(*p.origin,b[0][idx(piece::pawn)]);
-            BOOST_CHECK_EQUAL(r&p.destinations.remaining(),0);
-            r|=p.destinations.remaining();
-         });
-      boost::test_tools::output_test_stream ots;
-      print_canvas(r,ots);
-      BOOST_CHECK(ots.is_equal(
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "...X....\n"
-                     "...X....\n"
-                     "........\n"
-                     "........\n"));
-   }
-   {
-      board b=scan_board(
-         "RNBQKBNR\n"
-         "PP.P.PPP\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "..P.P...\n"
-         "...p....\n"
-         "........\n");
-      board_metrics bm(b);
-      moves_iterator moves_it(b[0],bm);
-      uint64_t r=0;
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r,&b](piece_moves p){
-            BOOST_CHECK_EQUAL(*p.origin,b[0][idx(piece::pawn)]);
-            BOOST_CHECK_EQUAL(r&p.destinations.remaining(),0);
-            r|=p.destinations.remaining();
-         });
-      boost::test_tools::output_test_stream ots;
-      print_canvas(r,ots);
-      BOOST_CHECK(ots.is_equal(
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "...X....\n"
-                     "..XXX...\n"
-                     "........\n"
-                     "........\n"));
-   }
-   {
-      board b=scan_board(
-         "RNBQKBNR\n"
-         "PPPPPP.P\n"
-         ".......p\n"
-         ".......p\n"
-         ".......p\n"
-         "........\n"
-         "........\n"
-         "r......r\n");
-      board_metrics bm(b);
-      moves_iterator moves_it(b[0],bm);
-      uint64_t r=0;
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r,&b](piece_moves p){
-            BOOST_CHECK((p.moved_piece==piece::rook)||(p.destinations==bit_iterator()));
-            r|=p.destinations.remaining();
-         });
-      boost::test_tools::output_test_stream ots;
-      print_canvas(r,ots);
-      BOOST_CHECK(ots.is_equal(
-                     "........\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X......X\n"
-                     "X......X\n"
-                     ".XXXXXX.\n"));
-   }
-   {
-      board b=scan_board(
-         "RNBQKBNR\n"
-         "PPPPPP.P\n"
-         ".......p\n"
-         ".......p\n"
-         ".......p\n"
-         "........\n"
-         "........\n"
-         "r......r\n");
-      board_metrics bm(b);
-      moves_iterator moves_it(b[0],bm);
-      uint64_t r=0;
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r,&b](piece_moves p){
-            BOOST_CHECK((p.moved_piece==piece::rook)||(p.destinations==bit_iterator()));
-            r|=p.destinations.remaining();
-         });
-      boost::test_tools::output_test_stream ots;
-      print_canvas(r,ots);
-      BOOST_CHECK(ots.is_equal(
-                     "........\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X.......\n"
-                     "X......X\n"
-                     "X......X\n"
-                     ".XXXXXX.\n"));
-   }
+   moves_iterator_check(
+      "RNBQKBNR\n"
+      "PPPPPPPP\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "...p....\n"
+      "........\n",
+
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "...X....\n"
+      "...X....\n"
+      "........\n"
+      "........\n");
+
+   moves_iterator_check(
+      "RNBQKBNR\n"
+      "PPPPPP.P\n"
+      ".......p\n"
+      ".......p\n"
+      ".......p\n"
+      "........\n"
+      "........\n"
+      "r......r\n",
+
+      "........\n"
+      "X.......\n"
+      "X.......\n"
+      "X.......\n"
+      "X.......\n"
+      "X......X\n"
+      "X......X\n"
+      ".XXXXXX.\n");
+
    {
       board b=test_board1;
       board_metrics bm(b);
@@ -864,7 +773,6 @@ BOOST_AUTO_TEST_CASE( time_knight_move )
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 {
-   volatile uint64_t s=(1ULL<<(8*(8-(1))));
    board b=test_board1;
    volatile uint8_t r;
    TimeOperation time_op;
@@ -880,6 +788,19 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
          });
    }
    time_op.time_report("piece_moves walk",ops);
+}
+
+BOOST_AUTO_TEST_CASE( time_count_set_bits )
+{
+   volatile uint64_t r;
+   volatile uint64_t in=0X100110011001F30ULL;
+   TimeOperation time_op;
+   constexpr long ops=80000000;
+   for(long i=0;i<ops;++i)
+   {
+      r=bits_set(in);
+   }
+   time_op.time_report("set bits",ops);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -23,76 +23,104 @@ namespace cheapshot
 // slide: move until an obstacle is met (captures included - even captures of own pieces)
 // jump: knights jump
 
-// aliased: wrapping from right to left - every 8 steps - is ignored, and the callers problem.
+// aliased: wrapping from right to left is ignored when changing row every 8 bits, and the caller's problem.
 
-// this file is built-up from lowlevel (top of the file) to highlevel (bottom of the file) functions.
+// this file is built-up from low-level (top of the file) to high-level (bottom of the file) functions.
 // piece-moves are found towards the bottom of the file
 
+// all moves are generic (white, black) apart from pawn-moves, which have a separate up and down version
+
    constexpr bool
-   is_max_single_bit(uint64_t p)
+   is_max_single_bit(uint64_t p) noexcept
    {
       return !(p & (p - 1));
    }
 
    constexpr bool
-   is_single_bit(uint64_t p)
+   is_single_bit(uint64_t p) noexcept
    {
       return is_max_single_bit(p) && p;
    }
 
    // returns 0 in case of p==0
    constexpr uint64_t
-   lowest_bit(uint64_t p)
+   lowest_bit(uint64_t p) noexcept
    {
       return p&(~p+1);
    }
 
+   // accepts max 14 bits
+   constexpr uint64_t
+   bits_set(uint64_t p) noexcept
+   {
+      return __builtin_popcountl(p);
+   }
+
+
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
-   {
-      constexpr uint64_t
-      aliased_move_right_up(uint64_t p, int n=6, int step=1, int i = 0)
+   {      
+      constexpr uint64_t left_shift(uint64_t l, uint64_t r) noexcept
       {
-         return (i<n)?aliased_move_right_up(p|p<<(step*(1<<i)),n,step,i+1):p;
+         return l<<r;
+      }
+
+      constexpr uint64_t right_shift(uint64_t l, uint64_t r) noexcept
+      {
+         return l>>r;
+      }
+
+      template<uint64_t (*Shift)(uint64_t, uint64_t)>
+      constexpr uint64_t
+      aliased_move_helper(uint64_t p, int n=6, int step=1, int i = 0) noexcept
+      {
+         return (i<n)?aliased_move_helper<Shift>(p|Shift(p,(step*(1<<i))),n,step,i+1):p;
       }
 
       constexpr uint64_t
-      aliased_move_left_down(uint64_t p, int n=6, int step=1, int i = 0)
+      aliased_move_increasing(uint64_t p, int n=6, int step=1, int i = 0) noexcept
       {
-         return (i<n)?aliased_move_left_down(p|p>>(step*(1<<i)),n,step,i+1):p;
+         return aliased_move_helper<left_shift>(p,n,step,i);
       }
 
       constexpr uint64_t
-      aliased_split(uint64_t p, int s)
+      aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i = 0) noexcept
+      {
+         return aliased_move_helper<right_shift>(p,n,step,i);
+      }
+
+      constexpr uint64_t
+      aliased_split(uint64_t p, int s) noexcept
       {
          return (p<<s)|(p>>s);
       }
 
       constexpr uint64_t
-      aliased_widen(uint64_t p, int s)
+      aliased_widen(uint64_t p, int s) noexcept
       {
          return p|aliased_split(p,s);
       }
 
       // b00111111 -> b00100000
       constexpr uint64_t
-      strip_lower_bits_when_all_lower_bits_set(uint64_t p)
+      strip_lower_bits_when_all_lower_bits_set(uint64_t p) noexcept
       {
          return p-(p>>1);
       }
    }
 
    constexpr uint64_t
-   highest_bit(uint64_t p)
+   highest_bit(uint64_t p) noexcept
    {
-      return detail::strip_lower_bits_when_all_lower_bits_set(detail::aliased_move_left_down(p));
+      return detail::strip_lower_bits_when_all_lower_bits_set(
+         detail::aliased_move_decreasing(p));
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
    // function accepts 0 and returns "all bits set"
 
    constexpr uint64_t
-   smaller(uint64_t s)
+   smaller(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
       return s-1;
@@ -100,21 +128,21 @@ namespace cheapshot
 
    // function accepts 0 and returns "all bits set"
    constexpr uint64_t
-   smaller_equal(uint64_t s)
+   smaller_equal(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
       return (s-1)|s;
    }
 
    constexpr uint64_t
-   bigger(uint64_t s)
+   bigger(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return ~smaller_equal(s);
    }
 
    constexpr uint64_t
-   bigger_equal(uint64_t s)
+   bigger_equal(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return ~smaller(s);
@@ -122,7 +150,7 @@ namespace cheapshot
 
    // function accepts 0 and returns "all bits set"
    constexpr uint64_t
-   bigger_equal_special_0(uint64_t s)
+   bigger_equal_special_0(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
       return bigger_equal(highest_bit(s|1ULL)); // TODO: improvable?
@@ -139,9 +167,9 @@ namespace cheapshot
 
    template<direction_up D>
    constexpr uint64_t
-   aliased_move(uint64_t p)
+   aliased_move(uint64_t p) noexcept
    {
-      return detail::aliased_move_right_up(p,3,D)|p;
+      return detail::aliased_move_increasing(p,3,D)|p;
    }
 
    enum direction_down
@@ -154,33 +182,33 @@ namespace cheapshot
 
    template<direction_down D>
    constexpr uint64_t
-   aliased_move(uint64_t p)
+   aliased_move(uint64_t p) noexcept
    {
-      return detail::aliased_move_left_down(p,3,D)|p;
+      return detail::aliased_move_decreasing(p,3,D)|p;
    }
 
    // helpers to get patterns based on column-row coordinates
 
    constexpr uint64_t
-   position(uint8_t column, uint8_t row)
+   position(uint8_t column, uint8_t row) noexcept
    {
       return 1ULL<<((row)*8+(column));
    }
 
    constexpr uint64_t
-   row_with_number(uint8_t row_number)
+   row_with_number(uint8_t row_number) noexcept
    {
       return aliased_move<right>(1ULL)<<(row_number*8);
    }
 
    constexpr uint64_t
-   column_with_number(uint8_t column_number)
+   column_with_number(uint8_t column_number) noexcept
    {
       return aliased_move<top>(1ULL)<<(column_number);
    }
 
    constexpr uint64_t
-   row(uint64_t s)
+   row(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return aliased_move<right>(
@@ -189,7 +217,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   columns(uint64_t p)
+   columns(uint64_t p) noexcept
    {
       return
          aliased_move<bottom>(p)|
@@ -197,7 +225,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   column(uint64_t s)
+   column(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return columns(s);
@@ -206,19 +234,19 @@ namespace cheapshot
    // helpers to get patterns based on column-row coordinates in algebraic notation
 
    constexpr uint64_t
-   algpos(char column, uint8_t row)
+   algpos(char column, uint8_t row) noexcept
    {
       return position(column-'A',row-1);
    }
 
    constexpr uint64_t
-   row_with_algebraic_number(uint8_t alrow)
+   row_with_algebraic_number(uint8_t alrow) noexcept
    {
       return row_with_number(alrow-1);
    }
 
    constexpr uint64_t
-   column_with_algebraic_number(uint8_t col)
+   column_with_algebraic_number(uint8_t col) noexcept
    {
       return column_with_number(col-'A');
    }
@@ -226,7 +254,7 @@ namespace cheapshot
    // specialized patterns for piece moves
 
    constexpr uint64_t
-   exclusive_left(uint64_t s)
+   exclusive_left(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return aliased_move<top>(
@@ -234,7 +262,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   diag_delta(uint64_t s,uint64_t left)
+   diag_delta(uint64_t s,uint64_t left) noexcept
    {
       // assert(is_single_bit(s));
       return
@@ -243,7 +271,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   diag_sum(uint64_t s,uint64_t left)
+   diag_sum(uint64_t s,uint64_t left) noexcept
    {
       // assert(is_single_bit(s));
       return
@@ -252,42 +280,71 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   diag_delta(uint64_t s)
+   diag_delta(uint64_t s) noexcept
    {
       return diag_delta(s,exclusive_left(s));
    }
 
    constexpr uint64_t
-   diag_sum(uint64_t s)
+   diag_sum(uint64_t s) noexcept
    {
       return diag_sum(s,exclusive_left(s));
    }
 
-   constexpr uint64_t
-   move_pawn(uint64_t s)
+   namespace detail
    {
-      // assert(is_single_bit(s));
-      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      return (s<<8)|(s&row_with_number(1))<<16;
+      template<uint64_t (*Shift)(uint64_t, uint64_t),int StartRow>
+      constexpr uint64_t
+      move_pawn(uint64_t s) noexcept
+      {
+         return Shift(s,8)|Shift(s&row_with_number(StartRow),16);
+      }
+
+      template<uint64_t (*Shift)(uint64_t, uint64_t)>
+      constexpr uint64_t
+      capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
+      {
+         return
+            (Shift(s,7)|Shift(s,9)) & // possible_pawn_captures
+            row(Shift(s,8)) & // next row
+            obstacles;
+      }
    }
 
-// if obstacles include our own pieces, they have to be excluded explicitly afterward
-// not including en-passant captures
    constexpr uint64_t
-   capture_with_pawn(uint64_t s, uint64_t obstacles)
+   move_pawn_up(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      return
-         ((s<<7)|(s<<9)) & // possible_pawn_captures
-         row(s<<8) & // next row
-         obstacles;
+      return detail::move_pawn<detail::left_shift,1>(s);
+   }
+
+   constexpr uint64_t
+   move_pawn_down(uint64_t s) noexcept
+   {
+      return detail::move_pawn<detail::right_shift,1>(s);
+   }
+
+   // if obstacles include our own pieces, they have to be excluded explicitly afterward
+   // not including en-passant captures
+   constexpr uint64_t
+   capture_with_pawn_up(uint64_t s, uint64_t obstacles) noexcept
+   {
+      // assert(is_single_bit(s));
+      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
+      return detail::capture_with_pawn<detail::left_shift>(s,obstacles);
+   }
+
+   constexpr uint64_t
+   capture_with_pawn_down(uint64_t s, uint64_t obstacles) noexcept
+   {
+      return detail::capture_with_pawn<detail::right_shift>(s,obstacles);
    }
 
    namespace detail
    {
       constexpr uint64_t
-      aliased_band_widen(uint64_t band,int n=1, int i = 0)
+      aliased_band_widen(uint64_t band,int n=1, int i = 0) noexcept
       {
          return i!=n?
             detail::aliased_band_widen(detail::aliased_widen(band,1),n,i+1):
@@ -296,7 +353,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   vertical_band(uint64_t s,uint8_t halfwidth)
+   vertical_band(uint64_t s,uint8_t halfwidth) noexcept
    {
       // assert(is_single_bit(s));
       return
@@ -306,7 +363,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   jump_knight_simple(uint64_t s)
+   jump_knight_simple(uint64_t s) noexcept
    {
       return
          vertical_band(s,2) &
@@ -316,13 +373,13 @@ namespace cheapshot
 
 // with obstacles to get uniform interface
    constexpr uint64_t
-   jump_knight(uint64_t s, uint64_t /*obstacles*/)
+   jump_knight(uint64_t s, uint64_t /*obstacles*/) noexcept
    {
       return jump_knight_simple(s);
    }
 
    constexpr uint64_t
-   move_king_simple(uint64_t s)
+   move_king_simple(uint64_t s) noexcept
    {
       return
          detail::aliased_widen(detail::aliased_widen(s,1),8)&
@@ -332,7 +389,7 @@ namespace cheapshot
 
 // with obstacles to get uniform interface
    constexpr uint64_t
-   move_king(uint64_t s, uint64_t /*obstacles*/)
+   move_king(uint64_t s, uint64_t /*obstacles*/) noexcept
    {
       return move_king_simple(s);
    }
@@ -341,7 +398,7 @@ namespace cheapshot
 // movement: movement in a single direction (for pawns, bishops, rooks, queens)
 // obstacles: own pieces plus opposing pieces (except the moving piece itself)
    constexpr uint64_t
-   slide(uint64_t s,uint64_t movement,uint64_t obstacles)
+   slide(uint64_t s,uint64_t movement,uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
       // assert((s&obstacles)==0);
@@ -356,7 +413,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_rook(uint64_t s, uint64_t obstacles) 
+   slide_rook(uint64_t s, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
       // vertical change
@@ -368,7 +425,7 @@ namespace cheapshot
    namespace detail
    {
       constexpr uint64_t
-      slide_bishop_optimised(uint64_t s, uint64_t obstacles,uint64_t left)
+      slide_bishop_optimised(uint64_t s, uint64_t obstacles,uint64_t left) noexcept
       {
          return 
             slide(s,diag_delta(s,left)^s,obstacles)|
@@ -377,7 +434,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_bishop(uint64_t s, uint64_t obstacles)
+   slide_bishop(uint64_t s, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
       return 
@@ -385,7 +442,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_queen(uint64_t s, uint64_t obstacles)
+   slide_queen(uint64_t s, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
       return 
@@ -394,7 +451,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_optimised_for_pawns(uint64_t movement,uint64_t obstacles)
+   slide_optimised_for_pawns_up(uint64_t movement,uint64_t obstacles) noexcept
    {
       return smaller(
          lowest_bit(
@@ -403,18 +460,41 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_pawn(uint64_t s,uint64_t obstacles)
+   slide_optimised_for_pawns_down(uint64_t movement,uint64_t obstacles) noexcept
    {
-      return 
-         slide_optimised_for_pawns(move_pawn(s),obstacles);
+      // optimisable?
+      return bigger(
+         highest_bit(
+            obstacles&movement // blocking_bottom
+            ))&movement;
    }
 
    constexpr uint64_t
-   slide_and_capture_with_pawn(uint64_t s,uint64_t obstacles)
+   slide_pawn_up(uint64_t s,uint64_t obstacles) noexcept
    {
-      return slide_pawn(s,obstacles)|capture_with_pawn(s,obstacles);
+      return 
+         slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
    }
 
+   constexpr uint64_t
+   slide_and_capture_with_pawn_up(uint64_t s,uint64_t obstacles) noexcept
+   {
+      return slide_pawn_up(s,obstacles)|capture_with_pawn_up(s,obstacles);
+   }
+
+   constexpr uint64_t
+   slide_pawn_down(uint64_t s,uint64_t obstacles) noexcept
+   {
+      return 
+         slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
+   }
+
+   constexpr uint64_t
+   slide_and_capture_with_pawn_down(uint64_t s,uint64_t obstacles) noexcept
+   {
+      return 
+         slide_pawn_down(s,obstacles)|capture_with_pawn_down(s,obstacles);
+   }
 } // cheapshot
 
 #endif
