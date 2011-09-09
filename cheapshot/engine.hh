@@ -13,14 +13,24 @@ namespace cheapshot
 
    namespace detail
    {
-      constexpr MoveGenerator move_generator[count<piece>()]=
+      constexpr MoveGenerator move_generator_array[count<color>()][count<piece>()]=
       {
-         slide_and_capture_with_pawn_up,
-         jump_knight,
-         slide_bishop,
-         slide_rook,
-         slide_queen,
-         move_king
+         {
+            slide_and_capture_with_pawn_up,
+            jump_knight,
+            slide_bishop,
+            slide_rook,
+            slide_queen,
+            move_king
+         },
+         {
+            slide_and_capture_with_pawn_down,
+            jump_knight,
+            slide_bishop,
+            slide_rook,
+            slide_queen,
+            move_king
+         }
       };
 
       constexpr uint64_t weight[count<piece>()]=
@@ -31,9 +41,9 @@ namespace cheapshot
    }
 
    constexpr MoveGenerator
-   move_gen(piece p)
+   move_generator_function(piece p)
    {
-      return detail::move_generator[idx(p)];
+      return detail::move_generator_array[idx(color::white)][idx(p)];
    }
 
    constexpr uint64_t
@@ -58,7 +68,7 @@ namespace cheapshot
       uint64_t
       moves(piece p,uint64_t s) const
       {
-         return move_gen(p)(s,all)&~own;
+         return move_generator_function(p)(s,all)&~own;
       }
    };
 

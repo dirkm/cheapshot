@@ -744,31 +744,28 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    time_op.time_report("column/row calculation",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_queen_move )
+template<typename T>
+void time_move(T fun, int count, const char* description)
 {
    volatile uint64_t s=(1ULL<<(4*(8-(4))));
    volatile uint64_t r;
    TimeOperation time_op;
-   const long ops=10000000;
    volatile uint64_t obstacles=random()&~s;
-   for(long i=0;i<ops;++i)
-   {
-      r=slide_queen(s,obstacles);
-   }
-   time_op.time_report("queen move",ops);
+   for(long i=0;i<count;++i)
+      r=fun(s,obstacles);
+   time_op.time_report(description,count);
 }
 
-BOOST_AUTO_TEST_CASE( time_knight_move )
+BOOST_AUTO_TEST_CASE( time_moves )
 {
-   volatile uint64_t s=(1ULL<<(4*(8-(4))));
-   volatile uint64_t r;
-   TimeOperation time_op;
-   const long ops=100000000;
-   for(long i=0;i<ops;++i)
-   {
-      r=jump_knight_simple(s);
-   }
-   time_op.time_report("knight move",ops);
+   time_move(&slide_pawn_up,300000000,"slide pawn up");
+   time_move(&slide_pawn_down,100000000,"slide pawn down");
+   time_move(&capture_with_pawn_up,200000000,"capture with pawn up");
+   time_move(&capture_with_pawn_down,200000000,"capture with pawn down");
+   time_move(&jump_knight,100000000,"knight jump");
+   time_move(&slide_bishop,20000000,"slide bishop");
+   time_move(&slide_rook,20000000,"slide rook");
+   time_move(&slide_queen,10000000,"slide queen");
 }
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
