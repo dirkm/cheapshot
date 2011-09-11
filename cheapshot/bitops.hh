@@ -470,11 +470,9 @@ namespace cheapshot
    constexpr uint64_t
    slide_optimised_for_pawns_down(uint64_t movement,uint64_t obstacles) noexcept
    {
-      // optimisable?
-      return bigger_special_0(
-         highest_bit(
-            obstacles&movement // blocking_bottom
-            ))&movement;
+      return 
+         ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
+         movement;
    }
 
    constexpr uint64_t

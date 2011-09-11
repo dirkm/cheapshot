@@ -828,8 +828,9 @@ void time_move(T fun, int count, const char* description)
 
 BOOST_AUTO_TEST_CASE( time_moves )
 {
-   time_move(&slide_pawn_up,300000000,"slide pawn up");
-   time_move(&slide_pawn_down,100000000,"slide pawn down");
+   // each timing takes about 1 sec on my machine
+   time_move(&slide_pawn_up,200000000,"slide pawn up");
+   time_move(&slide_pawn_down,200000000,"slide pawn down");
    time_move(&capture_with_pawn_up,200000000,"capture with pawn up");
    time_move(&capture_with_pawn_down,200000000,"capture with pawn down");
    time_move(&jump_knight,100000000,"knight jump");
