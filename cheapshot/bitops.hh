@@ -301,11 +301,13 @@ namespace cheapshot
 
    namespace detail
    {
-      template<uint64_t (*Shift)(uint64_t, uint64_t),int StartRow>
+      template<uint64_t (*Shift)(uint64_t, uint64_t)>
       constexpr uint64_t
       move_pawn(uint64_t s) noexcept
       {
-         return Shift(s,8)|Shift(s&row_with_number(StartRow),16);
+         return 
+            Shift(s,8)|
+            Shift(s&(row_with_number(1)|row_with_number(6)),16);
       }
 
       template<uint64_t (*Shift)(uint64_t, uint64_t)>
@@ -324,13 +326,13 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      return detail::move_pawn<detail::left_shift,1>(s);
+      return detail::move_pawn<detail::left_shift>(s);
    }
 
    constexpr uint64_t
    move_pawn_down(uint64_t s) noexcept
    {
-      return detail::move_pawn<detail::right_shift,6>(s);
+      return detail::move_pawn<detail::right_shift>(s);
    }
 
    // if obstacles include our own pieces, they have to be excluded explicitly afterward

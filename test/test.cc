@@ -848,7 +848,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      volatile moves_iterator moves_it(b[0],bm);
+      /*volatile*/ moves_iterator moves_it(b[0],bm); // TODO: bug in gcc 4.7 ??
       std::for_each
          (moves_it,moves_iterator(),
           [&r](piece_moves p){

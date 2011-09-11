@@ -1,8 +1,8 @@
 #; -*-makefile-*-
-#CPP := g++-4.5
-#CPP := g++
+#CXX := g++-4.5
+#CXX := g++
 CXX := g++-46
-#CPP := g++-trunk
+#CXX := g++-trunk
 
 #CFLAGS := -m32 -O3 -g -I. -std=c++0x -march=native -mtune=native
 #CFLAGS := -O3 -g -I. -std=c++0x -Wsuggest-attribute=const -Wsuggest-attribute=pure -march=native -mtune=native
