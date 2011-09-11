@@ -56,7 +56,7 @@ namespace cheapshot
    };
 
    inline void
-   mirror_inplace(uint64_t& v)
+   mirror_inplace(uint64_t& v) noexcept
    {
       //std::cout << std::hex << std::setw(16) << v << std::endl;
       v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);

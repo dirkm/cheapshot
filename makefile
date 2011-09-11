@@ -1,6 +1,6 @@
 include makefile.inc
 
-EXEC := 
+EXEC :=
 cleanfiles :=
 clean_default := *.o *.a *.so *.so.* *.d
 
@@ -17,7 +17,7 @@ include $(wildcard *.d)
 & = $(filter-out %.h %.d,$^)
 
 inc_before := mak_before.mk
-inc_after := mak_after.mk 
+inc_after := mak_after.mk
 rest = $(wordlist 2,$(words $(1)),$(1))
 get_dirlist = $(inc_before) $~$(firstword $(1))/makefile.inc $(wildcard $~$(firstword $(1))/*.d) $(inc_after) $(if $(rest),$(call get_dirlist,$(rest)),)
 scan_subdirs = $(eval dirlist:=$(SUBDIRS) $(dirlist)) $(call get_dirlist,$(SUBDIRS))
@@ -47,9 +47,22 @@ makefile: makefile.inc
 
 .PHONY: test unittest ct_test
 
-test: unittest ct_test 
+test: unittest ct_test
 
 unittest: test/test
 	$^
 
 ct_test: $(call depend, test/ct_test.cc) test/ct_test.o
+
+test_report: test/test
+	@echo -n "Date: "
+	@date
+	@echo "Compiler info:"
+	@$(CXX) -v 2>&1
+	@echo "CFlags: $(CFLAGS)"
+	@echo "Cpus: "
+	@grep "model name" /proc/cpuinfo
+	@echo "Last git commit: "
+	@git --no-pager log --max-count=1
+	@echo "Tests"
+	@ $^

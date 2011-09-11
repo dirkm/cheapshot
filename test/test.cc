@@ -49,9 +49,9 @@ namespace
          std::clock_t end_time = times(&end_cpu);
          float ops_sec=ops/((end_time - start_time)/ticks_per_sec);
          std::cout << descr << std::endl
-                   << " Real Time: " << (end_time - start_time)/ticks_per_sec
-                   << " User Time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
-                   << " System Time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
+                   << " real time: " << (end_time - start_time)/ticks_per_sec
+                   << " user time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
+                   << " system time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
                    << " ops/sec: " << ops_sec
                    << std::endl;
       }

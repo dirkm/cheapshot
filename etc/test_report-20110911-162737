@@ -1,0 +1,43 @@
+Date: Sun Sep 11 16:27:37 CEST 2011
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++-46
+COLLECT_LTO_WRAPPER=/home/dirk/local/libexec/gcc/x86_64-unknown-linux-gnu/4.6.1/lto-wrapper
+Target: x86_64-unknown-linux-gnu
+Configured with: ./configure --prefix=/home/dirk/local --program-suffix=-46 --enable-languages=c,c++,lto
+Thread model: posix
+gcc version 4.6.1 (GCC) 
+CFlags: -g -O3  -I. -std=c++0x -march=native -mtune=native
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit ce53d54348c9d892e78a6bd3bd482d2bc5e63610
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Sun Sep 11 15:29:30 2011 +0200
+
+    fix of ugly bug in mirror-function
+Tests
+Running 22 test cases...
+column/row calculation
+ real time: 1.03 user time: 1.02 system time: 0 ops/sec: 9.70874e+07
+slide pawn up
+ real time: 0.85 user time: 0.85 system time: 0 ops/sec: 3.52941e+08
+slide pawn down
+ real time: 1.98 user time: 1.95 system time: 0 ops/sec: 5.05051e+07
+capture with pawn up
+ real time: 1.31 user time: 1.29 system time: 0 ops/sec: 1.52672e+08
+capture with pawn down
+ real time: 1.28 user time: 1.24 system time: 0 ops/sec: 1.5625e+08
+knight jump
+ real time: 1.25 user time: 1.2 system time: 0 ops/sec: 8e+07
+slide bishop
+ real time: 1.15 user time: 1.13 system time: 0 ops/sec: 1.73913e+07
+slide rook
+ real time: 1.05 user time: 1.04 system time: 0 ops/sec: 1.90476e+07
+slide queen
+ real time: 1.12 user time: 1.08 system time: 0 ops/sec: 8.92857e+06
+piece_moves walk
+ real time: 0.96 user time: 0.95 system time: 0 ops/sec: 3.125e+06
+set bits
+ real time: 1.06 user time: 1.02 system time: 0 ops/sec: 7.54717e+07
