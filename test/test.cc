@@ -344,13 +344,83 @@ BOOST_AUTO_TEST_CASE( move_king_test )
    }
 }
 
+BOOST_AUTO_TEST_CASE( mirror_test )
+{
+   {
+      constexpr char canvas[]=
+         "......X.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".XXX....\n"
+         ".X.X....\n";
+
+      constexpr char canvas_mirror[]=
+         ".X.X....\n"
+         ".XXX....\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "......X.\n";
+      BOOST_CHECK_EQUAL(mirror(scan_canvas(canvas,'X')),scan_canvas(canvas_mirror,'X'));
+   }
+   {
+      constexpr char canvas[]=
+         "......X.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+
+      constexpr char canvas_mirror[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "......X.\n";
+      BOOST_CHECK_EQUAL(mirror(scan_canvas(canvas,'X')),scan_canvas(canvas_mirror,'X'));
+   }
+   {
+      constexpr char canvas[]=
+         "........\n"
+         "......X.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+
+      constexpr char canvas_mirror[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "......X.\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(mirror(scan_canvas(canvas,'X')),scan_canvas(canvas_mirror,'X'));
+   }
+ }
+
 inline void
 slide_pawn_check(const char* canvas)
 {
    uint64_t pawns=scan_canvas(canvas,'p');
    uint64_t opposing=scan_canvas(canvas,'o');
    uint64_t result=scan_canvas(canvas,'X');
-   // print_canvas(slide_pawn_up(pawns,opposing,std::cout);
+   // print_canvas(slide_pawn_up(pawns,opposing,std::cout));
    BOOST_CHECK_EQUAL(slide_pawn_up(pawns,opposing),result);
    BOOST_CHECK_EQUAL(slide_pawn_down(mirror(pawns),mirror(opposing)),mirror(result));
 }

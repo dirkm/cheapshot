@@ -59,7 +59,7 @@ namespace cheapshot
 
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
-   {      
+   {
       constexpr uint64_t left_shift(uint64_t l, uint64_t r) noexcept
       {
          return l<<r;
@@ -155,6 +155,14 @@ namespace cheapshot
       // assert(is_max_single_bit(s));
       return bigger_equal(highest_bit(s|1ULL)); // TODO: improvable?
    }
+
+   constexpr uint64_t
+   bigger_special_0(uint64_t s) noexcept
+   {
+      // assert(is_max_single_bit(s));
+      return bigger(highest_bit(s|1ULL)); // TODO: improvable?
+   }
+
 
    // sliding moves
    enum direction_up
@@ -322,7 +330,7 @@ namespace cheapshot
    constexpr uint64_t
    move_pawn_down(uint64_t s) noexcept
    {
-      return detail::move_pawn<detail::right_shift,1>(s);
+      return detail::move_pawn<detail::right_shift,6>(s);
    }
 
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
@@ -427,7 +435,7 @@ namespace cheapshot
       constexpr uint64_t
       slide_bishop_optimised(uint64_t s, uint64_t obstacles,uint64_t left) noexcept
       {
-         return 
+         return
             slide(s,diag_delta(s,left)^s,obstacles)|
             slide(s,diag_sum(s,left)^s,obstacles);
       }
@@ -437,7 +445,7 @@ namespace cheapshot
    slide_bishop(uint64_t s, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
-      return 
+      return
          detail::slide_bishop_optimised(s,obstacles,exclusive_left(s));
    }
 
@@ -445,7 +453,7 @@ namespace cheapshot
    slide_queen(uint64_t s, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
-      return 
+      return
          slide_rook(s,obstacles)|
          slide_bishop(s,obstacles);
    }
@@ -463,7 +471,7 @@ namespace cheapshot
    slide_optimised_for_pawns_down(uint64_t movement,uint64_t obstacles) noexcept
    {
       // optimisable?
-      return bigger(
+      return bigger_special_0(
          highest_bit(
             obstacles&movement // blocking_bottom
             ))&movement;
@@ -472,7 +480,7 @@ namespace cheapshot
    constexpr uint64_t
    slide_pawn_up(uint64_t s,uint64_t obstacles) noexcept
    {
-      return 
+      return
          slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
    }
 
@@ -485,14 +493,14 @@ namespace cheapshot
    constexpr uint64_t
    slide_pawn_down(uint64_t s,uint64_t obstacles) noexcept
    {
-      return 
+      return
          slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
    }
 
    constexpr uint64_t
    slide_and_capture_with_pawn_down(uint64_t s,uint64_t obstacles) noexcept
    {
-      return 
+      return
          slide_pawn_down(s,obstacles)|capture_with_pawn_down(s,obstacles);
    }
 } // cheapshot

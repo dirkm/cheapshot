@@ -58,10 +58,10 @@ namespace cheapshot
    inline void
    mirror_inplace(uint64_t& v)
    {
-      // swap bytes
+      //std::cout << std::hex << std::setw(16) << v << std::endl;
       v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
       // swap 2-byte long pairs
-      v = ((v >> 16) & 0xFFFF0000FFFF0000ULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
+      v = ((v >> 16) & 0x0000FFFF0000FFFFULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
       // swap 4-byte long pairs
       v = (v >> 32) | (v << 32);
    }
