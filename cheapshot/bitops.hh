@@ -56,16 +56,17 @@ namespace cheapshot
       return __builtin_popcountl(p);
    }
 
-
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
    {
-      constexpr uint64_t left_shift(uint64_t l, uint64_t r) noexcept
+      constexpr uint64_t 
+      left_shift(uint64_t l, uint64_t r) noexcept
       {
          return l<<r;
       }
 
-      constexpr uint64_t right_shift(uint64_t l, uint64_t r) noexcept
+      constexpr uint64_t 
+      right_shift(uint64_t l, uint64_t r) noexcept
       {
          return l>>r;
       }
@@ -162,7 +163,6 @@ namespace cheapshot
       // assert(is_max_single_bit(s));
       return bigger(highest_bit(s|1ULL)); // TODO: improvable?
    }
-
 
    // sliding moves
    enum direction_up

@@ -5,25 +5,25 @@
 #include <array>
 
 namespace cheapshot
-{   
+{
    template<typename T>
-   constexpr std::size_t 
-   idx(T t) 
+   constexpr std::size_t
+   idx(T t)
    {
       return (std::size_t)t;
    }
 
    template<typename T>
-   constexpr std::size_t 
-   count() 
+   constexpr std::size_t
+   count()
    {
       return idx(T::count);
    }
 
    enum class piece { pawn, knight, bishop, rook, queen, king, count };
 
-   inline piece 
-   operator++( piece &rs) 
+   inline piece
+   operator++( piece &rs)
    {
       rs=piece(idx(rs)+1);
       return rs;
@@ -32,7 +32,7 @@ namespace cheapshot
    enum class color { white, black, count };
 
    constexpr color
-   other_color(color c) 
+   other_color(color c)
    {
       return (c==color::white)?
          color::black:
@@ -76,14 +76,14 @@ namespace cheapshot
    inline void
    mirror_inplace(single_color_board& scb)
    {
-      for(uint64_t& v: scb)
+      for(auto& v: scb)
          mirror_inplace(v);
    }
 
    inline void
    mirror_inplace(board& board)
    {
-      for(single_color_board& scb: board)
+      for(auto& scb: board)
          mirror_inplace(scb);
    }
 
@@ -95,7 +95,7 @@ namespace cheapshot
       return b;
    }
 
-   inline uint64_t 
+   inline uint64_t
    obstacles(const single_color_board& scb)
    {
       uint64_t r=0;
@@ -104,8 +104,8 @@ namespace cheapshot
       return r;
    }
    // compressed format
-   
-   // hash-function 
+
+   // hash-function
 } // cheapshot
 
 #endif

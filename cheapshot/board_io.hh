@@ -6,7 +6,7 @@
 
 namespace cheapshot
 {
-   typedef std::array<char,(std::size_t)piece::count> piece_representation;
+   typedef std::array<char,count<piece>()> piece_representation;
    typedef std::array<char,64> canvas;
 
    constexpr piece_representation repr_pieces_white={'p','n','b','r','q','k'};
@@ -64,16 +64,17 @@ namespace cheapshot
       uint64_t r=0;
       for(int j=0;j<8;++j)
       {
-         r<<=8;
+         // not the same as simply filling from left to right
+         r<<=8; 
          uint8_t s=0;
          for(int i=0;i<8;++i,++l)
          {
             if(*l==piece)
-               s+=(1<<i);
+               s|=(1<<i);
          }
          assert(*l=='\n');
          ++l;
-         r+=s;
+         r|=s;
       }
       return r;
    }

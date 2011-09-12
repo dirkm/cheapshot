@@ -346,6 +346,8 @@ BOOST_AUTO_TEST_CASE( move_king_test )
 
 BOOST_AUTO_TEST_CASE( mirror_test )
 {
+   BOOST_CHECK_EQUAL(mirror(0ULL),0ULL);
+   BOOST_CHECK_EQUAL(mirror(~0ULL),~0ULL);
    {
       constexpr char canvas[]=
          "......X.\n"
