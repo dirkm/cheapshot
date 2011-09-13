@@ -59,13 +59,13 @@ namespace cheapshot
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
    {
-      constexpr uint64_t 
+      constexpr uint64_t
       left_shift(uint64_t l, uint64_t r) noexcept
       {
          return l<<r;
       }
 
-      constexpr uint64_t 
+      constexpr uint64_t
       right_shift(uint64_t l, uint64_t r) noexcept
       {
          return l>>r;
@@ -81,7 +81,10 @@ namespace cheapshot
       constexpr uint64_t
       aliased_move_increasing(uint64_t p, int n=6, int step=1, int i = 0) noexcept
       {
-         return aliased_move_helper<left_shift>(p,n,step,i);
+         // performance-trick: multiply by precomputed value (+10%)
+         // limitation: this only works when multiplying without carry
+         // TODO: limitation should be made explicit by interface-change
+         return p*aliased_move_helper<left_shift>(1ULL,n,step,i);
       }
 
       constexpr uint64_t
@@ -155,13 +158,6 @@ namespace cheapshot
    {
       // assert(is_max_single_bit(s));
       return bigger_equal(highest_bit(s|1ULL)); // TODO: improvable?
-   }
-
-   constexpr uint64_t
-   bigger_special_0(uint64_t s) noexcept
-   {
-      // assert(is_max_single_bit(s));
-      return bigger(highest_bit(s|1ULL)); // TODO: improvable?
    }
 
    // sliding moves
@@ -305,7 +301,7 @@ namespace cheapshot
       constexpr uint64_t
       move_pawn(uint64_t s) noexcept
       {
-         return 
+         return
             Shift(s,8)|
             Shift(s&(row_with_number(1)|row_with_number(6)),16);
       }
@@ -472,7 +468,7 @@ namespace cheapshot
    constexpr uint64_t
    slide_optimised_for_pawns_down(uint64_t movement,uint64_t obstacles) noexcept
    {
-      return 
+      return
          ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
          movement;
    }
