@@ -817,7 +817,7 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
 }
 
 template<typename T>
-void time_move(T fun, int count, const char* description)
+void time_move(T fun, long count, const char* description)
 {
    volatile uint64_t s=(1ULL<<(4*(8-(4))));
    volatile uint64_t r;
