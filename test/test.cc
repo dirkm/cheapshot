@@ -43,7 +43,7 @@ namespace
       {
       }
 
-      void time_report(const char* descr, int ops)
+      void time_report(const char* descr, long ops)
       {
          tms end_cpu;
          std::clock_t end_time = times(&end_cpu);
