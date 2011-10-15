@@ -1,0 +1,43 @@
+Date: Sat Oct 15 20:42:15 CEST 2011
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/4.6.1/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu/Linaro 4.6.1-9ubuntu3' --with-bugurl=file:///usr/share/doc/gcc-4.6/README.Bugs --enable-languages=c,c++,fortran,objc,obj-c++,go --prefix=/usr --program-suffix=-4.6 --enable-shared --enable-linker-build-id --with-system-zlib --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --with-gxx-include-dir=/usr/include/c++/4.6 --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --enable-plugin --enable-objc-gc --disable-werror --with-arch-32=i686 --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 4.6.1 (Ubuntu/Linaro 4.6.1-9ubuntu3) 
+CFlags: -g -O3  -I. -std=c++0x -march=native -mtune=native
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit 1a7cca0cff5a5277971fb489804eaa525dc0e186
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Sat Oct 15 20:40:59 2011 +0200
+
+    replace multiple shifts in get_highest_bit with a bit scan reverse assembler instruction
+Tests
+Running 22 test cases...
+column/row calculation
+ real time: 1.04 user time: 1.02 system time: 0.01 ops/sec: 9.61538e+07
+slide pawn up
+ real time: 0.88 user time: 0.86 system time: 0.01 ops/sec: 3.40909e+08
+slide pawn down
+ real time: 0.84 user time: 0.84 system time: 0 ops/sec: 3.57143e+08
+capture with pawn up
+ real time: 1.11 user time: 1.09 system time: 0 ops/sec: 1.8018e+08
+capture with pawn down
+ real time: 1.13 user time: 1.12 system time: 0 ops/sec: 1.76991e+08
+knight jump
+ real time: 1.04 user time: 1.03 system time: 0 ops/sec: 9.61538e+07
+slide bishop
+ real time: 1.13 user time: 1.11 system time: 0 ops/sec: 3.53982e+07
+slide rook
+ real time: 0.89 user time: 0.89 system time: 0 ops/sec: 4.49438e+07
+slide queen
+ real time: 1.04 user time: 1.02 system time: 0 ops/sec: 1.92308e+07
+piece_moves walk
+ real time: 1.04 user time: 1.04 system time: 0 ops/sec: 5.76923e+06
+set bits
+ real time: 1.26 user time: 1.24 system time: 0.01 ops/sec: 6.34921e+07
