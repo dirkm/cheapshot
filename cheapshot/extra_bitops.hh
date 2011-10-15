@@ -52,6 +52,23 @@ namespace cheapshot
       // assert(is_max_single_bit(s));
       return bigger(highest_bit(s|1ULL)); // TODO: improvable?
    }
+
+   namespace detail
+   {
+      // b00111111 -> b00100000
+      constexpr uint64_t
+      strip_lower_bits_when_all_lower_bits_set(uint64_t p) noexcept
+      {
+         return p-(p>>1);
+      }
+   }
+
+   constexpr uint64_t
+   highest_bit_portable(uint64_t p) noexcept
+   {
+      return detail::strip_lower_bits_when_all_lower_bits_set(
+         detail::aliased_move_decreasing(p));
+   }
 }
 
 #endif

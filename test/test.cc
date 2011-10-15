@@ -831,14 +831,14 @@ void time_move(T fun, long count, const char* description)
 BOOST_AUTO_TEST_CASE( time_moves )
 {
    // each timing takes about 1 sec on my machine
-   time_move(&slide_pawn_up,200000000,"slide pawn up");
-   time_move(&slide_pawn_down,200000000,"slide pawn down");
+   time_move(&slide_pawn_up,300000000,"slide pawn up");
+   time_move(&slide_pawn_down,300000000,"slide pawn down");
    time_move(&capture_with_pawn_up,200000000,"capture with pawn up");
    time_move(&capture_with_pawn_down,200000000,"capture with pawn down");
    time_move(&jump_knight,100000000,"knight jump");
-   time_move(&slide_bishop,20000000,"slide bishop");
-   time_move(&slide_rook,20000000,"slide rook");
-   time_move(&slide_queen,10000000,"slide queen");
+   time_move(&slide_bishop,40000000,"slide bishop");
+   time_move(&slide_rook,40000000,"slide rook");
+   time_move(&slide_queen,20000000,"slide queen");
 }
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
@@ -846,11 +846,11 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    board b=test_board1;
    volatile uint8_t r;
    TimeOperation time_op;
-   const long ops=3000000;
+   const long ops=6000000;
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      /*volatile*/ moves_iterator moves_it(b[0],bm); // TODO: bug in gcc 4.7 ??
+      volatile moves_iterator moves_it(b[0],bm);
       std::for_each
          (moves_it,moves_iterator(),
           [&r](piece_moves p){

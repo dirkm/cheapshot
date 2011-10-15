@@ -2,8 +2,9 @@
 #include "cheapshot/board_io.hh"
 #include <iostream>
 #include <cstring>
+#include <stdexcept>
 
-inline std::uint64_t 
+inline std::uint64_t
 arg_to_uint64(const char* arg)
 {
    constexpr char hexprefix[]="0x";
@@ -23,13 +24,11 @@ arg_to_uint64(const char* arg)
    std::uint64_t r=std::stoull(arg,&idx,base);
 
    if(idx!=std::strlen(arg))
-   {
       throw std::runtime_error("garbage at the end of input");
-   }
    return r;
 }
 
-int 
+int
 main(int argc, const char* argv[])
 {
    if(argc<2||!std::strcmp("-h",argv[1])||!std::strcmp("--help",argv[1]))
@@ -39,20 +38,18 @@ main(int argc, const char* argv[])
          "canvas: uint64_t representation of a chess canvas as used in cheapshot.\n"
          "\tdecimal and hexadecimal (prefixed with 0x) input is accepted.\n"
                 << std::endl;
+      return 1;
    }
-   else
+   try
    {
-      try
-      {
-         cheapshot::print_canvas(arg_to_uint64(argv[1]),std::cout);
-      }
-      catch(const std::exception& ex)
-      {
-         std::cerr << "ERROR: expected 64 bit unsigned integer at input\n"
-            "message: '" << ex.what() << "'"
-                   << std::endl;
-         return 1;
-      }
+      cheapshot::print_canvas(arg_to_uint64(argv[1]),std::cout);
+      return 0;
    }
-   return 0;
+   catch(const std::exception& ex)
+   {
+      std::cerr << "ERROR: expected 64 bit unsigned integer at input\n"
+         "message: '" << ex.what() << "'"
+                << std::endl;
+      return 1;
+   }
 }

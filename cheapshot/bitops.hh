@@ -71,15 +71,15 @@ namespace cheapshot
          return l>>r;
       }
 
-      template<uint64_t (*Shift)(uint64_t, uint64_t)>
+      template<uint64_t (*Shift)(uint64_t, uint64_t) noexcept>
       constexpr uint64_t
-      aliased_move_helper(uint64_t p, int n=6, int step=1, int i = 0) noexcept
+      aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
       {
          return (i<n)?aliased_move_helper<Shift>(p|Shift(p,(step*(1<<i))),n,step,i+1):p;
       }
 
       constexpr uint64_t
-      aliased_move_increasing(uint64_t p, int n=6, int step=1, int i = 0) noexcept
+      aliased_move_increasing(uint64_t p, int n=6, int step=1, int i=0) noexcept
       {
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
@@ -87,8 +87,10 @@ namespace cheapshot
          return p*aliased_move_helper<left_shift>(1ULL,n,step,i);
       }
 
+      // product is faster, this might be solved by multiplying with gcd of aliased_move_helper and 1<<64
+
       constexpr uint64_t
-      aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i = 0) noexcept
+      aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i=0) noexcept
       {
          return aliased_move_helper<right_shift>(p,n,step,i);
       }
@@ -104,20 +106,12 @@ namespace cheapshot
       {
          return p|aliased_split(p,s);
       }
-
-      // b00111111 -> b00100000
-      constexpr uint64_t
-      strip_lower_bits_when_all_lower_bits_set(uint64_t p) noexcept
-      {
-         return p-(p>>1);
-      }
    }
 
    constexpr uint64_t
    highest_bit(uint64_t p) noexcept
    {
-      return detail::strip_lower_bits_when_all_lower_bits_set(
-         detail::aliased_move_decreasing(p));
+      return (1ULL<<63)>>__builtin_clzll(p);
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -266,7 +260,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   diag_delta(uint64_t s,uint64_t left) noexcept
+   diag_delta(uint64_t s, uint64_t left) noexcept
    {
       // assert(is_single_bit(s));
       return
@@ -275,7 +269,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   diag_sum(uint64_t s,uint64_t left) noexcept
+   diag_sum(uint64_t s, uint64_t left) noexcept
    {
       // assert(is_single_bit(s));
       return
@@ -350,7 +344,7 @@ namespace cheapshot
    namespace detail
    {
       constexpr uint64_t
-      aliased_band_widen(uint64_t band,int n=1, int i = 0) noexcept
+      aliased_band_widen(uint64_t band, int n=1, int i=0) noexcept
       {
          return i!=n?
             detail::aliased_band_widen(detail::aliased_widen(band,1),n,i+1):
@@ -404,7 +398,7 @@ namespace cheapshot
 // movement: movement in a single direction (for pawns, bishops, rooks, queens)
 // obstacles: own pieces plus opposing pieces (except the moving piece itself)
    constexpr uint64_t
-   slide(uint64_t s,uint64_t movement,uint64_t obstacles) noexcept
+   slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
    {
       // assert(is_single_bit(s));
       // assert((s&obstacles)==0);
@@ -431,7 +425,7 @@ namespace cheapshot
    namespace detail
    {
       constexpr uint64_t
-      slide_bishop_optimised(uint64_t s, uint64_t obstacles,uint64_t left) noexcept
+      slide_bishop_optimised(uint64_t s, uint64_t obstacles, uint64_t left) noexcept
       {
          return
             slide(s,diag_delta(s,left)^s,obstacles)|
@@ -457,7 +451,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_optimised_for_pawns_up(uint64_t movement,uint64_t obstacles) noexcept
+   slide_optimised_for_pawns_up(uint64_t movement, uint64_t obstacles) noexcept
    {
       return smaller(
          lowest_bit(
@@ -466,7 +460,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_optimised_for_pawns_down(uint64_t movement,uint64_t obstacles) noexcept
+   slide_optimised_for_pawns_down(uint64_t movement, uint64_t obstacles) noexcept
    {
       return
          ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
@@ -474,27 +468,27 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   slide_pawn_up(uint64_t s,uint64_t obstacles) noexcept
+   slide_pawn_up(uint64_t s, uint64_t obstacles) noexcept
    {
       return
          slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
    }
 
    constexpr uint64_t
-   slide_and_capture_with_pawn_up(uint64_t s,uint64_t obstacles) noexcept
+   slide_and_capture_with_pawn_up(uint64_t s, uint64_t obstacles) noexcept
    {
       return slide_pawn_up(s,obstacles)|capture_with_pawn_up(s,obstacles);
    }
 
    constexpr uint64_t
-   slide_pawn_down(uint64_t s,uint64_t obstacles) noexcept
+   slide_pawn_down(uint64_t s, uint64_t obstacles) noexcept
    {
       return
          slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
    }
 
    constexpr uint64_t
-   slide_and_capture_with_pawn_down(uint64_t s,uint64_t obstacles) noexcept
+   slide_and_capture_with_pawn_down(uint64_t s, uint64_t obstacles) noexcept
    {
       return
          slide_pawn_down(s,obstacles)|capture_with_pawn_down(s,obstacles);
