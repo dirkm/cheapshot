@@ -23,7 +23,7 @@ namespace cheapshot
    enum class piece { pawn, knight, bishop, rook, queen, king, count };
 
    inline piece
-   operator++( piece &rs)
+   operator++(piece& rs)
    {
       rs=piece(idx(rs)+1);
       return rs;
@@ -34,16 +34,17 @@ namespace cheapshot
    constexpr color
    other_color(color c)
    {
-      return (c==color::white)?
-         color::black:
-         color::white;
+      return color(idx(c)^1);
+      //return (c==color::white)?
+      //   color::black:
+      //   color::white;
    }
 
    typedef std::array<uint64_t,count<piece>()> single_color_board;
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
-   typedef std::array<single_color_board,count<color>()> board;
+   typedef std::array<single_color_board,count<color>()> whole_board;
 
    constexpr single_color_board init_white_board=
    {
@@ -81,16 +82,16 @@ namespace cheapshot
    }
 
    inline void
-   mirror_inplace(board& board)
+   mirror_inplace(whole_board& board)
    {
       for(auto& scb: board)
          mirror_inplace(scb);
    }
 
-   inline board
+   inline whole_board
    initial_board()
    {
-      board b={init_white_board,init_white_board};
+      whole_board b={init_white_board,init_white_board};
       mirror_inplace(b[idx(color::black)]);
       return b;
    }

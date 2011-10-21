@@ -252,7 +252,7 @@ namespace cheapshot
    // specialized patterns for piece moves
 
    constexpr uint64_t
-   exclusive_left(uint64_t s) noexcept
+   strict_left_of(uint64_t s) noexcept
    {
       // assert(is_single_bit(s));
       return aliased_move<top>(
@@ -280,13 +280,13 @@ namespace cheapshot
    constexpr uint64_t
    diag_delta(uint64_t s) noexcept
    {
-      return diag_delta(s,exclusive_left(s));
+      return diag_delta(s,strict_left_of(s));
    }
 
    constexpr uint64_t
    diag_sum(uint64_t s) noexcept
    {
-      return diag_sum(s,exclusive_left(s));
+      return diag_sum(s,strict_left_of(s));
    }
 
    namespace detail
@@ -438,7 +438,7 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       return
-         detail::slide_bishop_optimised(s,obstacles,exclusive_left(s));
+         detail::slide_bishop_optimised(s,obstacles,strict_left_of(s));
    }
 
    constexpr uint64_t

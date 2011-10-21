@@ -65,7 +65,7 @@ namespace
 
 // white to move mate in 5
 // http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
-   const board test_board1=scan_board(
+   const whole_board test_board1=scan_board(
       "......RK\n"
       "r......P\n"
       "..PP....\n"
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
 BOOST_AUTO_TEST_CASE( init_board_test )
 {
    boost::test_tools::output_test_stream ots;
-   board b= initial_board();
+   whole_board b= initial_board();
    print_board(b,ots);
    BOOST_CHECK( ots.is_equal(initial_canvas));
 }
@@ -162,8 +162,8 @@ BOOST_AUTO_TEST_CASE( primitive_test )
    BOOST_CHECK_EQUAL(highest_bit(0xF123ULL),0x8000ULL);
    BOOST_CHECK_EQUAL(highest_bit(0x1ULL),0x1ULL);
    BOOST_CHECK_EQUAL(highest_bit(0x0ULL),0x0ULL);
-   BOOST_CHECK_EQUAL(exclusive_left(0x1ULL),0x0ULL);
-   BOOST_CHECK_EQUAL(exclusive_left(0x2ULL),0x0101010101010101ULL);
+   BOOST_CHECK_EQUAL(strict_left_of(0x1ULL),0x0ULL);
+   BOOST_CHECK_EQUAL(strict_left_of(0x2ULL),0x0101010101010101ULL);
 }
 
 BOOST_AUTO_TEST_CASE( row_and_column_test )
@@ -665,9 +665,9 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
 inline void
 moves_iterator_check(const char* board_layout, const char* captures)
 {
-   board b=scan_board(board_layout);
-   board_metrics bm(b);
-   moves_iterator moves_it(b[0],bm);
+   whole_board b=scan_board(board_layout);
+   board_metrics bm(b,color::white);
+   moves_iterator moves_it(bm);
    uint64_t r=0;
    std::for_each
       (moves_it,moves_iterator(),
@@ -720,9 +720,9 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       ".XXXXXX.\n");
 
    {
-      board b=test_board1;
-      board_metrics bm(b);
-      moves_iterator moves_it(b[0],bm);
+      whole_board b=test_board1;
+      board_metrics bm(b,color::white);
+      moves_iterator moves_it(bm);
       uint64_t r[count<piece>()]={0,0,0,0,0};
       std::for_each
          (moves_it,moves_iterator(),
@@ -798,7 +798,26 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
+
+BOOST_AUTO_TEST_CASE( analyze_mate_test )
+{
+   const whole_board mate_board1=scan_board(
+      ".......q\n"
+      "P.PK..PP\n"
+      "...P....\n"
+      "....P...\n"
+      ".p.pp..B\n"
+      "...Q.p..\n"
+      "pp.....p\n"
+      "rnb.k..r\n");
+
+   board_metrics bm(mate_board1,color::white);
+   // cheating by selecting all moves
+   BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);   
+}
+
 BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(timings_suite)
 
 BOOST_AUTO_TEST_CASE( time_column_and_row_test )
@@ -843,14 +862,14 @@ BOOST_AUTO_TEST_CASE( time_moves )
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 {
-   board b=test_board1;
+   whole_board b=test_board1;
    volatile uint8_t r;
    TimeOperation time_op;
    const long ops=6000000;
    for(long i=0;i<ops;++i)
    {
-      board_metrics bm(b);
-      volatile moves_iterator moves_it(b[0],bm);
+      board_metrics bm(b,color::white);
+      volatile moves_iterator moves_it(bm);
       std::for_each
          (moves_it,moves_iterator(),
           [&r](piece_moves p){
