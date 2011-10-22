@@ -65,7 +65,7 @@ namespace
 
 // white to move mate in 5
 // http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
-   const whole_board test_board1=scan_board(
+   const board_t test_board1=scan_board(
       "......RK\n"
       "r......P\n"
       "..PP....\n"
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
 BOOST_AUTO_TEST_CASE( init_board_test )
 {
    boost::test_tools::output_test_stream ots;
-   whole_board b= initial_board();
+   board_t b= initial_board();
    print_board(b,ots);
    BOOST_CHECK( ots.is_equal(initial_canvas));
 }
@@ -665,7 +665,7 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
 inline void
 moves_iterator_check(const char* board_layout, const char* captures)
 {
-   whole_board b=scan_board(board_layout);
+   board_t b=scan_board(board_layout);
    board_metrics bm(b,color::white);
    moves_iterator moves_it(bm);
    uint64_t r=0;
@@ -720,7 +720,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       ".XXXXXX.\n");
 
    {
-      whole_board b=test_board1;
+      board_t b=test_board1;
       board_metrics bm(b,color::white);
       moves_iterator moves_it(bm);
       uint64_t r[count<piece>()]={0,0,0,0,0};
@@ -801,7 +801,8 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
 
 BOOST_AUTO_TEST_CASE( analyze_mate_test )
 {
-   const whole_board mate_board1=scan_board(
+   // Rodzynski-Alekhine, Paris 1913
+   const board_t mate_board1=scan_board(
       ".......q\n"
       "P.PK..PP\n"
       "...P....\n"
@@ -812,7 +813,7 @@ BOOST_AUTO_TEST_CASE( analyze_mate_test )
       "rnb.k..r\n");
 
    board_metrics bm(mate_board1,color::white);
-   // cheating by selecting all moves
+   // TODO: cheating by selecting all moves
    BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);   
 }
 
@@ -862,7 +863,7 @@ BOOST_AUTO_TEST_CASE( time_moves )
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
 {
-   whole_board b=test_board1;
+   board_t b=test_board1;
    volatile uint8_t r;
    TimeOperation time_op;
    const long ops=6000000;

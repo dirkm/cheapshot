@@ -44,7 +44,7 @@ namespace cheapshot
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
-   typedef std::array<single_color_board,count<color>()> whole_board;
+   typedef std::array<single_color_board,count<color>()> board_t;
 
    constexpr single_color_board init_white_board=
    {
@@ -82,16 +82,16 @@ namespace cheapshot
    }
 
    inline void
-   mirror_inplace(whole_board& board)
+   mirror_inplace(board_t& board)
    {
       for(auto& scb: board)
          mirror_inplace(scb);
    }
 
-   inline whole_board
+   inline board_t
    initial_board()
    {
-      whole_board b={init_white_board,init_white_board};
+      board_t b={init_white_board,init_white_board};
       mirror_inplace(b[idx(color::black)]);
       return b;
    }

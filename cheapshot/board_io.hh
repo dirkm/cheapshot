@@ -40,7 +40,7 @@ namespace cheapshot
    }
 
    inline std::ostream&
-   print_board(const whole_board& board, std::ostream& os)
+   print_board(const board_t& board, std::ostream& os)
    {
       canvas repr;
       repr.fill('.');
@@ -89,10 +89,10 @@ namespace cheapshot
       return scb;
    }
 
-   inline whole_board
+   inline board_t
    scan_board(const char* l) noexcept
    {
-      whole_board b={scan_board_single_color(l,repr_pieces_white),
+      board_t b={scan_board_single_color(l,repr_pieces_white),
                      scan_board_single_color(l,repr_pieces_black)};
       return b;
    }

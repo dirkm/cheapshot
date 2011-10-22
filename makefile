@@ -50,7 +50,7 @@ makefile: makefile.inc
 test: unittest ct_test
 
 unittest: test/test
-	$^
+	$^ --catch_system_errors=0
 
 ct_test: $(call depend, test/ct_test.cc) test/ct_test.o
 

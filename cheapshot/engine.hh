@@ -8,10 +8,10 @@
 
 namespace cheapshot
 {
-   typedef uint64_t (*MoveGenerator)(uint64_t p,uint64_t obstacles);
-   typedef MoveGenerator MovesPerPiece[count<piece>()];
+   typedef uint64_t (*move_generator_t)(uint64_t p,uint64_t obstacles);
+   typedef move_generator_t movegen_per_piece_t[count<piece>()];
 
-   constexpr MovesPerPiece move_generator_array[count<color>()]=
+   constexpr movegen_per_piece_t move_generator_array[count<color>()]=
    {
       {
          slide_and_capture_with_pawn_up,
@@ -25,7 +25,7 @@ namespace cheapshot
          slide_and_capture_with_pawn_down,
          jump_knight,
          slide_bishop,
-            slide_rook,
+         slide_rook,
          slide_queen,
          move_king
       }
@@ -40,12 +40,6 @@ namespace cheapshot
       };
    }
 
-   constexpr MoveGenerator
-   move_generator_function(const MovesPerPiece& mg, piece p)
-   {
-      return mg[idx(p)];
-   }
-
    constexpr uint64_t
    weight(piece p)
    {
@@ -55,46 +49,47 @@ namespace cheapshot
    struct board_metrics
    {
    public:
-      const whole_board& board;
+      const board_t& board;
       color turn;
    private:
-      const single_color_board* p_own_color;
-      const MovesPerPiece* p_own_move_generator_array;
+      const single_color_board* p_own_scb;
+      const movegen_per_piece_t* p_own_movegen;
    public:
       uint64_t own;
       uint64_t opposing;
       uint64_t all;
 
       explicit
-      board_metrics(const whole_board& board_, color turn_):
+      board_metrics(const board_t& board_, color turn_):
          board(board_),
          turn(turn_),
-         p_own_color(&board[idx(turn)]),
-         p_own_move_generator_array(&move_generator_array[idx(turn)]),
+         p_own_scb(&board[idx(turn)]),
+         p_own_movegen(&move_generator_array[idx(turn)]),
          own(obstacles(board[idx(turn)])),
          opposing(obstacles(board[idx(other_color(turn))])),
          all(opposing|own)
       {}
 
-      uint64_t
-      moves(piece p,uint64_t s) const
-      {
-         return move_generator_function(*p_own_move_generator_array,p)(s,all)&~own; // this & is not always necessary
-      }
-
       void switch_side()
       {
          turn=other_color(turn);
-         p_own_color=&board[idx(turn)];
-         p_own_move_generator_array=&move_generator_array[idx(turn)];
+         p_own_scb=&board[idx(turn)];
+         p_own_movegen=&move_generator_array[idx(turn)];
          std::swap(own,opposing);
       }
 
       const single_color_board&
-      own_color() const
+      own_scb() const
       {
-      // dependent variable, (but calculating slows down measurably)
-         return *p_own_color;
+         // dependent variable, (but calculating slows down measurably)
+         return *p_own_scb;
+      }
+
+      uint64_t
+      moves(piece p,uint64_t s) const
+      {
+         return (*p_own_movegen)[idx(p)](s,all)
+            &~own; // this is probably not always necessary
       }
    };
 
@@ -188,7 +183,7 @@ namespace cheapshot
       bit_iterator
       origin_iterator(piece p) const
       {
-         return bit_iterator(metrics->own_color()[idx(p)]);
+         return bit_iterator(metrics->own_scb()[idx(p)]);
       }
    };
 
@@ -198,42 +193,41 @@ namespace cheapshot
    {
       constexpr int checkmate=std::numeric_limits<int>::max();
       constexpr int stalemate=checkmate-1;
-      constexpr int selfcheck=stalemate-1; // no valid move found
+      constexpr int no_valid_move=stalemate-1; // no valid move found
    }
 
-   void
-   make_move(whole_board& board,const piece_moves& mv, uint64_t destination)
+   inline board_t&
+   make_move(board_t& board, color turn, piece p, uint64_t origin, uint64_t destination)
    {
-      // TODO
-      board[idx(color::white)][idx(mv.moved_piece)]^=(*mv.origin|destination);
-      for(auto& v: board[idx(color::black)])
+      board[idx(turn)][idx(p)]^=(origin|destination);
+      for(auto& v: board[idx(other_color(turn))])
          v&=~destination;
+      return board;
    }
 
-   int
+   inline int
    analyse_position(const board_metrics& bm, uint64_t under_attack)
    {
-      bool king_under_attack=bm.own_color()[idx(piece::king)]&under_attack;
-      int s=score::selfcheck;
+      bool king_under_attack=bm.own_scb()[idx(piece::king)]&under_attack;
+      int s=score::no_valid_move;
       // evaluate and recurse deeper
       for(moves_iterator moves_it(bm);moves_it!=end_moves_it;++moves_it)
       {
-         // test check
          for(bit_iterator& dest_iter=moves_it->destinations;
              dest_iter!=bit_iterator();
              ++dest_iter)
          {
-            whole_board new_board=bm.board;
-            make_move(new_board,*moves_it,*dest_iter);
+            board_t new_board=bm.board;
+            make_move(new_board,bm.turn,moves_it->moved_piece,*moves_it->origin,*dest_iter);
             print_board(new_board,std::cout);
             board_metrics bm_new(new_board,bm.turn); // this can be improved
             uint64_t oponent_under_attack=0ULL;
-            for(moves_iterator moves_it(bm);moves_it!=end_moves_it;++moves_it)
+            for(moves_iterator moves_it(bm_new);moves_it!=end_moves_it;++moves_it)
                oponent_under_attack|=moves_it->destinations.remaining();
 
-            uint64_t p_king=bm_new.own_color()[idx(piece::king)];
+            uint64_t p_king=bm_new.own_scb()[idx(piece::king)];
             bm_new.switch_side();
-            // currently calculated twice, should probably be passed as list
+            // TODO: calculated twice, should be passed as list
             uint64_t own_under_attack=0ULL;
             for(moves_iterator own_attack_it(bm_new);own_attack_it!=end_moves_it;++own_attack_it)
                own_under_attack|=own_attack_it->destinations.remaining();
@@ -246,32 +240,33 @@ namespace cheapshot
 
             if(p_king&own_under_attack)
                continue; // ignore checks
-            // TODO (some checks)
-            exit(-1);
-            int s=analyse_position(bm_new,oponent_under_attack);
-            if(s==score::stalemate||score::checkmate)
-               return -s;
+            // TODO: delete, this was temporary added to stop infinite recursion
+            exit(-1); 
+            s=analyse_position(bm_new,oponent_under_attack);
+            // TODO
+            // if(s==score::stalemate||score::checkmate)
+            //   return -s;
          }
       }
-      return s==score::selfcheck?
+      return s==score::no_valid_move?
          king_under_attack?score::checkmate:score::stalemate:
          s;
    }
 
-   void
-   move_castle(whole_board& b)
+   inline void
+   move_castle(board_t& b)
    {
       // TODO
    }
 
-   void
-   capture_en_passant(whole_board& b)
+   inline void
+   capture_en_passant(board_t& b)
    {
       // TODO
    }
 
-   void
-   move_promotion(whole_board& b)
+   inline void
+   move_promotion(board_t& b)
    {
       // TODO
    }
