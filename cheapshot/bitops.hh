@@ -111,7 +111,10 @@ namespace cheapshot
    constexpr uint64_t
    highest_bit(uint64_t p) noexcept
    {
-      return (1ULL<<63)>>__builtin_clzll(p);
+      // why is this faster with conditional than without?
+      return p?
+         (1ULL<<63)>>__builtin_clzll(p):
+         p;
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed

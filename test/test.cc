@@ -74,6 +74,14 @@ namespace
       "N......p\n"
       ".......k\n"
       "R...Q...\n");
+
+   template<typename T>
+   void
+   for_all_moves(moves_iterator it, T t)
+   {
+      for(;it!=moves_iterator_end();++it)
+         t(*it);
+   }
 }
 
 BOOST_AUTO_TEST_SUITE(piece_moves_suite)
@@ -669,11 +677,10 @@ moves_iterator_check(const char* board_layout, const char* captures)
    board_metrics bm(b,color::white);
    moves_iterator moves_it(bm);
    uint64_t r=0;
-   std::for_each
-      (moves_it,moves_iterator(),
-       [&r,&b](piece_moves p){
-         r|=p.destinations.remaining();
-      });
+   for_all_moves(moves_it,
+                 [&r](piece_moves p){
+                    r|=p.destinations.remaining();
+                 });
    boost::test_tools::output_test_stream ots;
    print_canvas(r,ots);
    BOOST_CHECK(ots.is_equal(captures));
@@ -724,11 +731,10 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       board_metrics bm(b,color::white);
       moves_iterator moves_it(bm);
       uint64_t r[count<piece>()]={0,0,0,0,0};
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r](piece_moves p){
-            r[idx(p.moved_piece)]|=p.destinations.remaining();
-         });
+      for_all_moves(moves_it,
+                    [&r,&bm](piece_moves p){
+                       r[idx(p.moved_piece)]|=p.destinations.remaining();
+                    });
       {
          boost::test_tools::output_test_stream ots;
          print_canvas(r[idx(piece::pawn)],ots);
@@ -798,11 +804,10 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
-
 BOOST_AUTO_TEST_CASE( analyze_mate_test )
 {
    // Rodzynski-Alekhine, Paris 1913
-   const board_t mate_board1=scan_board(
+   board_t mate_board1=scan_board(
       ".......q\n"
       "P.PK..PP\n"
       "...P....\n"
@@ -871,11 +876,10 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    {
       board_metrics bm(b,color::white);
       volatile moves_iterator moves_it(bm);
-      std::for_each
-         (moves_it,moves_iterator(),
-          [&r](piece_moves p){
-            r|=p.destinations.remaining();
-         });
+      for_all_moves(moves_it,
+                    [&r](piece_moves p){
+                       r|=p.destinations.remaining();
+                    });
    }
    time_op.time_report("piece_moves walk",ops);
 }

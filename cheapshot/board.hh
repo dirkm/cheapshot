@@ -35,9 +35,6 @@ namespace cheapshot
    other_color(color c)
    {
       return color(idx(c)^1);
-      //return (c==color::white)?
-      //   color::black:
-      //   color::white;
    }
 
    typedef std::array<uint64_t,count<piece>()> single_color_board;
