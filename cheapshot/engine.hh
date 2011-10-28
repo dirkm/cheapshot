@@ -31,28 +31,13 @@ namespace cheapshot
       }
    };
 
-   namespace detail
-   {
-      constexpr uint64_t weight[count<piece>()]=
-      {
-         1, 3, 3, 5, 9,
-         std::numeric_limits<uint64_t>::max()
-      };
-   }
-
-   constexpr uint64_t
-   weight(piece p)
-   {
-      return detail::weight[idx(p)];
-   }
-
    struct board_metrics
    {
    public:
       board_t& board;
       color turn;
    private:
-      single_color_board* p_own_side;
+      board_side* p_own_side;
       const movegen_per_color_t* p_own_movegen;
    public:
       uint64_t own;
@@ -78,26 +63,19 @@ namespace cheapshot
          std::swap(own,opposing);
       }
 
-      const single_color_board&
-      own_side() const
-      {
-         // dependent variable, (but calculating slows down measurably)
-         return *p_own_side;
-      }
+      // dependent variable, (but calculating slows down measurably)
+      const board_side&
+      own_side() const { return *p_own_side; }
 
-      single_color_board&
-      own_side()
-      {
-         // dependent variable, (but calculating slows down measurably)
-         return *p_own_side;
-      }
+      board_side&
+      own_side() { return *p_own_side; }
 
-       uint64_t
-       all_destinations(piece p,uint64_t s) const
-       {
-          return (*p_own_movegen)[idx(p)](s,all)
-             &~own; // this is probably not always necessary
-       }
+      uint64_t
+      all_destinations(piece p,uint64_t s) const
+      {
+         return (*p_own_movegen)[idx(p)](s,all)
+            &~own; // this is probably not always necessary
+      }
    };
 
    struct piece_moves
@@ -173,17 +151,16 @@ namespace cheapshot
       }
 
       void
-      first_match()
+      first_match() // idempotent
       {
          while(ref.origin==bit_iterator())
          {
             ++ref.moved_piece;
             if(ref.moved_piece==piece::count)
-               return;
+               return; // the end
             ref.origin=bit_iterator(metrics.own_side()[idx(ref.moved_piece)]);
          }
-         ref.destinations=bit_iterator(
-            metrics.all_destinations(ref.moved_piece,*ref.origin));
+         ref.destinations=bit_iterator(metrics.all_destinations(ref.moved_piece,*ref.origin));
       }
    };
 
@@ -195,13 +172,21 @@ namespace cheapshot
    }
 
    inline void
-   make_move(uint64_t& piece_loc, single_color_board& other_side,
+   make_move(uint64_t& piece_loc, board_side& other_side,
              uint64_t origin, uint64_t destination)
    {
       piece_loc^=(origin|destination);
       for(auto& v: other_side)
          v&=~destination;
    }
+
+   // moves have to be stored in a container, where they can be compared, sorted .... .
+   // they have to readable in order
+
+   // opponent en-passant captures cannot capture kings
+   // castling cannot be used to avoid mate in 1
+   // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
+   //  this should make the loop easier
 
    inline int
    analyse_position(board_metrics& bm, uint64_t under_attack)
@@ -253,21 +238,34 @@ namespace cheapshot
    }
 
    inline void
-   move_castle(board_t& b)
+   move_castle(board_metrics& bm, uint64_t own_under_attack)
    {
       // TODO
    }
 
-   inline void
-   capture_en_passant(board_t& b)
-   {
-      // TODO
-   }
+   constexpr piece piece_promotions[]={
+      piece::queen,piece::knight,piece::rook,piece::bishop};
 
    inline void
-   move_promotion(board_t& b)
+   move_promotion(board_metrics& bm)
    {
-      // TODO
+      // use function iterator
+      bm.own_side()[idx(piece::pawn)]&row_with_number(7);
+   }
+
+   namespace detail
+   {
+      constexpr uint64_t weight[count<piece>()]=
+      {
+         1, 3, 3, 5, 9,
+         std::numeric_limits<uint64_t>::max()
+      };
+   }
+
+   constexpr uint64_t
+   weight(piece p)
+   {
+      return detail::weight[idx(p)];
    }
 }
 

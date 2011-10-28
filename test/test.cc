@@ -1,24 +1,19 @@
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <cstdlib>
 #include <ctime>
-#include <iostream>
-#include <iterator>
 #include <sys/times.h>
-
-#include "cheapshot/bitops.hh"
-#include "cheapshot/board.hh"
-#include "cheapshot/board_io.hh"
-#include "cheapshot/engine.hh"
-#include "cheapshot/extra_bitops.hh"
-#include "cheapshot/iterator.hh"
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cheapshot
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
+
+#include "cheapshot/bitops.hh"
+#include "cheapshot/board.hh"
+#include "cheapshot/board_io.hh"
+#include "cheapshot/engine.hh"
+#include "cheapshot/iterator.hh"
+
+#include "cheapshot/extra_bitops.hh"
 
 using namespace cheapshot;
 
@@ -498,7 +493,7 @@ capture_pawn_check(const char* canvas)
    BOOST_CHECK_EQUAL(capture_with_pawn_down(mirror(pawns),mirror(opposing)),mirror(captures));
 }
 
-BOOST_AUTO_TEST_CASE( capture_with_pawn_up_test )
+BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
 {
    capture_pawn_check(
       "........\n"
@@ -518,6 +513,61 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_up_test )
       "OoOo....\n"
       ".po.....\n"
       "..o.....\n"
+      "........\n");
+}
+
+inline void
+capture_pawn_en_passant_check(const char* canvas)
+{
+   uint64_t ep_pawns_before_move=scan_canvas(canvas,'1');
+   uint64_t ep_pawns=scan_canvas(canvas,'2');
+   uint64_t own_pawn=scan_canvas(canvas,'x');
+   uint64_t captures=scan_canvas(canvas,'X'); // TODO: 2 should go after capture
+   {
+      uint64_t ep_info_down=en_passant_info_down(ep_pawns_before_move, ep_pawns);
+      BOOST_CHECK(is_max_single_bit(ep_info_down));
+      BOOST_CHECK_EQUAL(en_passant_capture_up(own_pawn, ep_info_down),captures);
+   }
+   mirror_inplace(ep_pawns_before_move);
+   mirror_inplace(ep_pawns);
+   mirror_inplace(own_pawn);
+   mirror_inplace(captures);
+   {
+      uint64_t ep_info_up=en_passant_info_up(ep_pawns_before_move, ep_pawns);
+      BOOST_CHECK(is_max_single_bit(ep_info_up));
+      BOOST_CHECK_EQUAL(en_passant_capture_down(own_pawn, ep_info_up),captures);
+   }
+
+}
+
+BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
+{
+   capture_pawn_en_passant_check(
+      "........\n"
+      "..1.....\n"
+      "..X.....\n"
+      "..2x....\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n");
+   capture_pawn_en_passant_check(
+      "........\n"
+      "..1.....\n"
+      "..2.....\n"
+      "...x....\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n");
+   capture_pawn_en_passant_check(
+      "........\n"
+      "........\n"
+      "..1.....\n"
+      "..2x....\n"
+      "........\n"
+      "........\n"
+      "........\n"
       "........\n");
 }
 
@@ -670,6 +720,10 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(basic_engine_suite)
+
 inline void
 moves_iterator_check(const char* board_layout, const char* captures)
 {
@@ -804,22 +858,55 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( analyze_mate_test )
+BOOST_AUTO_TEST_CASE( game_finish_test )
 {
-   // Rodzynski-Alekhine, Paris 1913
-   board_t mate_board1=scan_board(
-      ".......q\n"
-      "P.PK..PP\n"
-      "...P....\n"
-      "....P...\n"
-      ".p.pp..B\n"
-      "...Q.p..\n"
-      "pp.....p\n"
-      "rnb.k..r\n");
+   {
+      // Rodzynski-Alekhine, Paris 1913
+      board_t mate_board=scan_board(
+         ".......q\n"
+         "P.PK..PP\n"
+         "...P....\n"
+         "....P...\n"
+         ".p.pp..B\n"
+         "...Q.p..\n"
+         "pp.....p\n"
+         "rnb.k..r\n");
 
-   board_metrics bm(mate_board1,color::white);
-   // TODO: cheating by selecting all moves
-   BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);   
+      board_metrics bm(mate_board,color::white);
+      // cheating by selecting all moves
+      BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);
+   }
+   {
+      // Carlsen-Harestad Politiken Cup 2003
+      board_t mate_board=scan_board(
+         "R.......\n"
+         "...BB..r\n"
+         "Q......K\n"
+         ".PNpP.PP\n"
+         "..P.....\n"
+         "..p.....\n"
+         ".pb...p.\n"
+         "..b...k.\n");
+      board_metrics bm(mate_board,color::black);
+      // cheating by selecting all moves
+      BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);
+   }
+   {
+      // wikipedia stalemate article
+      board_t stalemate_board=scan_board(
+         ".......K\n"
+         ".....k..\n"
+         "......q.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n");
+
+      board_metrics bm(stalemate_board,color::black);
+      // TODO: cheating by selecting no moves
+      BOOST_CHECK_EQUAL(analyse_position(bm,0ULL),score::stalemate);
+   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -839,6 +926,19 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
       r=row_number(s);
    }
    time_op.time_report("column/row calculation",ops);
+}
+
+BOOST_AUTO_TEST_CASE( time_board_pos )
+{
+   volatile uint64_t s=(1ULL<<(8*(8-(1))));
+   volatile uint64_t c;
+   TimeOperation time_op;
+   const long ops=100000000;
+   for(long i=0;i<ops;++i)
+      c=get_board_pos(s);
+   // portable version is 15% faster, but code-complexity increases
+   //c=get_board_pos_portable(s);
+   time_op.time_report("board pos",ops);
 }
 
 template<typename T>
@@ -894,7 +994,7 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
    {
       r=bits_set(in);
    }
-   time_op.time_report("set bits",ops);
+   time_op.time_report("count set bits",ops);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

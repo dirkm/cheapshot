@@ -3,11 +3,11 @@
 ## Warning
 
 Cheapshot is in early construction phase, and has been for some time.
-Is is meant to be a chess-engine written in C++0x, and should take advantage of 64 bit arithmetic.
+It is meant to be a chess-engine written in C++0x, and should take advantage of 64 bit arithmetic.
 
-In order to build, boost (system-layout) is required.
+In order to build, [boost](http://www.boost.org) (system-layout) is required.
 
-Basic piece-moves are done (without castling and en passant). 
+Basic piece-moves are done (without castling and promotions). 
 Currently, I am working on a routine to walk plies. 
 
 There is no AI yet. You might want to check back in a couple of years.

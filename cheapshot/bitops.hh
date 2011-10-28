@@ -71,7 +71,9 @@ namespace cheapshot
          return l>>r;
       }
 
-      template<uint64_t (*Shift)(uint64_t, uint64_t) noexcept>
+      typedef uint64_t (*shift)(uint64_t, uint64_t);
+
+      template<shift Shift>
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
       {
@@ -262,39 +264,44 @@ namespace cheapshot
          (aliased_move<bottom>(s)-1)&row_with_number(0));
    }
 
-   constexpr uint64_t
-   diag_delta(uint64_t s, uint64_t left) noexcept
+   namespace detail
    {
-      // assert(is_single_bit(s));
-      return
-         (aliased_move<bottom_left>(s)&left)|
-         (aliased_move<top_right>(s)&~left); // right=~left
-   }
 
-   constexpr uint64_t
-   diag_sum(uint64_t s, uint64_t left) noexcept
-   {
-      // assert(is_single_bit(s));
-      return
-         (aliased_move<top_left>(s)&left)|
-         (aliased_move<bottom_right>(s)&~left); // right=~left
+      constexpr uint64_t
+      diag_delta(uint64_t s, uint64_t left) noexcept
+      {
+         // assert(is_single_bit(s));
+         return
+            (aliased_move<bottom_left>(s)&left)|
+            (aliased_move<top_right>(s)&~left); // right=~left
+      }
+
+      constexpr uint64_t
+      diag_sum(uint64_t s, uint64_t left) noexcept
+      {
+         // assert(is_single_bit(s));
+         return
+            (aliased_move<top_left>(s)&left)|
+            (aliased_move<bottom_right>(s)&~left); // right=~left
+      }
+
    }
 
    constexpr uint64_t
    diag_delta(uint64_t s) noexcept
    {
-      return diag_delta(s,strict_left_of(s));
+      return detail::diag_delta(s,strict_left_of(s));
    }
 
    constexpr uint64_t
    diag_sum(uint64_t s) noexcept
    {
-      return diag_sum(s,strict_left_of(s));
+      return detail::diag_sum(s,strict_left_of(s));
    }
 
    namespace detail
    {
-      template<uint64_t (*Shift)(uint64_t, uint64_t)>
+      template<shift Shift>
       constexpr uint64_t
       move_pawn(uint64_t s) noexcept
       {
@@ -303,7 +310,7 @@ namespace cheapshot
             Shift(s&(row_with_number(1)|row_with_number(6)),16);
       }
 
-      template<uint64_t (*Shift)(uint64_t, uint64_t)>
+      template<shift Shift>
       constexpr uint64_t
       capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
       {
@@ -453,28 +460,34 @@ namespace cheapshot
          slide_bishop(s,obstacles);
    }
 
-   constexpr uint64_t
-   slide_optimised_for_pawns_up(uint64_t movement, uint64_t obstacles) noexcept
+   namespace detail
    {
-      return smaller(
-         lowest_bit(
-            obstacles&movement // blocking_top
-            ))&movement;
+      constexpr uint64_t
+      slide_optimised_for_pawns_up(uint64_t movement, uint64_t obstacles) noexcept
+      {
+         return smaller(
+            lowest_bit(
+               obstacles&movement // blocking_top
+               ))&movement;
+      }
+
+      constexpr uint64_t
+      slide_optimised_for_pawns_down(uint64_t movement, uint64_t obstacles) noexcept
+      {
+         return
+            ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
+            movement;
+      }
    }
 
-   constexpr uint64_t
-   slide_optimised_for_pawns_down(uint64_t movement, uint64_t obstacles) noexcept
-   {
-      return
-         ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
-         movement;
-   }
+   // slides are allowed to reach the ends of the board. promotions will be done
+   //  in the eval-loop
 
    constexpr uint64_t
    slide_pawn_up(uint64_t s, uint64_t obstacles) noexcept
    {
       return
-         slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
+         detail::slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
    }
 
    constexpr uint64_t
@@ -487,7 +500,7 @@ namespace cheapshot
    slide_pawn_down(uint64_t s, uint64_t obstacles) noexcept
    {
       return
-         slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
+         detail::slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
    }
 
    constexpr uint64_t
@@ -496,6 +509,49 @@ namespace cheapshot
       return
          slide_pawn_down(s,obstacles)|capture_with_pawn_down(s,obstacles);
    }
+
+   namespace detail
+   {
+      template<shift ShiftForward, shift ShiftBackward>
+      constexpr uint64_t
+      en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
+      {
+         return ShiftBackward(((pawns_before_move ^ pawns) & 
+                               (ShiftForward(pawns_before_move ^ pawns,16)))&
+                              (row_with_number(3)|row_with_number(4)),8);
+      }
+   }
+
+   // prepare en-passant info as input for en_passant_capture
+   constexpr uint64_t
+   en_passant_info_up(uint64_t pawns_before_move, uint64_t pawns) noexcept
+   {
+      return detail::en_passant_info<detail::left_shift,detail::right_shift>
+         (pawns_before_move,pawns);
+   }
+
+   constexpr uint64_t
+   en_passant_info_down(uint64_t pawns_before_move, uint64_t pawns) noexcept
+   {
+      return detail::en_passant_info<detail::right_shift,detail::left_shift>
+         (pawns_before_move,pawns);
+   }
+
+   // call always works, but row-checking s first is faster.
+   constexpr uint64_t
+   en_passant_capture_up(uint64_t s, uint64_t ep_info_down) noexcept
+   {
+      return capture_with_pawn_up(s,ep_info_down);
+   }
+
+   constexpr uint64_t
+   en_passant_capture_down(uint64_t s, uint64_t ep_info_up) noexcept
+   {
+      return capture_with_pawn_down(s,ep_info_up);
+   }
+
+   constexpr uint64_t block_castle_mask_down=algpos('D',1)|algpos('F',1);
+   constexpr uint64_t block_castle_mask_up=algpos('D',8)|algpos('F',8);
 } // cheapshot
 
 #endif

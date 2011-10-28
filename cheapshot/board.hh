@@ -1,8 +1,9 @@
 #ifndef CHEAPSHOT_BOARD_HH
 #define CHEAPSHOT_BOARD_HH
 
-#include "cheapshot/bitops.hh"
 #include <array>
+
+#include "cheapshot/bitops.hh"
 
 namespace cheapshot
 {
@@ -37,13 +38,13 @@ namespace cheapshot
       return color(idx(c)^1);
    }
 
-   typedef std::array<uint64_t,count<piece>()> single_color_board;
+   typedef std::array<uint64_t,count<piece>()> board_side;
 
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
-   typedef std::array<single_color_board,count<color>()> board_t;
+   typedef std::array<board_side,count<color>()> board_t;
 
-   constexpr single_color_board init_white_board=
+   constexpr board_side init_white_board=
    {
       row_with_algebraic_number(2), // p
       algpos('B',1)|algpos('G',1), // n
@@ -72,7 +73,7 @@ namespace cheapshot
    }
 
    inline void
-   mirror_inplace(single_color_board& scb)
+   mirror_inplace(board_side& scb)
    {
       for(auto& v: scb)
          mirror_inplace(v);
@@ -94,7 +95,7 @@ namespace cheapshot
    }
 
    inline uint64_t
-   obstacles(const single_color_board& scb)
+   obstacles(const board_side& scb)
    {
       uint64_t r=0;
       for(uint64_t p: scb)
