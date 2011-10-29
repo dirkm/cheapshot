@@ -88,8 +88,7 @@ namespace cheapshot
    struct moves_iterator_end{};
 
    class moves_iterator
-      : public std::iterator<
-      std::forward_iterator_tag,uint64_t, std::ptrdiff_t,piece_moves*,piece_moves&>
+      : public std::iterator<std::forward_iterator_tag,piece_moves>
    {
    private:
       const board_metrics& metrics;
@@ -180,6 +179,11 @@ namespace cheapshot
          v&=~destination;
    }
 
+   class boardgen_iterator
+      : public std::iterator<std::forward_iterator_tag,board_t>
+   {
+   };
+
    // moves have to be stored in a container, where they can be compared, sorted .... .
    // they have to readable in order
 
@@ -187,6 +191,18 @@ namespace cheapshot
    // castling cannot be used to avoid mate in 1
    // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
    //  this should make the loop easier
+
+   struct moves_container
+   {
+      std::array<piece_moves,16> moves;
+      std::size_t nr_moves;
+   };
+
+   inline bool
+   has_selfcheck(board_metrics bm, const moves_container& opponent_moves)
+   {
+      
+   }
 
    inline int
    analyse_position(board_metrics& bm, uint64_t under_attack)
@@ -203,7 +219,7 @@ namespace cheapshot
             board_t new_board=bm.board;
             make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                       new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-            print_board(new_board,std::cout);
+            // print_board(new_board,std::cout);
             board_metrics bm_new(new_board,bm.turn); // this can be improved
             uint64_t oponent_under_attack=0ULL;
             for(moves_iterator attack_it(bm_new);attack_it!=moves_iterator_end();++attack_it)
@@ -215,12 +231,12 @@ namespace cheapshot
             uint64_t own_under_attack=0ULL;
             for(moves_iterator own_attack_it(bm_new);own_attack_it!=moves_iterator_end();++own_attack_it)
                own_under_attack|=own_attack_it->destinations.remaining();
-            std::cout << std::endl;
-            print_canvas(own_under_attack,std::cout);
+            // std::cout << std::endl;
+            // print_position(own_under_attack,std::cout);
 
-            std::cout << std::endl;
-            print_canvas(p_king&own_under_attack,std::cout,'M');
-            print_canvas(p_king,std::cout,'k');
+            // std::cout << std::endl;
+            // print_position(p_king&own_under_attack,std::cout,'M');
+            // print_position(p_king,std::cout,'k');
 
             if(p_king&own_under_attack)
                continue; // ignore checks

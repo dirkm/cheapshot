@@ -24,8 +24,8 @@ namespace cheapshot
    inline void
    fill_canvas_side(const board_side& side,canvas_t& c,piece_representation p) noexcept
    {
-      auto pi=p.begin();
-      for(auto bi=side.begin();bi!=side.end();++bi,++pi)
+      auto pi=begin(p);
+      for(auto bi=begin(side);bi!=end(side);++bi,++pi)
          fill_canvas(*bi,c,*pi);
    }
 
@@ -52,7 +52,7 @@ namespace cheapshot
    }
 
    inline std::ostream&
-   print_canvas(uint64_t t, std::ostream& os,char p='X')
+   print_position(uint64_t t, std::ostream& os,char p='X')
    {
       canvas_t c;
       c.fill('.');
@@ -85,8 +85,8 @@ namespace cheapshot
    scan_board_side(const char* canvas, piece_representation repr) noexcept
    {
       board_side side;
-      auto pi=repr.begin();
-      for(auto bi=side.begin();bi!=side.end();++bi,++pi)
+      auto pi=begin(repr);
+      for(auto bi=begin(side);bi!=end(side);++bi,++pi)
          *bi=scan_canvas(canvas,*pi);
       return side;
    }

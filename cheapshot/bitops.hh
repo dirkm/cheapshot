@@ -516,7 +516,7 @@ namespace cheapshot
       constexpr uint64_t
       en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
       {
-         return ShiftBackward(((pawns_before_move ^ pawns) & 
+         return ShiftBackward(((pawns_before_move ^ pawns) &
                                (ShiftForward(pawns_before_move ^ pawns,16)))&
                               (row_with_number(3)|row_with_number(4)),8);
       }

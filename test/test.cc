@@ -70,6 +70,18 @@ namespace
       ".......k\n"
       "R...Q...\n");
 
+// Rodzynski-Alekhine, Paris 1913
+   const char canvas_mate_board1[]= 
+      ".......q\n"
+      "P.PK..PP\n"
+      "...P....\n"
+      "....P...\n"
+      ".p.pp..B\n"
+      "...Q.p..\n"
+      "pp.....p\n"
+      "rnb.k..r\n";
+
+
    template<typename T>
    void
    for_all_moves(moves_iterator it, T t)
@@ -154,7 +166,7 @@ BOOST_AUTO_TEST_CASE( canvas_test )
       "XXXX.XXX\n";
    constexpr uint64_t test_val=0x123456789ABCDEFULL;
 
-   print_canvas(test_val,ots);
+   print_position(test_val,ots);
    BOOST_CHECK( ots.is_equal(test_canvas));
    BOOST_CHECK_EQUAL(scan_canvas(test_canvas,'X'),test_val);
 }
@@ -197,7 +209,7 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          ".......X\n"
          ".......X\n"
          "XXXXXXXr\n";
-      // print_canvas(slide_rook(
+      // print_position(slide_rook(
       //                 scan_canvas(canvas,'r'),
       //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
       BOOST_CHECK_EQUAL(slide_rook(
@@ -215,7 +227,7 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          "..Xo....\n"
          "..O.....\n"
          "..o.....\n";
-      // print_canvas(slide_rook(
+      // print_position(slide_rook(
       //                 scan_canvas(canvas,'r'),
       //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
       BOOST_CHECK_EQUAL(slide_rook(
@@ -256,7 +268,7 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
          "..O.....\n"
          "..o.....\n"
          "........\n";
-      // print_canvas(slide_queen(
+      // print_position(slide_queen(
       //                 scan_canvas(canvas,'q'),
       //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
 
@@ -417,7 +429,7 @@ BOOST_AUTO_TEST_CASE( mirror_test )
          "........\n";
       BOOST_CHECK_EQUAL(mirror(scan_canvas(canvas,'X')),scan_canvas(canvas_mirror,'X'));
    }
- }
+}
 
 inline void
 slide_pawn_check(const char* canvas)
@@ -425,7 +437,7 @@ slide_pawn_check(const char* canvas)
    uint64_t pawns=scan_canvas(canvas,'p');
    uint64_t opposing=scan_canvas(canvas,'o');
    uint64_t result=scan_canvas(canvas,'X');
-   // print_canvas(slide_pawn_up(pawns,opposing,std::cout));
+   // print_position(slide_pawn_up(pawns,opposing,std::cout));
    BOOST_CHECK_EQUAL(slide_pawn_up(pawns,opposing),result);
    BOOST_CHECK_EQUAL(slide_pawn_down(mirror(pawns),mirror(opposing)),mirror(result));
 }
@@ -575,7 +587,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 {
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(1ULL),ots);
+      print_position(diag_delta(1ULL),ots);
       BOOST_CHECK( ots.is_equal(
                       ".......X\n"
                       "......X.\n"
@@ -589,7 +601,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(smaller(1ULL<<(8*(8-(1)))),ots);
+      print_position(smaller(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "XXXXXXXX\n"
@@ -603,7 +615,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(1ULL)>>8,ots);
+      print_position(diag_delta(1ULL)>>8,ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       ".......X\n"
@@ -617,7 +629,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(1ULL)<<32,ots);
+      print_position(diag_delta(1ULL)<<32,ots);
       BOOST_CHECK( ots.is_equal(
                       "...X....\n"
                       "..X.....\n"
@@ -631,7 +643,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(1ULL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(1ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "X.......\n"
                       "........\n"
@@ -645,7 +657,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(0x80ULL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(0x80ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       ".......X\n"
                       "......X.\n"
@@ -659,7 +671,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_delta(0x10ULL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(0x10ULL<<(8*(8-(1)))),ots);
       BOOST_CHECK( ots.is_equal(
                       "....X...\n"
                       "...X....\n"
@@ -673,7 +685,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_sum(1ULL<<7),ots);
+      print_position(diag_sum(1ULL<<7),ots);
       BOOST_CHECK( ots.is_equal(
                       "X.......\n"
                       ".X......\n"
@@ -687,7 +699,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_sum(1ULL<<7)>>(8*6),ots);
+      print_position(diag_sum(1ULL<<7)>>(8*6),ots);
       BOOST_CHECK( ots.is_equal(
                       "........\n"
                       "........\n"
@@ -701,7 +713,7 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_canvas(diag_sum(1<<15),ots);
+      print_position(diag_sum(1<<15),ots);
       BOOST_CHECK( ots.is_equal(
                       ".X......\n"
                       "..X.....\n"
@@ -736,7 +748,7 @@ moves_iterator_check(const char* board_layout, const char* captures)
                     r|=p.destinations.remaining();
                  });
    boost::test_tools::output_test_stream ots;
-   print_canvas(r,ots);
+   print_position(r,ots);
    BOOST_CHECK(ots.is_equal(captures));
 }
 
@@ -791,7 +803,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
                     });
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[idx(piece::pawn)],ots);
+         print_position(r[idx(piece::pawn)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -805,7 +817,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       BOOST_CHECK_EQUAL(r[idx(piece::knight)],0);
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[idx(piece::bishop)],ots);
+         print_position(r[idx(piece::bishop)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -818,7 +830,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[idx(piece::rook)],ots);
+         print_position(r[idx(piece::rook)],ots);
          BOOST_CHECK(ots.is_equal(
                         "X.......\n"
                         ".XXXXXXX\n"
@@ -831,7 +843,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[idx(piece::queen)],ots);
+         print_position(r[idx(piece::queen)],ots);
          BOOST_CHECK(ots.is_equal(
                         "......X.\n"
                         "......X.\n"
@@ -844,7 +856,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_canvas(r[idx(piece::king)],ots);
+         print_position(r[idx(piece::king)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -861,17 +873,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
 BOOST_AUTO_TEST_CASE( game_finish_test )
 {
    {
-      // Rodzynski-Alekhine, Paris 1913
-      board_t mate_board=scan_board(
-         ".......q\n"
-         "P.PK..PP\n"
-         "...P....\n"
-         "....P...\n"
-         ".p.pp..B\n"
-         "...Q.p..\n"
-         "pp.....p\n"
-         "rnb.k..r\n");
-
+      board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
       // cheating by selecting all moves
       BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);
@@ -996,5 +998,20 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
    }
    time_op.time_report("count set bits",ops);
 }
+
+BOOST_AUTO_TEST_CASE( time_mate_check )
+{
+   board_t mate_board=scan_board(canvas_mate_board1);
+   board_metrics bm(mate_board,color::white);
+   volatile uint64_t attack_mask=~0ULL;
+   TimeOperation time_op;
+   constexpr long ops=100000;
+   for(long i=0;i<ops;++i)
+   {
+      analyse_position(bm,attack_mask);
+   }
+   time_op.time_report("mate check",ops);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
