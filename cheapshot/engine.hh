@@ -165,9 +165,11 @@ namespace cheapshot
 
    namespace score
    {
+      // king_en_prise : ilegal position were the oponent's king is en-prise
       constexpr int checkmate=std::numeric_limits<int>::max();
       constexpr int stalemate=checkmate-1;
       constexpr int no_valid_move=stalemate-1; // no valid move found
+      constexpr int max_depth_exceeded=no_valid_move-1;
    }
 
    inline void
@@ -179,11 +181,6 @@ namespace cheapshot
          v&=~destination;
    }
 
-   class boardgen_iterator
-      : public std::iterator<std::forward_iterator_tag,board_t>
-   {
-   };
-
    // moves have to be stored in a container, where they can be compared, sorted .... .
    // they have to readable in order
 
@@ -192,24 +189,42 @@ namespace cheapshot
    // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
    //  this should make the loop easier
 
-   struct moves_container
-   {
-      std::array<piece_moves,16> moves;
-      std::size_t nr_moves;
-   };
+//   struct moves_container
+//   {
+//      std::array<piece_moves,16> moves;
+//      std::size_t nr_moves;
+//   };
 
-   inline bool
-   has_selfcheck(board_metrics bm, const moves_container& opponent_moves)
+   template<typename DepthController>
+   int
+   analyze_position(board_metrics& bm, DepthController depth_controller)
    {
-      
-   }
+      {
+         uint64_t opponent_under_attack=0ULL;
+         for(moves_iterator it(bm);it!=moves_iterator_end();++it)
+            opponent_under_attack|=it->destinations.remaining();
 
-   inline int
-   analyse_position(board_metrics& bm, uint64_t under_attack)
-   {
-      bool king_under_attack=bm.own_side()[idx(piece::king)]&under_attack;
+         bm.switch_side();
+         const bool king_en_prise=bm.own_side()[idx(piece::king)]&
+            opponent_under_attack;
+         if(king_en_prise)
+            return score::no_valid_move;
+      }
+
+      if(!depth_controller.attempt_depth_increase())
+         return score::max_depth_exceeded;
+
+      uint64_t own_under_attack=0;
+      {
+         for(moves_iterator it(bm);it!=moves_iterator_end();++it)
+            own_under_attack|=it->destinations.remaining();
+      }
+
+      bm.switch_side();
+      bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
       int s=score::no_valid_move;
       // evaluate and recurse deeper
+      // TODO: avoid repeat
       for(moves_iterator moves_it(bm);moves_it!=moves_iterator_end();++moves_it)
       {
          for(bit_iterator& dest_iter=moves_it->destinations;
@@ -220,32 +235,11 @@ namespace cheapshot
             make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                       new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
             // print_board(new_board,std::cout);
-            board_metrics bm_new(new_board,bm.turn); // this can be improved
-            uint64_t oponent_under_attack=0ULL;
-            for(moves_iterator attack_it(bm_new);attack_it!=moves_iterator_end();++attack_it)
-               oponent_under_attack|=attack_it->destinations.remaining();
-
-            uint64_t p_king=bm_new.own_side()[idx(piece::king)];
-            bm_new.switch_side();
-            // TODO: calculated twice, should be passed as list
-            uint64_t own_under_attack=0ULL;
-            for(moves_iterator own_attack_it(bm_new);own_attack_it!=moves_iterator_end();++own_attack_it)
-               own_under_attack|=own_attack_it->destinations.remaining();
-            // std::cout << std::endl;
-            // print_position(own_under_attack,std::cout);
-
-            // std::cout << std::endl;
-            // print_position(p_king&own_under_attack,std::cout,'M');
-            // print_position(p_king,std::cout,'k');
-
-            if(p_king&own_under_attack)
-               continue; // ignore checks
-            // TODO: delete, this was temporary added to stop infinite recursion
-            exit(-1);
-            s=analyse_position(bm_new,oponent_under_attack);
+            board_metrics bm_new(new_board,other_color(bm.turn));
+            s=analyze_position(bm_new,depth_controller);
+            if(s==score::max_depth_exceeded)
+               continue;
             // TODO
-            // if(s==score::stalemate||score::checkmate)
-            //   return -s;
          }
       }
       return s==score::no_valid_move?

@@ -42,7 +42,7 @@ main(int argc, const char* argv[])
    }
    try
    {
-      cheapshot::print_canvas(arg_to_uint64(argv[1]),std::cout);
+      cheapshot::print_position(arg_to_uint64(argv[1]),std::cout);
       return 0;
    }
    catch(const std::exception& ex)

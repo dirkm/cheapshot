@@ -71,7 +71,7 @@ namespace
       "R...Q...\n");
 
 // Rodzynski-Alekhine, Paris 1913
-   const char canvas_mate_board1[]= 
+   const char canvas_mate_board1[]=
       ".......q\n"
       "P.PK..PP\n"
       "...P....\n"
@@ -89,6 +89,23 @@ namespace
       for(;it!=moves_iterator_end();++it)
          t(*it);
    }
+
+   template<int MaxDepth>
+   class fixed_depth_cutoff
+   {
+   public:
+      fixed_depth_cutoff():
+         i(0)
+      {}
+
+      bool
+      attempt_depth_increase()
+      {
+         return (i++)<MaxDepth;
+      }
+   private:
+      int i;
+   };
 }
 
 BOOST_AUTO_TEST_SUITE(piece_moves_suite)
@@ -875,8 +892,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
    {
       board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
-      // cheating by selecting all moves
-      BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::checkmate);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -890,8 +906,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".pb...p.\n"
          "..b...k.\n");
       board_metrics bm(mate_board,color::black);
-      // cheating by selecting all moves
-      BOOST_CHECK_EQUAL(analyse_position(bm,~0ULL),score::checkmate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::checkmate);
    }
    {
       // wikipedia stalemate article
@@ -906,8 +921,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n");
 
       board_metrics bm(stalemate_board,color::black);
-      // TODO: cheating by selecting no moves
-      BOOST_CHECK_EQUAL(analyse_position(bm,0ULL),score::stalemate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::stalemate);
    }
 }
 
@@ -1002,16 +1016,15 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
 BOOST_AUTO_TEST_CASE( time_mate_check )
 {
    board_t mate_board=scan_board(canvas_mate_board1);
-   board_metrics bm(mate_board,color::white);
-   volatile uint64_t attack_mask=~0ULL;
+   volatile color turn=color::white;
    TimeOperation time_op;
    constexpr long ops=100000;
    for(long i=0;i<ops;++i)
    {
-      analyse_position(bm,attack_mask);
+      board_metrics bm(mate_board,turn);
+      analyze_position(bm,fixed_depth_cutoff<1>());
    }
    time_op.time_report("mate check",ops);
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()
