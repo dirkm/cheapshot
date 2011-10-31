@@ -30,6 +30,27 @@ namespace cheapshot
          move_king
       }
    };
+   
+   struct en_passant_functions
+   {
+      uint64_t (*info)(uint64_t, uint64_t);
+      uint64_t (*candidates)(uint64_t, uint64_t);
+      uint64_t (*captures)(uint64_t, uint64_t);
+   };
+
+   constexpr en_passant_functions ep_functions_array[count<color>()]=
+   {
+      {
+         en_passant_info_up,
+         en_passant_candidates_up,
+         en_passant_capture_up
+      },
+      {
+         en_passant_info_down,
+         en_passant_candidates_down,
+         en_passant_capture_down
+      }
+   };
 
    struct board_metrics
    {
@@ -43,16 +64,18 @@ namespace cheapshot
       uint64_t own;
       uint64_t opposing;
       uint64_t all;
+      uint64_t last_ep_info; // en passant
 
       explicit
-      board_metrics(board_t& board_, color turn_):
+      board_metrics(board_t& board_, color turn_, uint64_t ep_info=0):
          board(board_),
          turn(turn_),
          p_own_side(&board[idx(turn)]),
          p_own_movegen(&move_generator_array[idx(turn)]),
-         own(obstacles(board[idx(turn)])),
+         own(obstacles(*p_own_side)),
          opposing(obstacles(board[idx(other_color(turn))])),
-         all(opposing|own)
+         all(opposing|own),
+         last_ep_info(ep_info)
       {}
 
       void switch_side()
@@ -181,6 +204,23 @@ namespace cheapshot
          v&=~destination;
    }
 
+   inline void
+   make_en_passant_move(uint64_t& pawn_loc, uint64_t& other_pawn_loc,
+                        uint64_t origin, uint64_t destination)
+   {
+      pawn_loc^=(origin|destination);
+      // row and column calculations are not the fastest way, but avoid another parameter
+      //   and en-passant captures are relatively rare
+      other_pawn_loc&=~row(origin)&column(destination); 
+   }
+
+   // TODO: returns lambda with enough info todo undo
+   inline std::function<void (board_t&)>
+   make_move_with_undo(uint64_t& piece_loc, board_side& other_side,
+                       uint64_t origin, uint64_t destination)
+   {
+   }
+
    // moves have to be stored in a container, where they can be compared, sorted .... .
    // they have to readable in order
 
@@ -189,57 +229,98 @@ namespace cheapshot
    // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
    //  this should make the loop easier
 
-//   struct moves_container
-//   {
-//      std::array<piece_moves,16> moves;
-//      std::size_t nr_moves;
-//   };
-
-   template<typename DepthController>
-   int
-   analyze_position(board_metrics& bm, DepthController depth_controller)
+   inline std::array<piece_moves,16>::iterator
+   store_basic_moves(std::array<piece_moves,16>& piece_moves,board_metrics& bm)
    {
-      {
-         uint64_t opponent_under_attack=0ULL;
-         for(moves_iterator it(bm);it!=moves_iterator_end();++it)
-            opponent_under_attack|=it->destinations.remaining();
+      auto out_it=begin(piece_moves);
+      for(moves_iterator it(bm);it!=moves_iterator_end();++it,++out_it)
+         *out_it=*it;
+      return out_it;
+   }
+   
+   template<typename It1, typename It2>
+   uint64_t
+   get_coverage(It1 it, It2 itend)
+   {
+      uint64_t r=0ULL;
+      for(;it!=itend;++it)
+         r|=it->destinations.remaining();
+      return r;
+   }
 
-         bm.switch_side();
-         const bool king_en_prise=bm.own_side()[idx(piece::king)]&
-            opponent_under_attack;
+   template<typename EngineController>
+   int
+   analyze_position(board_metrics& bm, EngineController engine_controller)
+   {
+      std::array<piece_moves,16> basic_moves; // 16 is the max nr of pieces per color
+      const auto basic_moves_end=store_basic_moves(basic_moves,bm);
+
+      uint64_t opponent_under_attack=
+         get_coverage(begin(basic_moves),basic_moves_end);
+
+      bm.switch_side(); // TODO: switching side to often
+      {
+         const bool king_en_prise=bm.own_side()[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
             return score::no_valid_move;
       }
 
-      if(!depth_controller.attempt_depth_increase())
+      if(!engine_controller.try_position(bm))
          return score::max_depth_exceeded;
 
-      uint64_t own_under_attack=0;
-      {
-         for(moves_iterator it(bm);it!=moves_iterator_end();++it)
-            own_under_attack|=it->destinations.remaining();
-      }
+      uint64_t own_under_attack=
+         get_coverage(moves_iterator(bm),moves_iterator_end());
 
       bm.switch_side();
+
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
+      const en_passant_functions& ep_functions=ep_functions_array[idx(bm.turn)];
       int s=score::no_valid_move;
+
       // evaluate and recurse deeper
-      // TODO: avoid repeat
-      for(moves_iterator moves_it(bm);moves_it!=moves_iterator_end();++moves_it)
+      for(auto moves_it=begin(basic_moves);moves_it!=basic_moves_end;++moves_it)
       {
          for(bit_iterator& dest_iter=moves_it->destinations;
              dest_iter!=bit_iterator();
              ++dest_iter)
          {
-            board_t new_board=bm.board;
+            board_t new_board=bm.board; // other engines undo moves ??
             make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                       new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-            // print_board(new_board,std::cout);
-            board_metrics bm_new(new_board,other_color(bm.turn));
-            s=analyze_position(bm_new,depth_controller);
+
+            // TODO: this should only be checked after a pawn move?
+            uint64_t en_passant_info=ep_functions.info(
+               bm.own_side()[idx(piece::pawn)],
+               new_board[idx(bm.turn)][idx(piece::pawn)]);
+            // TODO: undo move instead of creating new board ??
+            board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info); 
+            s=analyze_position(new_bm,engine_controller);
             if(s==score::max_depth_exceeded)
                continue;
-            // TODO
+            // TODO: get deeper mate checks going
+         }
+      }
+
+      // en passant captures
+      for(auto origin_iter=bit_iterator(ep_functions.candidates(bm.own_side()[idx(piece::pawn)],bm.last_ep_info));
+          origin_iter!=bit_iterator();
+          ++origin_iter)
+      {
+         uint64_t destinations=ep_functions.captures(*origin_iter,bm.last_ep_info);
+         for(auto dest_iter=bit_iterator(destinations);
+             dest_iter!=bit_iterator();
+             ++dest_iter)
+         {
+            board_t new_board=bm.board;
+            make_en_passant_move(
+               new_board[idx(bm.turn)][idx(piece::pawn)],
+               new_board[idx(other_color(bm.turn))][idx(piece::pawn)],
+               *origin_iter,*dest_iter);
+            // en_passant_info is zero here
+            board_metrics new_bm(new_board,other_color(bm.turn));
+            s=analyze_position(new_bm,engine_controller);
+            if(s==score::max_depth_exceeded)
+               continue;
          }
       }
       return s==score::no_valid_move?

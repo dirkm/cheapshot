@@ -71,7 +71,7 @@ namespace
       "R...Q...\n");
 
 // Rodzynski-Alekhine, Paris 1913
-   const char canvas_mate_board1[]=
+   const char canvas_mate_board1[]=(
       ".......q\n"
       "P.PK..PP\n"
       "...P....\n"
@@ -79,8 +79,7 @@ namespace
       ".p.pp..B\n"
       "...Q.p..\n"
       "pp.....p\n"
-      "rnb.k..r\n";
-
+      "rnb.k..r\n");
 
    template<typename T>
    void
@@ -91,19 +90,46 @@ namespace
    }
 
    template<int MaxDepth>
-   class fixed_depth_cutoff
+   class max_plie_cutoff
    {
    public:
-      fixed_depth_cutoff():
+      max_plie_cutoff():
          i(0)
       {}
 
       bool
-      attempt_depth_increase()
+      try_position(const board_metrics& bm)
       {
          return (i++)<MaxDepth;
       }
    private:
+      int i;
+   };
+
+   template<int MaxDepth>
+   class plie_cutoff_or_position
+   {
+   public:
+      plie_cutoff_or_position(const board_t& wanted_position_, bool& is_position_reached_):
+         wanted_position(wanted_position_),
+         is_position_reached(is_position_reached_),
+         i(0)
+      {}
+
+      bool
+      try_position(const board_metrics& bm)
+      {
+         if(bm.board==wanted_position)
+            is_position_reached=true;
+         // print_board(bm.board,std::cout);
+         // std::cout << std::endl << std::endl;
+         return 
+            ((i++)<MaxDepth) && 
+            (!is_position_reached);
+      }
+   private:
+      const board_t& wanted_position;
+      bool& is_position_reached;
       int i;
    };
 }
@@ -892,7 +918,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
    {
       board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
-      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::checkmate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),score::checkmate);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -906,7 +932,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".pb...p.\n"
          "..b...k.\n");
       board_metrics bm(mate_board,color::black);
-      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::checkmate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),score::checkmate);
    }
    {
       // wikipedia stalemate article
@@ -921,7 +947,40 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n");
 
       board_metrics bm(stalemate_board,color::black);
-      BOOST_CHECK_EQUAL(analyze_position(bm,fixed_depth_cutoff<1>()),score::stalemate);
+      BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),score::stalemate);
+   }
+}
+
+BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
+{
+   {
+      board_t en_passant_initial=scan_board(
+         "....K...\n"
+         "...P....\n"
+         "........\n"
+         "....p...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "....k...\n");
+
+      board_t en_passant_after_capture=scan_board(
+         "....K...\n"
+         "........\n"
+         "...p....\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "....k...\n");
+
+      bool position_reached=false;
+      // TODO: this test is broken since the position is reachable without e.p.
+      //  how to get here should be recorded
+      plie_cutoff_or_position<2> end_contr(en_passant_after_capture,position_reached);
+      board_metrics bm(en_passant_initial,color::black);
+      int s=analyze_position(bm,end_contr);
+      BOOST_CHECK(position_reached);
    }
 }
 
@@ -1008,7 +1067,7 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
    constexpr long ops=80000000;
    for(long i=0;i<ops;++i)
    {
-      r=bits_set(in);
+      r=count_bits_set(in);
    }
    time_op.time_report("count set bits",ops);
 }
@@ -1022,7 +1081,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(mate_board,turn);
-      analyze_position(bm,fixed_depth_cutoff<1>());
+      analyze_position(bm,max_plie_cutoff<1>());
    }
    time_op.time_report("mate check",ops);
 }

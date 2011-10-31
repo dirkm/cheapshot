@@ -51,7 +51,7 @@ namespace cheapshot
 
    // accepts max 14 bits
    constexpr uint64_t
-   bits_set(uint64_t p) noexcept
+   count_bits_set(uint64_t p) noexcept
    {
       return __builtin_popcountl(p);
    }
@@ -362,6 +362,8 @@ namespace cheapshot
       }
    }
 
+   // halfwidth 1: a band with max 3 columns, excluding the sides of the board
+   // halfwidth 2: same with 5 columns
    constexpr uint64_t
    vertical_band(uint64_t s,uint8_t halfwidth) noexcept
    {
@@ -537,6 +539,19 @@ namespace cheapshot
          (pawns_before_move,pawns);
    }
 
+   constexpr uint64_t
+   en_passant_candidates_up(uint64_t pawns, uint64_t ep_info)
+   {
+      // limit candidates to neighbouring rows (TODO: there is room for optimisation)
+      return pawns&row_with_number(4)&vertical_band(ep_info,1);
+   }
+
+   constexpr uint64_t
+   en_passant_candidates_down(uint64_t pawns, uint64_t ep_info)
+   {
+      return pawns&row_with_number(3)&vertical_band(ep_info,1);
+   }
+
    // call always works, but row-checking s first is faster.
    constexpr uint64_t
    en_passant_capture_up(uint64_t s, uint64_t ep_info_down) noexcept
@@ -550,8 +565,8 @@ namespace cheapshot
       return capture_with_pawn_down(s,ep_info_up);
    }
 
-   constexpr uint64_t block_castle_mask_down=algpos('D',1)|algpos('F',1);
-   constexpr uint64_t block_castle_mask_up=algpos('D',8)|algpos('F',8);
+   // constexpr uint64_t block_castle_mask_down=algpos('D',1)|algpos('F',1);
+   // constexpr uint64_t block_castle_mask_up=algpos('D',8)|algpos('F',8);
 } // cheapshot
 
 #endif
