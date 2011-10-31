@@ -30,7 +30,7 @@ namespace cheapshot
          move_king
       }
    };
-   
+
    struct en_passant_functions
    {
       uint64_t (*info)(uint64_t, uint64_t);
@@ -199,14 +199,22 @@ namespace cheapshot
       }
    };
 
-   namespace score
+   struct score
    {
-      // king_en_prise : ilegal position were the oponent's king is en-prise
-      constexpr int checkmate=std::numeric_limits<int>::max();
-      constexpr int stalemate=checkmate-1;
-      constexpr int no_valid_move=stalemate-1; // no valid move found
-      constexpr int max_depth_exceeded=no_valid_move-1;
-   }
+      // doesn't change sign in between turns
+      enum class status_t {invalid_position, max_depth_exceeded, normal};
+      status_t status;
+      // the higher the value, the more special the result
+      //   the engine will take the minimum of a newer and older position
+      //   no_valid_move is internal and should not be moved in between calls
+      static const int no_valid_move=std::numeric_limits<int>::max();
+      static const int checkmate=no_valid_move-1;
+      static const int stalemate=checkmate-1;
+      int value;
+   };
+
+   const int score::checkmate;
+   const int score::stalemate;
 
    inline void
    make_move(uint64_t& piece_loc, board_side& other_side,
@@ -222,20 +230,11 @@ namespace cheapshot
                         uint64_t origin, uint64_t destination)
    {
       pawn_loc^=(origin|destination);
-      // row and column calculations are not the fastest way, but avoid another parameter
+      // row and column calculations are not the fastest way,
+      //   but this avoids another function-parameter
       //   and en-passant captures are relatively rare
-      other_pawn_loc&=~row(origin)&column(destination); 
+      other_pawn_loc&=~row(origin)&column(destination);
    }
-
-   // TODO: returns lambda with enough info todo undo
-   inline std::function<void (board_t&)>
-   make_move_with_undo(uint64_t& piece_loc, board_side& other_side,
-                       uint64_t origin, uint64_t destination)
-   {
-   }
-
-   // moves have to be stored in a container, where they can be compared, sorted .... .
-   // they have to readable in order
 
    // opponent en-passant captures cannot capture kings
    // castling cannot be used to avoid mate in 1
@@ -250,7 +249,7 @@ namespace cheapshot
          *out_it=*it;
       return out_it;
    }
-   
+
    template<typename It1, typename It2>
    uint64_t
    get_coverage(It1 it, It2 itend)
@@ -262,7 +261,11 @@ namespace cheapshot
    }
 
    template<typename EngineController>
-   int
+   score
+   recurse_and_evaluate(score last_score,board_metrics& bm, EngineController& engine_controller);
+
+   template<typename EngineController>
+   score
    analyze_position(board_metrics& bm, EngineController engine_controller)
    {
       std::array<piece_moves,16> basic_moves; // 16 is the max nr of pieces per color
@@ -271,26 +274,28 @@ namespace cheapshot
       uint64_t opponent_under_attack=
          get_coverage(begin(basic_moves),basic_moves_end);
 
-      bm.switch_side(); // TODO: switching side to often
+      bm.switch_side(); // TODO: switching side too often
       {
          const bool king_en_prise=bm.own_side()[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
-            return score::no_valid_move;
+            return {score::status_t::invalid_position,0};
       }
 
       if(!engine_controller.try_position(bm))
-         return score::max_depth_exceeded;
+         return {score::status_t::max_depth_exceeded,0};
 
       uint64_t own_under_attack=
          get_coverage(moves_iterator(bm),moves_iterator_end());
 
       bm.switch_side();
 
+      // TODO: moves should be sorted in a list of candidate-moves
+
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
       const en_passant_functions& ep_functions=ep_functions_array[idx(bm.turn)];
-      int s=score::no_valid_move;
+      score s={score::status_t::normal,score::no_valid_move};
 
-      // evaluate and recurse deeper
+      // evaluate normal moves
       for(auto moves_it=begin(basic_moves);moves_it!=basic_moves_end;++moves_it)
       {
          for(bit_iterator& dest_iter=moves_it->destinations;
@@ -306,11 +311,8 @@ namespace cheapshot
                bm.own_side()[idx(piece::pawn)],
                new_board[idx(bm.turn)][idx(piece::pawn)]);
             // TODO: undo move instead of creating new board ??
-            board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info); 
-            s=analyze_position(new_bm,engine_controller);
-            if(s==score::max_depth_exceeded)
-               continue;
-            // TODO: get deeper mate checks going
+            board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
+            s=recurse_and_evaluate(s,new_bm,engine_controller);
          }
       }
 
@@ -331,14 +333,22 @@ namespace cheapshot
                *origin_iter,*dest_iter);
             // en_passant_info is zero here
             board_metrics new_bm(new_board,other_color(bm.turn));
-            s=analyze_position(new_bm,engine_controller);
-            if(s==score::max_depth_exceeded)
-               continue;
+            s=recurse_and_evaluate(s,new_bm,engine_controller);
          }
       }
-      return s==score::no_valid_move?
-         king_under_attack?score::checkmate:score::stalemate:
-         s;
+      if(s.value==score::no_valid_move)
+         s.value=king_under_attack?score::checkmate:score::stalemate;
+      return s;
+   }
+
+   template<typename EngineController>
+   inline score
+   recurse_and_evaluate(score last_score,board_metrics& bm, EngineController& engine_controller)
+   {
+      score new_score=analyze_position(bm,engine_controller);
+      if (new_score.status==score::status_t::normal)
+         last_score.value=std::min(last_score.value,-new_score.value);
+      return last_score;
    }
 
    inline void
@@ -370,6 +380,13 @@ namespace cheapshot
    weight(piece p)
    {
       return detail::weight[idx(p)];
+   }
+
+   // TODO: returns lambda with enough info todo undo
+   inline std::function<void (board_t&)>
+   make_move_with_undo(uint64_t& piece_loc, board_side& other_side,
+                       uint64_t origin, uint64_t destination)
+   {
    }
 }
 
