@@ -58,24 +58,17 @@ namespace cheapshot
    mirror_inplace(uint64_t& v) noexcept
    {
       //std::cout << std::hex << std::setw(16) << v << std::endl;
-      v = ((v >> 8) & 0x00FF00FF00FF00FFULL) | ((v & 0x00FF00FF00FF00FFULL) << 8);
+      v = ((v >> 8) & 0x00FF00FF00FF00FFUL) | ((v & 0x00FF00FF00FF00FFUL) << 8);
       // swap 2-byte long pairs
-      v = ((v >> 16) & 0x0000FFFF0000FFFFULL) | ((v & 0x0000FFFF0000FFFFULL) << 16);
+      v = ((v >> 16) & 0x0000FFFF0000FFFFUL) | ((v & 0x0000FFFF0000FFFFUL) << 16);
       // swap 4-byte long pairs
       v = (v >> 32) | (v << 32);
    }
 
-   inline uint64_t
-   mirror(uint64_t v)
-   {
-      mirror_inplace(v);
-      return v;
-   }
-
    inline void
-   mirror_inplace(board_side& scb)
+   mirror_inplace(board_side& side)
    {
-      for(auto& v: scb)
+      for(auto& v: side)
          mirror_inplace(v);
    }
 
@@ -84,6 +77,15 @@ namespace cheapshot
    {
       for(auto& scb: board)
          mirror_inplace(scb);
+      std::swap(board[0],board[1]);
+   }
+
+   template<typename T>
+   T
+   mirror(T v)
+   {
+      mirror_inplace(v);
+      return v;
    }
 
    inline board_t

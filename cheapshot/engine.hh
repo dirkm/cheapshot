@@ -78,6 +78,19 @@ namespace cheapshot
          last_ep_info(ep_info)
       {}
 
+      // delegating constructors, anyone ??
+      explicit
+      board_metrics(board_t&& board_, color turn_, uint64_t ep_info=0):
+         board(board_),
+         turn(turn_),
+         p_own_side(&board[idx(turn)]),
+         p_own_movegen(&move_generator_array[idx(turn)]),
+         own(obstacles(*p_own_side)),
+         opposing(obstacles(board[idx(other_color(turn))])),
+         all(opposing|own),
+         last_ep_info(ep_info)
+      {}
+
       void switch_side()
       {
          turn=other_color(turn);
@@ -242,7 +255,7 @@ namespace cheapshot
    uint64_t
    get_coverage(It1 it, It2 itend)
    {
-      uint64_t r=0ULL;
+      uint64_t r=0UL;
       for(;it!=itend;++it)
          r|=it->destinations.remaining();
       return r;

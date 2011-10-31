@@ -86,7 +86,7 @@ namespace cheapshot
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
          // TODO: limitation should be made explicit by interface-change
-         return p*aliased_move_helper<left_shift>(1ULL,n,step,i);
+         return p*aliased_move_helper<left_shift>(1UL,n,step,i);
       }
 
       // product is faster, this might be solved by multiplying with gcd of aliased_move_helper and 1<<64
@@ -115,7 +115,7 @@ namespace cheapshot
    {
       // why is this faster with conditional than without?
       return p?
-         (1ULL<<63)>>__builtin_clzll(p):
+         (1UL<<63)>>__builtin_clzll(p):
          p;
    }
 
@@ -156,7 +156,7 @@ namespace cheapshot
    bigger_equal_special_0(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
-      return bigger_equal(highest_bit(s|1ULL)); // TODO: improvable?
+      return bigger_equal(highest_bit(s|1UL)); // TODO: improvable?
    }
 
    // sliding moves
@@ -195,19 +195,19 @@ namespace cheapshot
    constexpr uint64_t
    position(uint8_t column, uint8_t row) noexcept
    {
-      return 1ULL<<((row)*8+(column));
+      return 1UL<<((row)*8+(column));
    }
 
    constexpr uint64_t
    row_with_number(uint8_t row_number) noexcept
    {
-      return aliased_move<right>(1ULL)<<(row_number*8);
+      return aliased_move<right>(1UL)<<(row_number*8);
    }
 
    constexpr uint64_t
    column_with_number(uint8_t column_number) noexcept
    {
-      return aliased_move<top>(1ULL)<<(column_number);
+      return aliased_move<top>(1UL)<<(column_number);
    }
 
    constexpr uint64_t

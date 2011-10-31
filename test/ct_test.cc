@@ -14,16 +14,16 @@ namespace cheapshot
          (highest_bit_portable(v)==h);
    }
 
-   static_assert(test_highest_bit(0xF123ULL,0x8000ULL),"");
-   static_assert(test_highest_bit(0x812300ULL,0x800000ULL),"");
-   static_assert(test_highest_bit(0x0ULL,0x0ULL),"");
-   static_assert(count_bits_set(0x0ULL)==0,"");
-   static_assert(count_bits_set(0x10000001ULL)==2,"");
-   static_assert(count_bits_set(0x11FFULL)==10,"");
-   static_assert(count_bits_set(0x3FFF00ULL)==14,"");
-   static_assert(count_bits_set(0x11F7000ULL)==9,"");
-   static_assert(count_bits_set(0xFFF0000ULL)==12,"");
-   static_assert(count_bits_set(0xFFF0000FFF0000ULL)==24,"");
+   static_assert(test_highest_bit(0xF123UL,0x8000UL),"");
+   static_assert(test_highest_bit(0x812300UL,0x800000UL),"");
+   static_assert(test_highest_bit(0x0UL,0x0UL),"");
+   static_assert(count_bits_set(0x0UL)==0,"");
+   static_assert(count_bits_set(0x10000001UL)==2,"");
+   static_assert(count_bits_set(0x11FFUL)==10,"");
+   static_assert(count_bits_set(0x3FFF00UL)==14,"");
+   static_assert(count_bits_set(0x11F7000UL)==9,"");
+   static_assert(count_bits_set(0xFFF0000UL)==12,"");
+   static_assert(count_bits_set(0xFFF0000FFF0000UL)==24,"");
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
 }
