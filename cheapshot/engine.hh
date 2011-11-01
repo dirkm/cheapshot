@@ -199,22 +199,22 @@ namespace cheapshot
       }
    };
 
-   struct score
+   struct score_t
    {
       // doesn't change sign in between turns
-      enum class status_t {invalid_position, max_depth_exceeded, normal};
+      enum class status_t {invalid_position, normal};
       status_t status;
       // the higher the value, the more special the result
       //   the engine will take the minimum of a newer and older position
       //   no_valid_move is internal and should not be moved in between calls
-      static const int no_valid_move=std::numeric_limits<int>::max();
-      static const int checkmate=no_valid_move-1;
+      static const int checkmate=std::numeric_limits<int>::max()-2;
       static const int stalemate=checkmate-1;
+      static const int no_valid_move=std::numeric_limits<int>::min();
       int value;
    };
 
-   const int score::checkmate;
-   const int score::stalemate;
+   const int score_t::checkmate;
+   const int score_t::stalemate;
 
    inline void
    make_move(uint64_t& piece_loc, board_side& other_side,
@@ -261,11 +261,11 @@ namespace cheapshot
    }
 
    template<typename EngineController>
-   score
-   recurse_and_evaluate(score last_score,board_metrics& bm, EngineController& engine_controller);
+   score_t
+   recurse_and_evaluate(score_t last_score,board_metrics& bm, EngineController& engine_controller);
 
    template<typename EngineController>
-   score
+   score_t
    analyze_position(board_metrics& bm, EngineController engine_controller)
    {
       std::array<piece_moves,16> basic_moves; // 16 is the max nr of pieces per color
@@ -278,11 +278,13 @@ namespace cheapshot
       {
          const bool king_en_prise=bm.own_side()[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
-            return {score::status_t::invalid_position,0};
+            return {score_t::status_t::invalid_position,0};
       }
 
       if(!engine_controller.try_position(bm))
-         return {score::status_t::max_depth_exceeded,0};
+      {
+         return {score_t::status_t::normal,0}; // TODO: better eval-function than returning 0
+      }
 
       uint64_t own_under_attack=
          get_coverage(moves_iterator(bm),moves_iterator_end());
@@ -293,7 +295,7 @@ namespace cheapshot
 
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
       const en_passant_functions& ep_functions=ep_functions_array[idx(bm.turn)];
-      score s={score::status_t::normal,score::no_valid_move};
+      score_t score ={score_t::status_t::normal,score_t::no_valid_move};
 
       // evaluate normal moves
       for(auto moves_it=begin(basic_moves);moves_it!=basic_moves_end;++moves_it)
@@ -312,7 +314,7 @@ namespace cheapshot
                new_board[idx(bm.turn)][idx(piece::pawn)]);
             // TODO: undo move instead of creating new board ??
             board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
-            s=recurse_and_evaluate(s,new_bm,engine_controller);
+            score=recurse_and_evaluate(score,new_bm,engine_controller);
          }
       }
 
@@ -333,21 +335,23 @@ namespace cheapshot
                *origin_iter,*dest_iter);
             // en_passant_info is zero here
             board_metrics new_bm(new_board,other_color(bm.turn));
-            s=recurse_and_evaluate(s,new_bm,engine_controller);
+            score=recurse_and_evaluate(score,new_bm,engine_controller);
          }
       }
-      if(s.value==score::no_valid_move)
-         s.value=king_under_attack?score::checkmate:score::stalemate;
-      return s;
+      if(score.value==score_t::no_valid_move)
+         score.value=king_under_attack?-score_t::checkmate:-score_t::stalemate;
+      return score;
    }
 
    template<typename EngineController>
-   inline score
-   recurse_and_evaluate(score last_score,board_metrics& bm, EngineController& engine_controller)
+   inline score_t
+   recurse_and_evaluate(score_t last_score,board_metrics& bm, EngineController& engine_controller)
    {
-      score new_score=analyze_position(bm,engine_controller);
-      if (new_score.status==score::status_t::normal)
-         last_score.value=std::min(last_score.value,-new_score.value);
+      score_t score=analyze_position(bm,engine_controller);
+      if (score.status==score_t::status_t::normal)
+      {
+         last_score.value=std::max(last_score.value,-score.value);
+      }
       return last_score;
    }
 

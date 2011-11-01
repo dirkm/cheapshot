@@ -370,7 +370,8 @@ namespace cheapshot
       // assert(is_single_bit(s));
       return
          aliased_move<top>(
-            (detail::aliased_band_widen(aliased_move<bottom>(s),halfwidth)&
+            (detail::aliased_band_widen(
+               aliased_move<bottom>(s)&row_with_number(0),halfwidth)&
              row_with_number(0)));
    }
 

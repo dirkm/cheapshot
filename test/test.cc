@@ -58,8 +58,9 @@ namespace
 
    const float TimeOperation::ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
 
-// white to move mate in 5
 // http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
+// white to move mate in 5, but there is a BUG.
+// so, this is only useful as example position
    const board_t test_board1=scan_board(
       "......RK\n"
       "r......P\n"
@@ -69,6 +70,18 @@ namespace
       "N......p\n"
       ".......k\n"
       "R...Q...\n");
+
+// white to move mate in 3
+// http://chesspuzzles.com/mate-in-three
+   const board_t test_board2=scan_board(
+      "RN.Q.R..\n"
+      "P....PK.\n"
+      ".P...r.P\n"
+      "..PPp..q\n"
+      "...p....\n"
+      "..p....p\n"
+      "p.p...p.\n"
+      ".r.. .k.\n");
 
 // Rodzynski-Alekhine, Paris 1913
    const char canvas_mate_board1[]=(
@@ -100,7 +113,13 @@ namespace
       bool
       try_position(const board_metrics& bm)
       {
-         return (i++)<MaxDepth;
+         bool r=(i++)<MaxDepth;
+         // if (!r)
+         // {
+         //    print_board(bm.board,std::cout);
+         //    std::cout << std::endl << std::endl;
+         // }
+         return r;
       }
    private:
       int i;
@@ -114,20 +133,19 @@ namespace
          is_position_reached(is_position_reached_),
          positions(std::make_shared<std::vector<board_t>>(boards))
       {}
-      
+
       bool
       try_position(const board_metrics& bm)
       {
-         // print_board(bm.board,std::cout);
-         // std::cout << std::endl << std::endl;
          int idx=i++;
          if(idx>=positions->size())
-         {
-            is_position_reached=true;
             return false;
-         }
          if((*positions)[idx]!=bm.board)
             return false;
+         if(i==positions->size())
+            is_position_reached=true;
+         // print_board(bm.board,std::cout);
+         // std::cout << std::endl << std::endl;
          return true;
       }
    private:
@@ -139,22 +157,22 @@ namespace
 
 namespace cheapshot
 {
-   
-   bool 
-   operator==(const score& l, const score& r)
+
+   bool
+   operator==(const score_t& l, const score_t& r)
    {
       return (l.status==r.status) && (l.value==r.value);
    }
-   
-   bool 
-   operator!=(const score& l, const score& r) {return !(l==r);} 
-   
-   std::ostream& 
-   operator<<(std::ostream& os, const score &s)
+
+   bool
+   operator!=(const score_t& l, const score_t& r) {return !(l==r);}
+
+   std::ostream&
+   operator<<(std::ostream& os, const score_t &s)
    {
-      // os << s.status;
+      os << '(' << idx(s.status);
       os << " ";
-      os << s.value;
+      os << s.value << ')';
       return os;
    }
 }
@@ -395,6 +413,23 @@ BOOST_AUTO_TEST_CASE( jump_knight_test )
       BOOST_CHECK_EQUAL(jump_knight_simple(scan_canvas(canvas,'n')),
                         scan_canvas(canvas,'X'));
    }
+   {
+      constexpr char canvas[]=
+         ".n......\n"
+         "...X....\n"
+         "X.X.....\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+      uint64_t s=scan_canvas(canvas,'n');
+      // std::cout << "s: " << s << " vertical band: " << vertical_band(s,2)
+      //           << " widen: "<< widen << std::endl;
+      BOOST_CHECK_EQUAL(jump_knight_simple(s),
+                        scan_canvas(canvas,'X'));
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE( move_king_test )
@@ -944,7 +979,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
       board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score({score::status_t::normal,score::checkmate}));
+                        score_t({score_t::status_t::normal,-score_t::checkmate}));
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -959,7 +994,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..b...k.\n");
       board_metrics bm(mate_board,color::black);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score({score::status_t::normal,score::checkmate}));
+                        score_t({score_t::status_t::normal,-score_t::checkmate}));
    }
    {
       // wikipedia stalemate article
@@ -974,7 +1009,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n");
       board_metrics bm(stalemate_board,color::black);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score({score::status_t::normal,score::stalemate}));
+                        score_t({score_t::status_t::normal,-score_t::stalemate}));
    }
 }
 
@@ -1015,7 +1050,7 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       board_metrics bm(en_passant_initial,color::black);
       move_checker check(is_position_reached,
                          {en_passant_initial,en_passant_double_move,en_passant_after_capture});
-      score s=analyze_position(bm,check);
+      score_t s=analyze_position(bm,check);
       BOOST_CHECK(is_position_reached);
    }
    {
@@ -1024,8 +1059,104 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       move_checker check
          (is_position_reached,
           {mirror(en_passant_initial),mirror(en_passant_double_move),mirror(en_passant_after_capture)});
-      score s=analyze_position(bm,check);
+      score_t s=analyze_position(bm,check);
       BOOST_CHECK(is_position_reached);
+   }
+}
+
+BOOST_AUTO_TEST_CASE( find_mate_test )
+{
+   {
+      board_t b=test_board2;
+      const board_t b1=scan_board(
+         "RN.Q.R..\n"
+         "P....PK.\n"
+         ".P...r.q\n"
+         "..PPp...\n"
+         "...p....\n"
+         "..p....p\n"
+         "p.p...p.\n"
+         ".r.. .k.\n");
+      const board_t b2=scan_board(
+         "RN.Q.RK.\n"
+         "P....P..\n"
+         ".P...r.q\n"
+         "..PPp...\n"
+         "...p....\n"
+         "..p....p\n"
+         "p.p...p.\n"
+         ".r.. .k.\n");
+      const board_t b3=scan_board(
+         "RN.Q.RK.\n"
+         "P....P..\n"
+         ".P...r..\n"
+         "..PPp.q.\n"
+         "...p....\n"
+         "..p....p\n"
+         "p.p...p.\n"
+         ".r.. .k.\n");
+      const board_t b4=scan_board(
+         "RN.Q.R.K\n"
+         "P....P..\n"
+         ".P...r..\n"
+         "..PPp.q.\n"
+         "...p....\n"
+         "..p....p\n"
+         "p.p...p.\n"
+         ".r.. .k.\n");
+      const board_t b5=scan_board(
+         "RN.Q.R.K\n"
+         "P....P..\n"
+         ".P.....r\n"
+         "..PPp.q.\n"
+         "...p....\n"
+         "..p....p\n"
+         "p.p...p.\n"
+         ".r.. .k.\n");
+
+      {
+         board_metrics bm(b,color::white);
+         bool is_position_reached=false;
+         move_checker check(is_position_reached,{b,b1,b2,b3,b4,b5});
+         analyze_position(bm,check);
+         BOOST_CHECK(is_position_reached);
+      }
+      {
+         board_t btemp=b5;
+         board_metrics bm(btemp,color::black);
+         BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
+                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+      }
+      {
+         board_t btemp=b4;
+         board_metrics bm(btemp,color::white);
+         BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<2>()),
+                           score_t({score_t::status_t::normal,score_t::checkmate}));
+      }
+      {
+         board_t btemp=b3;
+         board_metrics bm(btemp,color::black);
+         BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<3>()),
+                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+      }
+      {
+         board_t btemp=b2;
+         board_metrics bm(btemp,color::white);
+         BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<4>()),
+                           score_t({score_t::status_t::normal,score_t::checkmate}));
+      }
+      {
+         board_t btemp=b1;
+         board_metrics bm(btemp,color::black);
+         BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<5>()),
+                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+      }
+      // {
+      //    board_t btemp=b;
+      //    board_metrics bm(btemp,color::white);
+      //    BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<6>()),
+      //                      score_t({score_t::status_t::normal,score_t::checkmate}));
+      // }
    }
 }
 
@@ -1053,7 +1184,7 @@ BOOST_AUTO_TEST_CASE( time_board_pos )
    volatile uint64_t s=(1UL<<(8*(8-(1))));
    volatile uint64_t c;
    TimeOperation time_op;
-   const long ops=100000000;
+   const long ops=600000000;
    for(long i=0;i<ops;++i)
       c=get_board_pos(s);
    // portable version is 15% faster, but code-complexity increases

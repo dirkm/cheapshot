@@ -1,0 +1,47 @@
+Date: Tue Nov  1 19:51:00 CET 2011
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/4.6.1/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu/Linaro 4.6.1-9ubuntu3' --with-bugurl=file:///usr/share/doc/gcc-4.6/README.Bugs --enable-languages=c,c++,fortran,objc,obj-c++,go --prefix=/usr --program-suffix=-4.6 --enable-shared --enable-linker-build-id --with-system-zlib --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --with-gxx-include-dir=/usr/include/c++/4.6 --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --enable-plugin --enable-objc-gc --disable-werror --with-arch-32=i686 --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 4.6.1 (Ubuntu/Linaro 4.6.1-9ubuntu3) 
+CFlags: -g -O3  -I. -std=c++0x -march=native -mtune=native
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit 740e6755e3685048f04f93cde92f9d7a6bdd78fe
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Mon Oct 31 22:41:16 2011 +0100
+
+    started reworking the scoring system
+Tests
+Running 28 test cases...
+column/row calculation
+ real time: 1.06 user time: 1.03 system time: 0 ops/sec: 9.43396e+07
+board pos
+ real time: 0.91 user time: 0.91 system time: 0 ops/sec: 6.59341e+08
+slide pawn up
+ real time: 1.05 user time: 1.05 system time: 0 ops/sec: 2.85714e+08
+slide pawn down
+ real time: 1.06 user time: 1.06 system time: 0 ops/sec: 2.83019e+08
+capture with pawn up
+ real time: 1.2 user time: 1.18 system time: 0 ops/sec: 1.66667e+08
+capture with pawn down
+ real time: 1.21 user time: 1.2 system time: 0 ops/sec: 1.65289e+08
+knight jump
+ real time: 1.08 user time: 1.07 system time: 0 ops/sec: 9.25926e+07
+slide bishop
+ real time: 0.97 user time: 0.97 system time: 0 ops/sec: 4.12371e+07
+slide rook
+ real time: 0.66 user time: 0.66 system time: 0 ops/sec: 6.06061e+07
+slide queen
+ real time: 0.85 user time: 0.86 system time: 0 ops/sec: 2.35294e+07
+piece_moves walk
+ real time: 1.32 user time: 1.31 system time: 0 ops/sec: 4.54545e+06
+count set bits
+ real time: 1.2 user time: 1.2 system time: 0 ops/sec: 6.66667e+07
+mate check (value is significantly less than nps)
+ real time: 1.11 user time: 1.11 system time: 0 ops/sec: 90090.1
