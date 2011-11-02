@@ -21,14 +21,14 @@ namespace
 {
    constexpr uint64_t full_board=~0UL;
    constexpr char initial_canvas[]=
-      "RNBQKBNR\n"
-      "PPPPPPPP\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n"
+      "rnbqkbnr\n"
       "pppppppp\n"
-      "rnbqkbnr\n";
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "PPPPPPPP\n"
+      "RNBQKBNR\n";
 
    class TimeOperation
    {
@@ -59,40 +59,40 @@ namespace
    const float TimeOperation::ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
 
 // http://www.chess.com/forum/view/more-puzzles/forced-mate-in-52
-// white to move mate in 5, but there is a BUG.
-// so, this is only useful as example position
+// white to move mate in 5, but there is a BUG in the position.
+// so, this is only useful as example
    const board_t test_board1=scan_board(
-      "......RK\n"
-      "r......P\n"
-      "..PP....\n"
-      ".Pp..N..\n"
-      ".p..b.q.\n"
-      "N......p\n"
-      ".......k\n"
-      "R...Q...\n");
+      "......rk\n"
+      "R......p\n"
+      "..pp....\n"
+      ".pP..n..\n"
+      ".P..B.Q.\n"
+      "n......P\n"
+      ".......K\n"
+      "r...q...\n");
 
 // white to move mate in 3
 // http://chesspuzzles.com/mate-in-three
    const board_t test_board2=scan_board(
-      "RN.Q.R..\n"
-      "P....PK.\n"
-      ".P...r.P\n"
-      "..PPp..q\n"
-      "...p....\n"
-      "..p....p\n"
-      "p.p...p.\n"
-      ".r.. .k.\n");
+      "rn.q.r..\n"
+      "p....pk.\n"
+      ".p...R.p\n"
+      "..ppP..Q\n"
+      "...P....\n"
+      "..P....P\n"
+      "P.P...P.\n"
+      ".R.. .K.\n");
 
 // Rodzynski-Alekhine, Paris 1913
    const char canvas_mate_board1[]=(
-      ".......q\n"
-      "P.PK..PP\n"
-      "...P....\n"
-      "....P...\n"
-      ".p.pp..B\n"
-      "...Q.p..\n"
-      "pp.....p\n"
-      "rnb.k..r\n");
+      ".......Q\n"
+      "p.pk..pp\n"
+      "...p....\n"
+      "....p...\n"
+      ".P.PP..b\n"
+      "...q.P..\n"
+      "PP.....P\n"
+      "RNB.K..R\n");
 
    template<typename T>
    void
@@ -128,9 +128,9 @@ namespace
    class move_checker
    {
    public:
-      move_checker(bool& is_position_reached_, std::initializer_list<board_t> boards):
+      move_checker(std::initializer_list<board_t> boards):
          i(0),
-         is_position_reached(is_position_reached_),
+         p_is_position_reached(std::make_shared<bool>(false)),
          positions(std::make_shared<std::vector<board_t>>(boards))
       {}
 
@@ -143,14 +143,20 @@ namespace
          if((*positions)[idx]!=bm.board)
             return false;
          if(i==positions->size())
-            is_position_reached=true;
+            *p_is_position_reached=true;
          // print_board(bm.board,std::cout);
          // std::cout << std::endl << std::endl;
          return true;
       }
+
+      bool is_position_reached() const
+      {
+         return *p_is_position_reached;
+      }
+      
    private:
+      std::shared_ptr<bool>  p_is_position_reached;
       std::shared_ptr<std::vector<board_t> >  positions;
-      bool& is_position_reached;
       int i;
    };
 }
@@ -537,7 +543,7 @@ BOOST_AUTO_TEST_CASE( mirror_test )
 inline void
 slide_pawn_check(const char* canvas)
 {
-   uint64_t pawns=scan_canvas(canvas,'p');
+   uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t opposing=scan_canvas(canvas,'o');
    uint64_t result=scan_canvas(canvas,'X');
    // print_position(slide_pawn_up(pawns,opposing,std::cout));
@@ -553,7 +559,7 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
       "........\n"
       "........\n"
       "..o.....\n"
-      "..p.....\n"
+      "..P.....\n"
       "........\n"
       "........\n");
 
@@ -563,7 +569,7 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
       "........\n"
       "........\n"
       "..X.....\n"
-      "..p.....\n"
+      "..P.....\n"
       "........\n"
       "........\n");
 
@@ -574,7 +580,7 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
       "........\n"
       "..X.....\n"
       "..X.....\n"
-      "..p.....\n"
+      "..P.....\n"
       "........\n");
 
    slide_pawn_check(
@@ -584,7 +590,7 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
       "........\n"
       "...o....\n"
       "...Xo...\n"
-      "...p....\n"
+      "...P....\n"
       "........\n");
 
    slide_pawn_check(
@@ -594,14 +600,14 @@ BOOST_AUTO_TEST_CASE( slide_pawn_test )
       "........\n"
       "........\n"
       "...o....\n"
-      "...p....\n"
+      "...P....\n"
       "........\n");
 }
 
 inline void
 capture_pawn_check(const char* canvas)
 {
-   uint64_t pawns=scan_canvas(canvas,'p');
+   uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t captures=scan_canvas(canvas,'O');
    uint64_t opposing=scan_canvas(canvas,'o')|captures;
    BOOST_CHECK_EQUAL(capture_with_pawn_up(pawns,opposing),captures);
@@ -616,7 +622,7 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
       "........\n"
       "........\n"
       "..oO....\n"
-      "..p.....\n"
+      "..P.....\n"
       "........\n"
       "........\n");
 
@@ -626,7 +632,7 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
       "........\n"
       "........\n"
       "OoOo....\n"
-      ".po.....\n"
+      ".Po.....\n"
       "..o.....\n"
       "........\n");
 }
@@ -636,8 +642,8 @@ capture_pawn_en_passant_check(const char* canvas)
 {
    uint64_t ep_pawns_before_move=scan_canvas(canvas,'1');
    uint64_t ep_pawns=scan_canvas(canvas,'2');
-   uint64_t own_pawn=scan_canvas(canvas,'x');
-   uint64_t captures=scan_canvas(canvas,'X'); // TODO: 2 should go after capture
+   uint64_t own_pawn=scan_canvas(canvas,'X');
+   uint64_t captures=scan_canvas(canvas,'x'); // TODO: 2 should go after capture
    {
       uint64_t ep_info_down=en_passant_info_down(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(ep_info_down));
@@ -660,8 +666,8 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
    capture_pawn_en_passant_check(
       "........\n"
       "..1.....\n"
-      "..X.....\n"
-      "..2x....\n"
+      "..x.....\n"
+      "..2X....\n"
       "........\n"
       "........\n"
       "........\n"
@@ -670,7 +676,7 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
       "........\n"
       "..1.....\n"
       "..2.....\n"
-      "...x....\n"
+      "...X....\n"
       "........\n"
       "........\n"
       "........\n"
@@ -679,7 +685,7 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
       "........\n"
       "........\n"
       "..1.....\n"
-      "..2x....\n"
+      "..2X....\n"
       "........\n"
       "........\n"
       "........\n"
@@ -858,13 +864,13 @@ moves_iterator_check(const char* board_layout, const char* captures)
 BOOST_AUTO_TEST_CASE( moves_iterator_test )
 {
    moves_iterator_check(
-      "RNBQKBNR\n"
-      "PPPPPPPP\n"
+      "rnbqkbnr\n"
+      "pppppppp\n"
       "........\n"
       "........\n"
       "........\n"
       "........\n"
-      "...p....\n"
+      "...P....\n"
       "........\n",
 
       "........\n"
@@ -877,14 +883,14 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
       "........\n");
 
    moves_iterator_check(
-      "RNBQKBNR\n"
-      "PPPPPP.P\n"
-      ".......p\n"
-      ".......p\n"
-      ".......p\n"
+      "rnbqkbnr\n"
+      "pppppp.p\n"
+      ".......P\n"
+      ".......P\n"
+      ".......P\n"
       "........\n"
       "........\n"
-      "r......r\n",
+      "R......R\n",
 
       "........\n"
       "X.......\n"
@@ -984,14 +990,14 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
    {
       // Carlsen-Harestad Politiken Cup 2003
       board_t mate_board=scan_board(
-         "R.......\n"
-         "...BB..r\n"
-         "Q......K\n"
-         ".PNpP.PP\n"
-         "..P.....\n"
+         "r.......\n"
+         "...bb..R\n"
+         "q......k\n"
+         ".pnPp.pp\n"
          "..p.....\n"
-         ".pb...p.\n"
-         "..b...k.\n");
+         "..P.....\n"
+         ".PB...P.\n"
+         "..B...K.\n");
       board_metrics bm(mate_board,color::black);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
                         score_t({score_t::status_t::normal,-score_t::checkmate}));
@@ -999,9 +1005,9 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
    {
       // wikipedia stalemate article
       board_t stalemate_board=scan_board(
-         ".......K\n"
-         ".....k..\n"
-         "......q.\n"
+         ".......k\n"
+         ".....K..\n"
+         "......Q.\n"
          "........\n"
          "........\n"
          "........\n"
@@ -1016,51 +1022,47 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
 BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
 {
    board_t en_passant_initial=scan_board(
-      "....K...\n"
-      "...P....\n"
-      "........\n"
-      "....p...\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "....k...\n");
-
-   board_t en_passant_double_move=scan_board(
-      "....K...\n"
-      "........\n"
-      "........\n"
-      "...Pp...\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "....k...\n");
-
-   board_t en_passant_after_capture=scan_board(
-      "....K...\n"
-      "........\n"
+      "....k...\n"
       "...p....\n"
       "........\n"
+      "....P...\n"
       "........\n"
       "........\n"
       "........\n"
-      "....k...\n");
+      "....K...\n");
+
+   board_t en_passant_double_move=scan_board(
+      "....k...\n"
+      "........\n"
+      "........\n"
+      "...pP...\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "....K...\n");
+
+   board_t en_passant_after_capture=scan_board(
+      "....k...\n"
+      "........\n"
+      "...P....\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "....K...\n");
 
    {
-      bool is_position_reached=false;
       board_metrics bm(en_passant_initial,color::black);
-      move_checker check(is_position_reached,
-                         {en_passant_initial,en_passant_double_move,en_passant_after_capture});
+      move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
       score_t s=analyze_position(bm,check);
-      BOOST_CHECK(is_position_reached);
+      BOOST_CHECK(check.is_position_reached());
    }
    {
-      bool is_position_reached=false;
       board_metrics bm(mirror(en_passant_initial),color::white);
       move_checker check
-         (is_position_reached,
-          {mirror(en_passant_initial),mirror(en_passant_double_move),mirror(en_passant_after_capture)});
+         ({mirror(en_passant_initial),mirror(en_passant_double_move),mirror(en_passant_after_capture)});
       score_t s=analyze_position(bm,check);
-      BOOST_CHECK(is_position_reached);
+      BOOST_CHECK(check.is_position_reached());
    }
 }
 
@@ -1069,57 +1071,56 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
    {
       board_t b=test_board2;
       const board_t b1=scan_board(
-         "RN.Q.R..\n"
-         "P....PK.\n"
-         ".P...r.q\n"
-         "..PPp...\n"
-         "...p....\n"
-         "..p....p\n"
-         "p.p...p.\n"
-         ".r.. .k.\n");
+         "rn.q.r..\n"
+         "p....pk.\n"
+         ".p...R.Q\n"
+         "..ppP...\n"
+         "...P....\n"
+         "..P....P\n"
+         "P.P...P.\n"
+         ".R.. .K.\n");
       const board_t b2=scan_board(
-         "RN.Q.RK.\n"
-         "P....P..\n"
-         ".P...r.q\n"
-         "..PPp...\n"
-         "...p....\n"
-         "..p....p\n"
-         "p.p...p.\n"
-         ".r.. .k.\n");
+         "rn.q.rk.\n"
+         "p....p..\n"
+         ".p...R.Q\n"
+         "..ppP...\n"
+         "...P....\n"
+         "..P....P\n"
+         "P.P...P.\n"
+         ".R.. .K.\n");
       const board_t b3=scan_board(
-         "RN.Q.RK.\n"
-         "P....P..\n"
-         ".P...r..\n"
-         "..PPp.q.\n"
-         "...p....\n"
-         "..p....p\n"
-         "p.p...p.\n"
-         ".r.. .k.\n");
+         "rn.q.rk.\n"
+         "p....p..\n"
+         ".p...R..\n"
+         "..ppP.Q.\n"
+         "...P....\n"
+         "..P....P\n"
+         "P.P...P.\n"
+         ".R.. .K.\n");
       const board_t b4=scan_board(
-         "RN.Q.R.K\n"
-         "P....P..\n"
-         ".P...r..\n"
-         "..PPp.q.\n"
-         "...p....\n"
-         "..p....p\n"
-         "p.p...p.\n"
-         ".r.. .k.\n");
+         "rn.q.r.k\n"
+         "p....p..\n"
+         ".p...R..\n"
+         "..ppP.Q.\n"
+         "...P....\n"
+         "..P....P\n"
+         "P.P...P.\n"
+         ".R.. .K.\n");
       const board_t b5=scan_board(
-         "RN.Q.R.K\n"
-         "P....P..\n"
-         ".P.....r\n"
-         "..PPp.q.\n"
-         "...p....\n"
-         "..p....p\n"
-         "p.p...p.\n"
-         ".r.. .k.\n");
+         "rn.q.r.k\n"
+         "p....p..\n"
+         ".p.....R\n"
+         "..ppP.Q.\n"
+         "...P....\n"
+         "..P....P\n"
+         "P.P...P.\n"
+         ".R.. .K.\n");
 
       {
          board_metrics bm(b,color::white);
-         bool is_position_reached=false;
-         move_checker check(is_position_reached,{b,b1,b2,b3,b4,b5});
+         move_checker check({b,b1,b2,b3,b4,b5});
          analyze_position(bm,check);
-         BOOST_CHECK(is_position_reached);
+         BOOST_CHECK(check.is_position_reached());
       }
       {
          board_t btemp=b5;

@@ -11,8 +11,8 @@ namespace cheapshot
    typedef std::array<char,count<piece>()> piece_representation;
    typedef std::array<char,64> canvas_t;
 
-   constexpr piece_representation repr_pieces_white={'p','n','b','r','q','k'};
-   constexpr piece_representation repr_pieces_black={'P','N','B','R','Q','K'};
+   constexpr piece_representation repr_pieces_white={'P','N','B','R','Q','K'};
+   constexpr piece_representation repr_pieces_black={'p','n','b','r','q','k'};
 
    inline void
    fill_canvas(const uint64_t& p,canvas_t& c,char piece) noexcept
