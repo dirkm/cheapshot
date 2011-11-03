@@ -2,7 +2,6 @@
 #define CHEAPSHOT_ENGINE_HH
 
 #include "cheapshot/board.hh"
-#include "cheapshot/board_io.hh"
 #include "cheapshot/bitops.hh"
 #include "cheapshot/iterator.hh"
 

@@ -841,6 +841,11 @@ BOOST_AUTO_TEST_CASE( scan_board_test )
    BOOST_CHECK(initial_board()==scan_board(initial_canvas));
 }
 
+BOOST_AUTO_TEST_CASE( scan_fen_test )
+{
+   BOOST_CHECK(initial_board()==scan_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(basic_engine_suite)

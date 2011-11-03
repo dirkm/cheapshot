@@ -3,6 +3,7 @@
 
 #include <array>
 #include <iostream>
+#include <sstream>
 #include <tuple>
 
 #include "cheapshot/iterator.hh"
@@ -127,6 +128,51 @@ namespace cheapshot
       return b;
    }
 
+   // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+
+   inline board_t
+   scan_fen_position(const char* fen) noexcept
+   {
+      board_t b={0};
+      for(uint8_t i=0;i<8;++i)
+      {
+         int num_inc;
+         for(uint8_t j=0;j<8;j+=num_inc,++fen)
+         {
+            if(std::isdigit(*fen))
+               num_inc=(*fen-'0');
+            else
+            {
+               color c;
+               piece p;
+               std::tie(c,p)=character_to_piece(*fen);
+               if(c!=color::count) 
+                  b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
+               else
+               {
+                  std::stringstream oss;
+                  oss << "unexpected character in fen: " << *fen;
+                  throw std::runtime_error(oss.str());
+               }
+               num_inc=1;
+            }
+         }
+         if(i!=7)
+         {
+            if(*fen!='/')
+            {
+               std::stringstream oss;
+               oss << "unexpected character in fen: " << *fen << " ('/' expected )";
+               throw std::runtime_error(oss.str());
+            }
+            ++fen;
+         }
+      }
+      return b;
+   }
+
+   // start position
+   // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
    inline board_t
    scan_fen(const char* fen) noexcept
    {
