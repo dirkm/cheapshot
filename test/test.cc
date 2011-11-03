@@ -81,7 +81,7 @@ namespace
       "...P....\n"
       "..P....P\n"
       "P.P...P.\n"
-      ".R.. .K.\n");
+      ".R....K.\n");
 
 // Rodzynski-Alekhine, Paris 1913
    const char canvas_mate_board1[]=(
@@ -1078,7 +1078,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "...P....\n"
          "..P....P\n"
          "P.P...P.\n"
-         ".R.. .K.\n");
+         ".R....K.\n");
       const board_t b2=scan_board(
          "rn.q.rk.\n"
          "p....p..\n"
@@ -1087,7 +1087,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "...P....\n"
          "..P....P\n"
          "P.P...P.\n"
-         ".R.. .K.\n");
+         ".R....K.\n");
       const board_t b3=scan_board(
          "rn.q.rk.\n"
          "p....p..\n"
@@ -1096,7 +1096,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "...P....\n"
          "..P....P\n"
          "P.P...P.\n"
-         ".R.. .K.\n");
+         ".R....K.\n");
       const board_t b4=scan_board(
          "rn.q.r.k\n"
          "p....p..\n"
@@ -1105,7 +1105,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "...P....\n"
          "..P....P\n"
          "P.P...P.\n"
-         ".R.. .K.\n");
+         ".R....K.\n");
       const board_t b5=scan_board(
          "rn.q.r.k\n"
          "p....p..\n"
@@ -1114,7 +1114,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "...P....\n"
          "..P....P\n"
          "P.P...P.\n"
-         ".R.. .K.\n");
+         ".R....K.\n");
 
       {
          board_metrics bm(b,color::white);
