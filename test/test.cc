@@ -153,7 +153,7 @@ namespace
       {
          return *p_is_position_reached;
       }
-      
+
    private:
       std::shared_ptr<bool>  p_is_position_reached;
       std::shared_ptr<std::vector<board_t> >  positions;
@@ -1218,6 +1218,7 @@ BOOST_AUTO_TEST_CASE( time_moves )
    time_move(&slide_bishop,40000000,"slide bishop");
    time_move(&slide_rook,40000000,"slide rook");
    time_move(&slide_queen,20000000,"slide queen");
+   time_move(&move_king,80000000,"move king");
 }
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )

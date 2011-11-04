@@ -76,6 +76,7 @@ namespace cheapshot
 
    namespace detail
    {
+      // i is used as a geometrical progression
       template<shift Shift>
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
@@ -91,8 +92,6 @@ namespace cheapshot
          // TODO: limitation should be made explicit by interface-change
          return p*aliased_move_helper<left_shift>(1UL,n,step,i);
       }
-
-      // product is faster, this might be solved by multiplying with gcd of aliased_move_helper and 1<<64
 
       constexpr uint64_t
       aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i=0) noexcept
@@ -313,28 +312,17 @@ namespace cheapshot
          obstacles;
    }
 
-   namespace detail
-   {
-      constexpr uint64_t
-      aliased_band_widen(uint64_t band, int n=1, int i=0) noexcept
-      {
-         return i!=n?
-            detail::aliased_band_widen(detail::aliased_widen(band,1),n,i+1):
-            band;
-      }
-   }
-
    // halfwidth 1: a band with max 3 columns, excluding the sides of the board
    // halfwidth 2: same with 5 columns
    constexpr uint64_t
    vertical_band(uint64_t s,uint8_t halfwidth) noexcept
    {
-      // assert(is_single_bit(s));
-      return
-         aliased_move<top>(
-            (detail::aliased_band_widen(
-               aliased_move<bottom>(s)&row_with_number(0),halfwidth)&
-             row_with_number(0)));
+      return aliased_move<top>(
+         (((aliased_move<bottom>(s)
+            &row_with_number(0))
+           *((1<<(2*halfwidth+1))-1)) // elements in the band on row 0
+          >>halfwidth) // shift to correct location
+         &row_with_number(0));
    }
 
    constexpr uint64_t
@@ -399,9 +387,9 @@ namespace cheapshot
 
    namespace detail
    {
-// s: moving piece
-// movement: movement in a single direction (for pawns, bishops, rooks, queens)
-// obstacles: own pieces plus opposing pieces (except the moving piece itself)
+      // s: moving piece
+      // movement: movement in a single direction (for pawns, bishops, rooks, queens)
+      // obstacles: own pieces plus opposing pieces (except the moving piece itself)
       constexpr uint64_t
       slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
       {
@@ -477,7 +465,7 @@ namespace cheapshot
       slide_optimised_for_pawns<down>(uint64_t movement, uint64_t obstacles) noexcept
       {
          return
-            ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
+            ~detail::aliased_move_decreasing(obstacles&movement,1,8)&
             movement;
       }
    }
@@ -532,7 +520,7 @@ namespace cheapshot
    constexpr uint64_t
    en_passant_capture(uint64_t s, uint64_t last_ep_info) noexcept
    {
-      return capture_with_pawn<T>(s,last_ep_info);      
+      return capture_with_pawn<T>(s,last_ep_info);
    }
 
    template<typename T>
