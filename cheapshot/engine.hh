@@ -30,14 +30,14 @@ namespace cheapshot
       }
    };
 
-   struct en_passant_functions
+   struct pawn_functions_t
    {
-      uint64_t (*info)(uint64_t, uint64_t);
-      uint64_t (*candidates)(uint64_t, uint64_t);
-      uint64_t (*captures)(uint64_t, uint64_t);
+      uint64_t (*ep_info)(uint64_t, uint64_t);
+      uint64_t (*ep_candidates)(uint64_t, uint64_t);
+      uint64_t (*ep_captures)(uint64_t, uint64_t);
    };
 
-   constexpr en_passant_functions ep_functions_array[count<color>()]=
+   constexpr pawn_functions_t pawn_functions_array[count<color>()]=
    {
       {
          en_passant_info<up>,
@@ -201,8 +201,6 @@ namespace cheapshot
    struct score_t
    {
       // doesn't change sign in between turns
-      enum class status_t {invalid_position, normal};
-      status_t status;
       // the higher the value, the more special the result
       //   the engine will take the minimum of a newer and older position
       //   no_valid_move is internal and should not be moved in between calls
@@ -214,6 +212,7 @@ namespace cheapshot
 
    const int score_t::checkmate;
    const int score_t::stalemate;
+   const int score_t::no_valid_move;
 
    inline void
    make_move(uint64_t& piece_loc, board_side& other_side,
@@ -233,6 +232,15 @@ namespace cheapshot
       //   but this avoids another function-parameter
       //   and en-passant captures are relatively rare
       other_pawn_loc&=~row(origin)&column(destination);
+   }
+
+   constexpr piece piece_promotions[]={
+      piece::queen,piece::knight,piece::rook,piece::bishop};
+
+   inline void
+   make_promotion(uint64_t& pawn_loc, board_side& other_side)
+   {
+      // TODO
    }
 
    // opponent en-passant captures cannot capture kings
@@ -277,12 +285,12 @@ namespace cheapshot
       {
          const bool king_en_prise=bm.own_side()[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
-            return {score_t::status_t::invalid_position,0};
+            return {-score_t::no_valid_move};
       }
 
       if(!engine_controller.try_position(bm))
       {
-         return {score_t::status_t::normal,0}; // TODO: better eval-function than returning 0
+         return {0}; // TODO: better eval-function than returning 0
       }
 
       uint64_t own_under_attack=
@@ -293,36 +301,51 @@ namespace cheapshot
       // TODO: moves should be sorted in a list of candidate-moves
 
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
-      const en_passant_functions& ep_functions=ep_functions_array[idx(bm.turn)];
-      score_t score ={score_t::status_t::normal,score_t::no_valid_move};
+      const pawn_functions_t& pawn_functions=pawn_functions_array[idx(bm.turn)];
+      score_t score{score_t::no_valid_move};
 
-      // evaluate normal moves
+      // evaluate moves
       for(auto moves_it=begin(basic_moves);moves_it!=basic_moves_end;++moves_it)
       {
-         for(bit_iterator& dest_iter=moves_it->destinations;
-             dest_iter!=bit_iterator();
-             ++dest_iter)
+         if(moves_it->moved_piece==piece::pawn)
          {
-            board_t new_board=bm.board; // other engines undo moves ??
-            make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
-                      new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-            // TODO: promotions are done after a pawn move only
-            // TODO: this should only be checked after a pawn move?
-            uint64_t en_passant_info=ep_functions.info(
-               bm.own_side()[idx(piece::pawn)],
-               new_board[idx(bm.turn)][idx(piece::pawn)]);
-            // TODO: undo move instead of creating new board ??
-            board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
-            score=recurse_and_evaluate(score,new_bm,engine_controller);
+            for(bit_iterator& dest_iter=moves_it->destinations;
+                dest_iter!=bit_iterator();
+                ++dest_iter)
+            {
+               board_t new_board=bm.board; // other engines undo moves ??
+               make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
+                         new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
+               // do promotions
+               uint64_t en_passant_info=pawn_functions.ep_info(
+                  bm.own_side()[idx(piece::pawn)],
+                  new_board[idx(bm.turn)][idx(piece::pawn)]);
+               board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
+               score=recurse_and_evaluate(score,new_bm,engine_controller);
+            }
+         }
+         else
+         { 
+            for(bit_iterator& dest_iter=moves_it->destinations;
+                dest_iter!=bit_iterator();
+                ++dest_iter)
+            {
+               board_t new_board=bm.board; // other engines undo moves ??
+               make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
+                         new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
+               uint64_t en_passant_info=0UL;
+               board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
+               score=recurse_and_evaluate(score,new_bm,engine_controller);
+            }
          }
       }
 
       // en passant captures
-      for(auto origin_iter=bit_iterator(ep_functions.candidates(bm.own_side()[idx(piece::pawn)],bm.last_ep_info));
+      for(auto origin_iter=bit_iterator(pawn_functions.ep_candidates(bm.own_side()[idx(piece::pawn)],bm.last_ep_info));
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t destinations=ep_functions.captures(*origin_iter,bm.last_ep_info);
+         uint64_t destinations=pawn_functions.ep_captures(*origin_iter,bm.last_ep_info);
          for(auto dest_iter=bit_iterator(destinations);
              dest_iter!=bit_iterator();
              ++dest_iter)
@@ -347,10 +370,7 @@ namespace cheapshot
    recurse_and_evaluate(score_t last_score,board_metrics& bm, EngineController& engine_controller)
    {
       score_t score=analyze_position(bm,engine_controller);
-      if (score.status==score_t::status_t::normal)
-      {
-         last_score.value=std::max(last_score.value,-score.value);
-      }
+      last_score.value=std::max(last_score.value,-score.value);
       return last_score;
    }
 
@@ -358,16 +378,6 @@ namespace cheapshot
    move_castle(board_metrics& bm, uint64_t own_under_attack)
    {
       // TODO
-   }
-
-   constexpr piece piece_promotions[]={
-      piece::queen,piece::knight,piece::rook,piece::bishop};
-
-   inline void
-   move_promotion(board_metrics& bm)
-   {
-      // use function iterator
-      bm.own_side()[idx(piece::pawn)]&row_with_number(7);
    }
 
    namespace detail

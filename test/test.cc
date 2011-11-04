@@ -167,7 +167,7 @@ namespace cheapshot
    bool
    operator==(const score_t& l, const score_t& r)
    {
-      return (l.status==r.status) && (l.value==r.value);
+      return (l.value==r.value);
    }
 
    bool
@@ -176,10 +176,7 @@ namespace cheapshot
    std::ostream&
    operator<<(std::ostream& os, const score_t &s)
    {
-      os << '(' << idx(s.status);
-      os << " ";
-      os << s.value << ')';
-      return os;
+      return os << s.value;
    }
 }
 
@@ -990,7 +987,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
       board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score_t({score_t::status_t::normal,-score_t::checkmate}));
+                        score_t({-score_t::checkmate}));
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -1005,7 +1002,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..B...K.\n");
       board_metrics bm(mate_board,color::black);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score_t({score_t::status_t::normal,-score_t::checkmate}));
+                        score_t({-score_t::checkmate}));
    }
    {
       // wikipedia stalemate article
@@ -1020,7 +1017,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n");
       board_metrics bm(stalemate_board,color::black);
       BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                        score_t({score_t::status_t::normal,-score_t::stalemate}));
+                        score_t({-score_t::stalemate}));
    }
 }
 
@@ -1131,31 +1128,31 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          board_t btemp=b5;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+                           score_t({-score_t::checkmate}));
       }
       {
          board_t btemp=b4;
          board_metrics bm(btemp,color::white);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<2>()),
-                           score_t({score_t::status_t::normal,score_t::checkmate}));
+                           score_t({score_t::checkmate}));
       }
       {
          board_t btemp=b3;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<3>()),
-                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+                           score_t({-score_t::checkmate}));
       }
       {
          board_t btemp=b2;
          board_metrics bm(btemp,color::white);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<4>()),
-                           score_t({score_t::status_t::normal,score_t::checkmate}));
+                           score_t({score_t::checkmate}));
       }
       {
          board_t btemp=b1;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<5>()),
-                           score_t({score_t::status_t::normal,-score_t::checkmate}));
+                           score_t({-score_t::checkmate}));
       }
       // {
       //    board_t btemp=b;

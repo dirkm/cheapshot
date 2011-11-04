@@ -74,25 +74,6 @@ namespace cheapshot
       typedef uint64_t (*shift)(uint64_t, uint64_t);
    }
 
-   struct up
-   {
-      const static detail::shift shift_forward;
-      const static detail::shift shift_backward;
-   };
-
-   const detail::shift up::shift_forward=detail::left_shift;
-   const detail::shift up::shift_backward=detail::right_shift;
-
-   
-   struct down
-   {
-      const static detail::shift shift_forward;
-      const static detail::shift shift_backward;
-   };
-
-   const detail::shift down::shift_forward=detail::right_shift;
-   const detail::shift down::shift_backward=detail::left_shift;
-
    namespace detail
    {
       template<shift Shift>
@@ -306,7 +287,6 @@ namespace cheapshot
             (aliased_move<top_left>(s)&left)|
             (aliased_move<bottom_right>(s)&~left); // right=~left
       }
-
    }
 
    constexpr uint64_t
@@ -389,6 +369,25 @@ namespace cheapshot
       return move_king_simple(s);
    }
 
+   // used to set pawn-move directions
+   struct up
+   {
+      const static detail::shift shift_forward;
+      const static detail::shift shift_backward;
+   };
+
+   const detail::shift up::shift_forward=detail::left_shift;
+   const detail::shift up::shift_backward=detail::right_shift;
+
+   struct down
+   {
+      const static detail::shift shift_forward;
+      const static detail::shift shift_backward;
+   };
+
+   const detail::shift down::shift_forward=detail::right_shift;
+   const detail::shift down::shift_backward=detail::left_shift;
+
    template<typename T>
    constexpr uint64_t
    move_pawn(uint64_t s) noexcept
@@ -398,22 +397,25 @@ namespace cheapshot
             T::shift_forward(s&(row_with_number(1)|row_with_number(6)),16);
    }
 
+   namespace detail
+   {
 // s: moving piece
 // movement: movement in a single direction (for pawns, bishops, rooks, queens)
 // obstacles: own pieces plus opposing pieces (except the moving piece itself)
-   constexpr uint64_t
-   slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
-   {
-      // assert(is_single_bit(s));
-      // assert((s&obstacles)==0);
-      return
-         bigger_equal_special_0( // all higher than
-            highest_bit(smaller(s)&(obstacles&movement))) // bottom left obstacle
-         &
-         smaller_equal( // all smaller than
-            lowest_bit(bigger(s)&(obstacles&movement))) // top right obstacle
-         &
-         movement; // originally allowed
+      constexpr uint64_t
+      slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
+      {
+         // assert(is_single_bit(s));
+         // assert((s&obstacles)==0);
+         return
+            bigger_equal_special_0( // all higher than
+               highest_bit(smaller(s)&(obstacles&movement))) // bottom left obstacle
+            &
+            smaller_equal( // all smaller than
+               lowest_bit(bigger(s)&(obstacles&movement))) // top right obstacle
+            &
+            movement; // originally allowed
+      }
    }
 
    constexpr uint64_t
@@ -422,8 +424,8 @@ namespace cheapshot
       // assert(is_single_bit(s));
       // vertical change
       return
-         slide(s,column(s)^s,obstacles)| // vertical
-         slide(s,row(s)^s,obstacles); // horizontal
+         detail::slide(s,column(s)^s,obstacles)| // vertical
+         detail::slide(s,row(s)^s,obstacles); // horizontal
    }
 
    namespace detail
@@ -533,8 +535,23 @@ namespace cheapshot
       return capture_with_pawn<T>(s,last_ep_info);      
    }
 
-   // constexpr uint64_t block_castle_mask_down=algpos('D',1)|algpos('F',1);
-   // constexpr uint64_t block_castle_mask_up=algpos('D',8)|algpos('F',8);
+   template<typename T>
+   constexpr uint64_t
+   promotion_mask(uint64_t s) noexcept;
+
+   template<>
+   constexpr uint64_t
+   promotion_mask<up>(uint64_t s) noexcept
+   {
+      return s&row(7);
+   }
+
+   template<>
+   constexpr uint64_t
+   promotion_mask<down>(uint64_t s) noexcept
+   {
+      return s&row(0);
+   }
 } // cheapshot
 
 #endif
