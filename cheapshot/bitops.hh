@@ -72,7 +72,29 @@ namespace cheapshot
       }
 
       typedef uint64_t (*shift)(uint64_t, uint64_t);
+   }
 
+   struct up
+   {
+      const static detail::shift shift_forward;
+      const static detail::shift shift_backward;
+   };
+
+   const detail::shift up::shift_forward=detail::left_shift;
+   const detail::shift up::shift_backward=detail::right_shift;
+
+   
+   struct down
+   {
+      const static detail::shift shift_forward;
+      const static detail::shift shift_backward;
+   };
+
+   const detail::shift down::shift_forward=detail::right_shift;
+   const detail::shift down::shift_backward=detail::left_shift;
+
+   namespace detail
+   {
       template<shift Shift>
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
@@ -299,56 +321,16 @@ namespace cheapshot
       return detail::diag_sum(s,strict_left_of(s));
    }
 
-   namespace detail
-   {
-      template<shift Shift>
-      constexpr uint64_t
-      move_pawn(uint64_t s) noexcept
-      {
-         return
-            Shift(s,8)|
-            Shift(s&(row_with_number(1)|row_with_number(6)),16);
-      }
-
-      template<shift Shift>
-      constexpr uint64_t
-      capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
-      {
-         return
-            (Shift(s,7)|Shift(s,9)) & // possible_pawn_captures
-            row(Shift(s,8)) & // next row
-            obstacles;
-      }
-   }
-
-   constexpr uint64_t
-   move_pawn_up(uint64_t s) noexcept
-   {
-      // assert(is_single_bit(s));
-      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      return detail::move_pawn<detail::left_shift>(s);
-   }
-
-   constexpr uint64_t
-   move_pawn_down(uint64_t s) noexcept
-   {
-      return detail::move_pawn<detail::right_shift>(s);
-   }
-
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
    // not including en-passant captures
+   template<typename T>
    constexpr uint64_t
-   capture_with_pawn_up(uint64_t s, uint64_t obstacles) noexcept
+   capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      // assert(is_single_bit(s));
-      // assert(!(s&row_with_number(7))); // pawns are not supposed to be on the last row
-      return detail::capture_with_pawn<detail::left_shift>(s,obstacles);
-   }
-
-   constexpr uint64_t
-   capture_with_pawn_down(uint64_t s, uint64_t obstacles) noexcept
-   {
-      return detail::capture_with_pawn<detail::right_shift>(s,obstacles);
+      return
+         (T::shift_forward(s,7)|T::shift_forward(s,9)) & // possible_pawn_captures
+         row(T::shift_forward(s,8)) & // next row
+         obstacles;
    }
 
    namespace detail
@@ -405,6 +387,15 @@ namespace cheapshot
    move_king(uint64_t s, uint64_t /*obstacles*/) noexcept
    {
       return move_king_simple(s);
+   }
+
+   template<typename T>
+   constexpr uint64_t
+   move_pawn(uint64_t s) noexcept
+   {
+         return
+            T::shift_forward(s,8)|
+            T::shift_forward(s&(row_with_number(1)|row_with_number(6)),16);
    }
 
 // s: moving piece
@@ -465,8 +456,13 @@ namespace cheapshot
 
    namespace detail
    {
+      template<typename T>
       constexpr uint64_t
-      slide_optimised_for_pawns_up(uint64_t movement, uint64_t obstacles) noexcept
+      slide_optimised_for_pawns(uint64_t movement, uint64_t obstacles) noexcept;
+
+      template<>
+      constexpr uint64_t
+      slide_optimised_for_pawns<up>(uint64_t movement, uint64_t obstacles) noexcept
       {
          return smaller(
             lowest_bit(
@@ -474,8 +470,9 @@ namespace cheapshot
                ))&movement;
       }
 
+      template<>
       constexpr uint64_t
-      slide_optimised_for_pawns_down(uint64_t movement, uint64_t obstacles) noexcept
+      slide_optimised_for_pawns<down>(uint64_t movement, uint64_t obstacles) noexcept
       {
          return
             ~detail::aliased_move_decreasing(obstacles&movement, 1, 8)&
@@ -486,84 +483,54 @@ namespace cheapshot
    // slides are allowed to reach the ends of the board. promotions will be done
    //  in the eval-loop
 
+   template<typename T>
    constexpr uint64_t
-   slide_pawn_up(uint64_t s, uint64_t obstacles) noexcept
+   slide_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
       return
-         detail::slide_optimised_for_pawns_up(move_pawn_up(s),obstacles);
+         detail::slide_optimised_for_pawns<T>(move_pawn<T>(s),obstacles);
    }
 
+   template<typename T>
    constexpr uint64_t
-   slide_and_capture_with_pawn_up(uint64_t s, uint64_t obstacles) noexcept
+   slide_and_capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      return slide_pawn_up(s,obstacles)|capture_with_pawn_up(s,obstacles);
+      return slide_pawn<T>(s,obstacles)|capture_with_pawn<T>(s,obstacles);
    }
 
+   template<typename T>
    constexpr uint64_t
-   slide_pawn_down(uint64_t s, uint64_t obstacles) noexcept
+   en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
    {
-      return
-         detail::slide_optimised_for_pawns_down(move_pawn_down(s),obstacles);
+      return T::shift_backward(((pawns_before_move ^ pawns) &
+                                (T::shift_forward(pawns_before_move ^ pawns,16)))&
+                               (row_with_number(3)|row_with_number(4)),8);
    }
 
+   template<typename T>
    constexpr uint64_t
-   slide_and_capture_with_pawn_down(uint64_t s, uint64_t obstacles) noexcept
-   {
-      return
-         slide_pawn_down(s,obstacles)|capture_with_pawn_down(s,obstacles);
-   }
+   en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept;
 
-   namespace detail
-   {
-      template<shift ShiftForward, shift ShiftBackward>
-      constexpr uint64_t
-      en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
-      {
-         return ShiftBackward(((pawns_before_move ^ pawns) &
-                               (ShiftForward(pawns_before_move ^ pawns,16)))&
-                              (row_with_number(3)|row_with_number(4)),8);
-      }
-   }
-
-   // prepare en-passant info as input for en_passant_capture
+   template<>
    constexpr uint64_t
-   en_passant_info_up(uint64_t pawns_before_move, uint64_t pawns) noexcept
+   en_passant_candidates<up>(uint64_t pawns, uint64_t ep_info) noexcept
    {
-      return detail::en_passant_info<detail::left_shift,detail::right_shift>
-         (pawns_before_move,pawns);
-   }
-
-   constexpr uint64_t
-   en_passant_info_down(uint64_t pawns_before_move, uint64_t pawns) noexcept
-   {
-      return detail::en_passant_info<detail::right_shift,detail::left_shift>
-         (pawns_before_move,pawns);
-   }
-
-   constexpr uint64_t
-   en_passant_candidates_up(uint64_t pawns, uint64_t ep_info)
-   {
-      // limit candidates to neighbouring rows (TODO: there is room for optimisation)
+      // limit candidates to neighbouring rows
       return pawns&row_with_number(4)&vertical_band(ep_info,1);
    }
 
+   template<>
    constexpr uint64_t
-   en_passant_candidates_down(uint64_t pawns, uint64_t ep_info)
+   en_passant_candidates<down>(uint64_t pawns, uint64_t ep_info) noexcept
    {
       return pawns&row_with_number(3)&vertical_band(ep_info,1);
    }
 
-   // call always works, but row-checking s first is faster.
+   template<typename T>
    constexpr uint64_t
-   en_passant_capture_up(uint64_t s, uint64_t ep_info_down) noexcept
+   en_passant_capture(uint64_t s, uint64_t last_ep_info) noexcept
    {
-      return capture_with_pawn_up(s,ep_info_down);
-   }
-
-   constexpr uint64_t
-   en_passant_capture_down(uint64_t s, uint64_t ep_info_up) noexcept
-   {
-      return capture_with_pawn_down(s,ep_info_up);
+      return capture_with_pawn<T>(s,last_ep_info);      
    }
 
    // constexpr uint64_t block_castle_mask_down=algpos('D',1)|algpos('F',1);

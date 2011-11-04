@@ -2,7 +2,6 @@
 #include "cheapshot/board_io.hh"
 #include <iostream>
 #include <cstring>
-#include <stdexcept>
 
 inline std::uint64_t
 arg_to_uint64(const char* arg)

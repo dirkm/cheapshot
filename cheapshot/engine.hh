@@ -13,7 +13,7 @@ namespace cheapshot
    constexpr movegen_per_color_t move_generator_array[count<color>()]=
    {
       {
-         slide_and_capture_with_pawn_up,
+         slide_and_capture_with_pawn<up>,
          jump_knight,
          slide_bishop,
          slide_rook,
@@ -21,7 +21,7 @@ namespace cheapshot
          move_king
       },
       {
-         slide_and_capture_with_pawn_down,
+         slide_and_capture_with_pawn<down>,
          jump_knight,
          slide_bishop,
          slide_rook,
@@ -40,14 +40,14 @@ namespace cheapshot
    constexpr en_passant_functions ep_functions_array[count<color>()]=
    {
       {
-         en_passant_info_up,
-         en_passant_candidates_up,
-         en_passant_capture_up
+         en_passant_info<up>,
+         en_passant_candidates<up>,
+         en_passant_capture<up>
       },
       {
-         en_passant_info_down,
-         en_passant_candidates_down,
-         en_passant_capture_down
+         en_passant_info<down>,
+         en_passant_candidates<down>,
+         en_passant_capture<down>
       }
    };
 
@@ -306,7 +306,7 @@ namespace cheapshot
             board_t new_board=bm.board; // other engines undo moves ??
             make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                       new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-
+            // TODO: promotions are done after a pawn move only
             // TODO: this should only be checked after a pawn move?
             uint64_t en_passant_info=ep_functions.info(
                bm.own_side()[idx(piece::pawn)],

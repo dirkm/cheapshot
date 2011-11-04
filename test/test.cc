@@ -546,9 +546,9 @@ slide_pawn_check(const char* canvas)
    uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t opposing=scan_canvas(canvas,'o');
    uint64_t result=scan_canvas(canvas,'X');
-   // print_position(slide_pawn_up(pawns,opposing,std::cout));
-   BOOST_CHECK_EQUAL(slide_pawn_up(pawns,opposing),result);
-   BOOST_CHECK_EQUAL(slide_pawn_down(mirror(pawns),mirror(opposing)),mirror(result));
+   // print_position(slide_pawn<up>(pawns,opposing,std::cout));
+   BOOST_CHECK_EQUAL(slide_pawn<up>(pawns,opposing),result);
+   BOOST_CHECK_EQUAL(slide_pawn<down>(mirror(pawns),mirror(opposing)),mirror(result));
 }
 
 BOOST_AUTO_TEST_CASE( slide_pawn_test )
@@ -610,8 +610,8 @@ capture_pawn_check(const char* canvas)
    uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t captures=scan_canvas(canvas,'O');
    uint64_t opposing=scan_canvas(canvas,'o')|captures;
-   BOOST_CHECK_EQUAL(capture_with_pawn_up(pawns,opposing),captures);
-   BOOST_CHECK_EQUAL(capture_with_pawn_down(mirror(pawns),mirror(opposing)),mirror(captures));
+   BOOST_CHECK_EQUAL(capture_with_pawn<up>(pawns,opposing),captures);
+   BOOST_CHECK_EQUAL(capture_with_pawn<down>(mirror(pawns),mirror(opposing)),mirror(captures));
 }
 
 BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
@@ -645,18 +645,18 @@ capture_pawn_en_passant_check(const char* canvas)
    uint64_t own_pawn=scan_canvas(canvas,'X');
    uint64_t captures=scan_canvas(canvas,'x'); // TODO: 2 should go after capture
    {
-      uint64_t ep_info_down=en_passant_info_down(ep_pawns_before_move, ep_pawns);
-      BOOST_CHECK(is_max_single_bit(ep_info_down));
-      BOOST_CHECK_EQUAL(en_passant_capture_up(own_pawn, ep_info_down),captures);
+      uint64_t last_ep_info=en_passant_info<down>(ep_pawns_before_move, ep_pawns);
+      BOOST_CHECK(is_max_single_bit(last_ep_info));
+      BOOST_CHECK_EQUAL(en_passant_capture<up>(own_pawn, last_ep_info),captures);
    }
    mirror_inplace(ep_pawns_before_move);
    mirror_inplace(ep_pawns);
    mirror_inplace(own_pawn);
    mirror_inplace(captures);
    {
-      uint64_t ep_info_up=en_passant_info_up(ep_pawns_before_move, ep_pawns);
-      BOOST_CHECK(is_max_single_bit(ep_info_up));
-      BOOST_CHECK_EQUAL(en_passant_capture_down(own_pawn, ep_info_up),captures);
+      uint64_t last_ep_info=en_passant_info<up>(ep_pawns_before_move, ep_pawns);
+      BOOST_CHECK(is_max_single_bit(last_ep_info));
+      BOOST_CHECK_EQUAL(en_passant_capture<down>(own_pawn, last_ep_info),captures);
    }
 
 }
@@ -1213,10 +1213,10 @@ void time_move(T fun, long count, const char* description)
 BOOST_AUTO_TEST_CASE( time_moves )
 {
    // each timing takes about 1 sec on my machine
-   time_move(&slide_pawn_up,300000000,"slide pawn up");
-   time_move(&slide_pawn_down,300000000,"slide pawn down");
-   time_move(&capture_with_pawn_up,200000000,"capture with pawn up");
-   time_move(&capture_with_pawn_down,200000000,"capture with pawn down");
+   time_move(&slide_pawn<up>,300000000,"slide pawn up");
+   time_move(&slide_pawn<down>,300000000,"slide pawn down");
+   time_move(&capture_with_pawn<up>,200000000,"capture with pawn up");
+   time_move(&capture_with_pawn<down>,200000000,"capture with pawn down");
    time_move(&jump_knight,100000000,"knight jump");
    time_move(&slide_bishop,40000000,"slide bishop");
    time_move(&slide_rook,40000000,"slide rook");

@@ -4,6 +4,7 @@
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <tuple>
 
 #include "cheapshot/iterator.hh"
@@ -131,7 +132,7 @@ namespace cheapshot
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 
    inline board_t
-   scan_fen_position(const char* fen) noexcept
+   scan_fen_position(const char* fen)
    {
       board_t b={0};
       for(uint8_t i=0;i<8;++i)
@@ -146,7 +147,7 @@ namespace cheapshot
                color c;
                piece p;
                std::tie(c,p)=character_to_piece(*fen);
-               if(c!=color::count) 
+               if(c!=color::count)
                   b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
                else
                {
@@ -174,7 +175,7 @@ namespace cheapshot
    // start position
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
    inline board_t
-   scan_fen(const char* fen) noexcept
+   scan_fen(const char* fen)
    {
       // TODO
    }
