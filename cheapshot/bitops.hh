@@ -314,13 +314,15 @@ namespace cheapshot
 
    // halfwidth 1: a band with max 3 columns, excluding the sides of the board
    // halfwidth 2: same with 5 columns
+   
+   // this is DEPRECATED because too complicated
    constexpr uint64_t
    vertical_band(uint64_t s,uint8_t halfwidth) noexcept
    {
       return aliased_move<top>(
-         (((aliased_move<bottom>(s)
+         ((aliased_move<bottom>(s)
             &row_with_number(0))
-           *((1<<(2*halfwidth+1))-1)) // elements in the band on row 0
+           *smaller(1U<<(2*halfwidth+1)) // elements in the band on row 0
           >>halfwidth) // shift to correct location
          &row_with_number(0));
    }
@@ -329,9 +331,9 @@ namespace cheapshot
    jump_knight_simple(uint64_t s) noexcept
    {
       return
-         vertical_band(s,2) &
-         (detail::aliased_split(detail::aliased_split(s,2),8)|
-          detail::aliased_split(detail::aliased_split(s,1),16));
+         // vertical_band(s,2) & // TODO get rid of band and use (row)
+         (detail::aliased_split(detail::aliased_split(s,2)&row(s),8)|
+          detail::aliased_split(detail::aliased_split(s,1)&row(s),16));
    }
 
 // with obstacles to get uniform interface
@@ -345,9 +347,8 @@ namespace cheapshot
    move_king_simple(uint64_t s) noexcept
    {
       return
-         detail::aliased_widen(detail::aliased_widen(s,1),8)&
-         vertical_band(s,1)&
-         ~s;
+         detail::aliased_widen(detail::aliased_widen(s,1)&row(s),8)^
+         s;
    }
 
 // with obstacles to get uniform interface

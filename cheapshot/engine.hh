@@ -66,7 +66,7 @@ namespace cheapshot
       uint64_t last_ep_info; // en passant
 
       explicit
-      board_metrics(board_t& board_, color turn_, uint64_t ep_info=0):
+      board_metrics(board_t& board_, color turn_, uint64_t ep_info=0UL):
          board(board_),
          turn(turn_),
          p_own_side(&board[idx(turn)]),
@@ -289,9 +289,7 @@ namespace cheapshot
       }
 
       if(!engine_controller.try_position(bm))
-      {
          return {0}; // TODO: better eval-function than returning 0
-      }
 
       uint64_t own_under_attack=
          get_coverage(moves_iterator(bm),moves_iterator_end());
@@ -313,10 +311,10 @@ namespace cheapshot
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
+               // TODO: check if promotion and loop over them
                board_t new_board=bm.board; // other engines undo moves ??
                make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
                          new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-               // do promotions
                uint64_t en_passant_info=pawn_functions.ep_info(
                   bm.own_side()[idx(piece::pawn)],
                   new_board[idx(bm.turn)][idx(piece::pawn)]);
@@ -333,8 +331,7 @@ namespace cheapshot
                board_t new_board=bm.board; // other engines undo moves ??
                make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                          new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-               uint64_t en_passant_info=0UL;
-               board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
+               board_metrics new_bm(new_board,other_color(bm.turn));
                score=recurse_and_evaluate(score,new_bm,engine_controller);
             }
          }
