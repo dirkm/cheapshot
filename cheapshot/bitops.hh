@@ -30,6 +30,13 @@ namespace cheapshot
 
 // all moves are generic (white, black) apart from pawn-moves, which have a separate up and down version
 
+/*
+   uint64_t operator "" u64(uint64_t c)
+   {
+      return c;
+   }
+*/
+
    constexpr bool
    is_max_single_bit(uint64_t p) noexcept
    {
@@ -60,18 +67,18 @@ namespace cheapshot
    // not considered as part of the API, because too specific, dangerous, or prone to change
    {
       constexpr uint64_t
-      left_shift(uint64_t l, uint64_t r) noexcept
+      left_shift(uint64_t l, char r) noexcept
       {
          return l<<r;
       }
 
       constexpr uint64_t
-      right_shift(uint64_t l, uint64_t r) noexcept
+      right_shift(uint64_t l, char r) noexcept
       {
          return l>>r;
       }
 
-      typedef uint64_t (*shift)(uint64_t, uint64_t);
+      typedef uint64_t (*shift)(uint64_t, char);
    }
 
    namespace detail
@@ -130,6 +137,15 @@ namespace cheapshot
       // assert(is_max_single_bit(s));
       return s-1;
    }
+
+   constexpr uint64_t
+   in_between(uint64_t s1,uint64_t s2) noexcept
+   {
+      // assert(is_max_single_bit(s1));
+      // assert(is_max_single_bit(s2));
+      return s2-s1;
+   }
+
 
    // function accepts 0 and returns "all bits set"
    constexpr uint64_t
@@ -192,6 +208,13 @@ namespace cheapshot
       return detail::aliased_move_decreasing(p,3,D)|p;
    }
 
+
+   constexpr uint64_t
+   to_the_right(uint64_t s,char n) noexcept
+   {
+      return in_between(s,s<<n);
+   }
+
    // helpers to get patterns based on column-row coordinates
 
    constexpr uint64_t
@@ -201,39 +224,31 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   row_with_number(uint8_t row_number) noexcept
+   column(uint64_t s) noexcept
    {
-      return aliased_move<right>(1UL)<<(row_number*8);
+      return
+         aliased_move<bottom>(s)|
+         aliased_move<top>(s);
    }
 
    constexpr uint64_t
    column_with_number(uint8_t column_number) noexcept
    {
-      return aliased_move<top>(1UL)<<(column_number);
+      return column(1UL)<<column_number;
    }
 
    constexpr uint64_t
    row(uint64_t s) noexcept
    {
-      // assert(is_single_bit(s));
-      return aliased_move<right>(
-         aliased_move<left>(s)&
-         column_with_number(0));
+      return to_the_right(
+         aliased_move<left>(s)&column_with_number(0),
+         8);
    }
 
    constexpr uint64_t
-   columns(uint64_t p) noexcept
+   row_with_number(uint8_t row_number) noexcept
    {
-      return
-         aliased_move<bottom>(p)|
-         aliased_move<top>(p);
-   }
-
-   constexpr uint64_t
-   column(uint64_t s) noexcept
-   {
-      // assert(is_single_bit(s));
-      return columns(s);
+      return row(1UL)<<(row_number*8);
    }
 
    // helpers to get patterns based on column-row coordinates in algebraic notation
@@ -310,21 +325,6 @@ namespace cheapshot
          (T::shift_forward(s,7)|T::shift_forward(s,9)) & // possible_pawn_captures
          row(T::shift_forward(s,8)) & // next row
          obstacles;
-   }
-
-   // halfwidth 1: a band with max 3 columns, excluding the sides of the board
-   // halfwidth 2: same with 5 columns
-   
-   // this is DEPRECATED because too complicated
-   constexpr uint64_t
-   vertical_band(uint64_t s,uint8_t halfwidth) noexcept
-   {
-      return aliased_move<top>(
-         ((aliased_move<bottom>(s)
-            &row_with_number(0))
-           *smaller(1U<<(2*halfwidth+1)) // elements in the band on row 0
-          >>halfwidth) // shift to correct location
-         &row_with_number(0));
    }
 
    constexpr uint64_t
@@ -500,21 +500,11 @@ namespace cheapshot
 
    template<typename T>
    constexpr uint64_t
-   en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept;
-
-   template<>
-   constexpr uint64_t
-   en_passant_candidates<up>(uint64_t pawns, uint64_t ep_info) noexcept
+   en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept
    {
-      // limit candidates to neighbouring rows
-      return pawns&row_with_number(4)&vertical_band(ep_info,1);
-   }
-
-   template<>
-   constexpr uint64_t
-   en_passant_candidates<down>(uint64_t pawns, uint64_t ep_info) noexcept
-   {
-      return pawns&row_with_number(3)&vertical_band(ep_info,1);
+      return pawns&
+         (T::shift_backward(ep_info,7)|T::shift_backward(ep_info,9))&
+         row(T::shift_backward(ep_info,8));
    }
 
    template<typename T>

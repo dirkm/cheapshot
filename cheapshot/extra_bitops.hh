@@ -87,6 +87,29 @@ namespace cheapshot
    {
       return deBruijnBitPosition[(s*0x022fdd63cc95386d) >> 58];
    }
+
+   // halfwidth 1: a band with max 3 columns, excluding the sides of the board
+   // halfwidth 2: same with 5 columns
+   
+   // this is DEPRECATED because too complicated
+   constexpr uint64_t
+   vertical_band(uint64_t s,uint8_t halfwidth) noexcept
+   {
+      return aliased_move<top>(
+         ((aliased_move<bottom>(s)
+            &row_with_number(0))
+           *smaller(1U<<(2*halfwidth+1)) // elements in the band on row 0
+          >>halfwidth) // shift to correct location
+         &row_with_number(0));
+   }
+
+   constexpr uint64_t
+   columns(uint64_t p) noexcept
+   {
+      return
+         aliased_move<bottom>(p)|
+         aliased_move<top>(p);
+   }
 }
 
 #endif
