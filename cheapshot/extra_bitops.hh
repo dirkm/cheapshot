@@ -50,7 +50,7 @@ namespace cheapshot
    bigger_special_0(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
-      return bigger(highest_bit(s|1ULL)); // TODO: improvable?
+      return bigger(highest_bit_no_zero(s|1ULL)); // TODO: improvable?
    }
 
    namespace detail

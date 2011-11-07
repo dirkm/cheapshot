@@ -10,13 +10,12 @@ namespace cheapshot
    test_highest_bit(uint64_t v, uint64_t h)
    {
       return 
-         (highest_bit(v)==h) && 
+         (highest_bit_no_zero(v)==h) && 
          (highest_bit_portable(v)==h);
    }
 
    static_assert(test_highest_bit(0xF123UL,0x8000UL),"");
    static_assert(test_highest_bit(0x812300UL,0x800000UL),"");
-   static_assert(test_highest_bit(0x0UL,0x0UL),"");
    static_assert(count_bits_set(0x0UL)==0,"");
    static_assert(count_bits_set(0x10000001UL)==2,"");
    static_assert(count_bits_set(0x11FFUL)==10,"");

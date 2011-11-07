@@ -263,9 +263,8 @@ BOOST_AUTO_TEST_CASE( canvas_test )
 
 BOOST_AUTO_TEST_CASE( primitive_test )
 {
-   BOOST_CHECK_EQUAL(highest_bit(0xF123UL),0x8000UL);
-   BOOST_CHECK_EQUAL(highest_bit(0x1UL),0x1UL);
-   BOOST_CHECK_EQUAL(highest_bit(0x0UL),0x0UL);
+   BOOST_CHECK_EQUAL(highest_bit_no_zero(0xF123UL),0x8000UL);
+   BOOST_CHECK_EQUAL(highest_bit_no_zero(0x1UL),0x1UL);
    BOOST_CHECK_EQUAL(strict_left_of(0x1UL),0x0UL);
    BOOST_CHECK_EQUAL(strict_left_of(0x2UL),0x0101010101010101UL);
 }

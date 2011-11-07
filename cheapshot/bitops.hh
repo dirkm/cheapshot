@@ -115,17 +115,17 @@ namespace cheapshot
       constexpr uint64_t
       aliased_widen(uint64_t p, int s) noexcept
       {
-         return p|aliased_split(p,s);
+         return aliased_move_decreasing(
+            aliased_move_increasing(p,1,s),
+            1,s);
       }
    }
 
    constexpr uint64_t
-   highest_bit(uint64_t p) noexcept
+   highest_bit_no_zero(uint64_t p) noexcept
    {
-      // why is this faster with conditional than without?
-      return p?
-         (1UL<<63)>>__builtin_clzll(p):
-         p;
+      // zero not allowed as input of clzll
+      return (1UL<<63)>>__builtin_clzll(p);
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -201,7 +201,6 @@ namespace cheapshot
    {
       return detail::aliased_move_decreasing(p,3,D)|p;
    }
-
 
    constexpr uint64_t
    to_the_right(uint64_t s,char n) noexcept
@@ -390,13 +389,10 @@ namespace cheapshot
          // assert(is_single_bit(s));
          // assert((s&obstacles)==0);
          return
-            bigger_equal( // all higher than
-               highest_bit(1UL|smaller(s)&(obstacles&movement))) // bottom left obstacle
-            &
-            smaller_equal( // all smaller than
-               lowest_bit(bigger(s)&(obstacles&movement))) // top right obstacle
-            &
-            movement; // originally allowed
+            in_between(
+               highest_bit_no_zero(1UL|(smaller(s)&(obstacles&movement))), // bottom left obstacle
+               (lowest_bit(bigger(s)&(obstacles&movement))<<1)) // top right obstacle + offset
+            &movement; // originally allowed
       }
    }
 
@@ -509,20 +505,10 @@ namespace cheapshot
 
    template<typename T>
    constexpr uint64_t
-   promotion_mask(uint64_t s) noexcept;
-
-   template<>
-   constexpr uint64_t
-   promotion_mask<up>(uint64_t s) noexcept
+   promotion_mask(uint64_t s) noexcept
    {
-      return s&row(7);
-   }
-
-   template<>
-   constexpr uint64_t
-   promotion_mask<down>(uint64_t s) noexcept
-   {
-      return s&row(0);
+      // last row
+      return T::shift_forward(row_with_number(3)|row_with_number(4),8*4);
    }
 } // cheapshot
 
