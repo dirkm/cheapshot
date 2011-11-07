@@ -138,6 +138,9 @@ namespace cheapshot
       return s-1;
    }
 
+   // s2 is allowed to be 0 (means one bigger than last bit)
+   // s1: single bit (min. 1UL)
+   // s1 is in result, s2 not
    constexpr uint64_t
    in_between(uint64_t s1,uint64_t s2) noexcept
    {
@@ -145,7 +148,6 @@ namespace cheapshot
       // assert(is_max_single_bit(s2));
       return s2-s1;
    }
-
 
    // function accepts 0 and returns "all bits set"
    constexpr uint64_t
@@ -167,14 +169,6 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       return ~smaller(s);
-   }
-
-   // function accepts 0 and returns "all bits set"
-   constexpr uint64_t
-   bigger_equal_special_0(uint64_t s) noexcept
-   {
-      // assert(is_max_single_bit(s));
-      return bigger_equal(highest_bit(s|1UL)); // TODO: improvable?
    }
 
    // sliding moves
@@ -331,7 +325,6 @@ namespace cheapshot
    jump_knight_simple(uint64_t s) noexcept
    {
       return
-         // vertical_band(s,2) & // TODO get rid of band and use (row)
          (detail::aliased_split(detail::aliased_split(s,2)&row(s),8)|
           detail::aliased_split(detail::aliased_split(s,1)&row(s),16));
    }
@@ -397,8 +390,8 @@ namespace cheapshot
          // assert(is_single_bit(s));
          // assert((s&obstacles)==0);
          return
-            bigger_equal_special_0( // all higher than
-               highest_bit(smaller(s)&(obstacles&movement))) // bottom left obstacle
+            bigger_equal( // all higher than
+               highest_bit(1UL|smaller(s)&(obstacles&movement))) // bottom left obstacle
             &
             smaller_equal( // all smaller than
                lowest_bit(bigger(s)&(obstacles&movement))) // top right obstacle
