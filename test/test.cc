@@ -278,15 +278,25 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
    BOOST_CHECK_EQUAL(column_number(1UL<<63),7);
 }
 
+bool rook_test(const char* canvas)
+{
+      // print_position(slide_rook(
+      //                 scan_canvas(canvas,'r'),
+      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
+      BOOST_CHECK_EQUAL(slide_rook(scan_canvas(canvas,'r'),
+                                   scan_canvas(canvas,'o','O')),
+                        scan_canvas(canvas,'X','r','O'));
+}
+
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
    BOOST_CHECK_EQUAL(slide_rook(algpos('A',1),row_with_algebraic_number(2)),
-                     ((row_with_algebraic_number(1)^algpos('A',1))|algpos('A',2)));
+                     ((row_with_algebraic_number(1)|algpos('A',1))|algpos('A',2)));
    BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),row_with_algebraic_number(2)),
-                     ((column_with_algebraic_number('D')|row_with_algebraic_number(3))&
-                      ~(row_with_algebraic_number(1)|algpos('D',3))));
+                     (column_with_algebraic_number('D')|row_with_algebraic_number(3))&
+                     ~row_with_algebraic_number(1));
    BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),algpos('D',2)|algpos('D',4)),
-                     (algpos('D',2)|algpos('D',4)|row_with_algebraic_number(3))^algpos('D',3));
+                     (algpos('D',2)|algpos('D',4)|row_with_algebraic_number(3)));
    {
       constexpr char canvas[]=
          "........\n"
@@ -297,13 +307,7 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          ".......X\n"
          ".......X\n"
          "XXXXXXXr\n";
-      // print_position(slide_rook(
-      //                 scan_canvas(canvas,'r'),
-      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
-      BOOST_CHECK_EQUAL(slide_rook(
-                           scan_canvas(canvas,'r'),
-                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
-                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
+      rook_test(canvas);
    }
    {
       constexpr char canvas[]=
@@ -315,13 +319,7 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
          "..Xo....\n"
          "..O.....\n"
          "..o.....\n";
-      // print_position(slide_rook(
-      //                 scan_canvas(canvas,'r'),
-      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
-      BOOST_CHECK_EQUAL(slide_rook(
-                           scan_canvas(canvas,'r'),
-                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
-                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
+      rook_test(canvas);
    }
 }
 
@@ -337,10 +335,9 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
          "........\n"
          "........\n"
          "........\n";
-      BOOST_CHECK_EQUAL(slide_bishop(
-                           scan_canvas(canvas,'b'),
-                           scan_canvas(canvas,'o')),
-                        scan_canvas(canvas,'X')|scan_canvas(canvas,'o'));
+      BOOST_CHECK_EQUAL(slide_bishop(scan_canvas(canvas,'b'),
+                                     scan_canvas(canvas,'o')),
+                        scan_canvas(canvas,'X','b','o'));
    }
 }
 
@@ -362,8 +359,8 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
 
       BOOST_CHECK_EQUAL(slide_queen(
                            scan_canvas(canvas,'q'),
-                           scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),
-                        scan_canvas(canvas,'X')|scan_canvas(canvas,'O'));
+                           scan_canvas(canvas,'o','O')),
+                        scan_canvas(canvas,'X','q','O'));
    }
 }
 

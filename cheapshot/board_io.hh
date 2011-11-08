@@ -107,6 +107,13 @@ namespace cheapshot
       return r;
    }
 
+   template<typename... Chars>
+   uint64_t 
+   scan_canvas(const char* canvas, char char1, Chars... chars)
+   {
+      return scan_canvas(canvas,char1)|scan_canvas(canvas,chars...);
+   }
+
    inline board_t
    scan_board(const char* canvas) noexcept
    {

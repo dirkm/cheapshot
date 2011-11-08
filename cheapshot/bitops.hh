@@ -78,13 +78,8 @@ namespace cheapshot
          return l>>r;
       }
 
-      typedef uint64_t (*shift)(uint64_t, char);
-   }
-
-   namespace detail
-   {
       // i is used as a geometrical progression
-      template<shift Shift>
+      template<uint64_t (*Shift)(uint64_t, char) noexcept>
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
       {
@@ -308,30 +303,30 @@ namespace cheapshot
       return detail::diag_sum(s,strict_left_of(s));
    }
 
-   struct up;
-   struct down;
+   class up;
+   class down;
 
-   template<typename T> 
-   uint64_t shift_forward(uint64_t l, char r);
-   
-   template<typename T> 
-   uint64_t shift_backward(uint64_t l, char r);
-   
-   template<> 
-   constexpr uint64_t 
-   shift_forward<up>(uint64_t l, char r){return l<<r;}
+   template<typename T>
+   uint64_t shift_forward(uint64_t l, char r) noexcept;
+
+   template<typename T>
+   uint64_t shift_backward(uint64_t l, char r) noexcept;
 
    template<>
-   constexpr uint64_t  
-   shift_backward<up>(uint64_t l, char r){return l>>r;}
-
-   template<> 
-   constexpr uint64_t 
-   shift_forward<down>(uint64_t l, char r){return l>>r;}
+   constexpr uint64_t
+   shift_forward<up>(uint64_t l, char r)  noexcept {return l<<r;}
 
    template<>
-   constexpr uint64_t  
-   shift_backward<down>(uint64_t l, char r){return l<<r;}
+   constexpr uint64_t
+   shift_backward<up>(uint64_t l, char r) noexcept {return l>>r;}
+
+   template<>
+   constexpr uint64_t
+   shift_forward<down>(uint64_t l, char r) noexcept {return l>>r;}
+
+   template<>
+   constexpr uint64_t
+   shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
 
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
    // not including en-passant captures
@@ -408,8 +403,8 @@ namespace cheapshot
       // assert(is_single_bit(s));
       // vertical change
       return
-         detail::slide(s,column(s)^s,obstacles)| // vertical
-         detail::slide(s,row(s)^s,obstacles); // horizontal
+         detail::slide(s,column(s),obstacles)| // vertical
+         detail::slide(s,row(s),obstacles); // horizontal
    }
 
    namespace detail
@@ -418,8 +413,8 @@ namespace cheapshot
       slide_bishop_optimised(uint64_t s, uint64_t obstacles, uint64_t left) noexcept
       {
          return
-            slide(s,diag_delta(s,left)^s,obstacles)|
-            slide(s,diag_sum(s,left)^s,obstacles);
+            slide(s,diag_delta(s,left),obstacles)|
+            slide(s,diag_sum(s,left),obstacles);
       }
    }
 
@@ -436,8 +431,7 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       return
-         slide_rook(s,obstacles)|
-         slide_bishop(s,obstacles);
+         slide_rook(s,obstacles)|slide_bishop(s,obstacles);
    }
 
    namespace detail
@@ -450,10 +444,9 @@ namespace cheapshot
       constexpr uint64_t
       slide_optimised_for_pawns<up>(uint64_t movement, uint64_t obstacles) noexcept
       {
-         return smaller(
-            lowest_bit(
-               obstacles&movement // blocking_top
-               ))&movement;
+         return 
+            smaller(lowest_bit(obstacles&movement))& // blocking_top
+            movement;
       }
 
       template<>
@@ -466,7 +459,7 @@ namespace cheapshot
       }
    }
 
-   // slides are allowed to reach the ends of the board. promotions will be done
+   // pawns are allowed to reach the end of the board. promotions are done
    //  in the eval-loop
 
    template<typename T>
