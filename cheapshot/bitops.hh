@@ -97,7 +97,7 @@ namespace cheapshot
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
          // TODO: limitation should be made explicit by interface-change
-         return p*aliased_move_helper<left_shift>(1UL,n,step,i);
+         return p*aliased_move_helper<left_shift>(1ULL,n,step,i);
       }
 
       constexpr uint64_t
@@ -125,7 +125,7 @@ namespace cheapshot
    highest_bit_no_zero(uint64_t p) noexcept
    {
       // zero not allowed as input of clzll
-      return (1UL<<63)>>__builtin_clzll(p);
+      return (1ULL<<63)>>__builtin_clzll(p);
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -139,7 +139,7 @@ namespace cheapshot
    }
 
    // s2 is allowed to be 0 (means one bigger than last bit)
-   // s1: single bit (min. 1UL)
+   // s1: single bit (min. 1ULL)
    // s1 is in result, s2 not
    constexpr uint64_t
    in_between(uint64_t s1,uint64_t s2) noexcept
@@ -213,7 +213,7 @@ namespace cheapshot
    constexpr uint64_t
    position(uint8_t column, uint8_t row) noexcept
    {
-      return 1UL<<((row)*8+(column));
+      return 1ULL<<((row)*8+(column));
    }
 
    constexpr uint64_t
@@ -227,7 +227,7 @@ namespace cheapshot
    constexpr uint64_t
    column_with_number(uint8_t column_number) noexcept
    {
-      return column(1UL)<<column_number;
+      return column(1ULL)<<column_number;
    }
 
    constexpr uint64_t
@@ -241,7 +241,7 @@ namespace cheapshot
    constexpr uint64_t
    row_with_number(uint8_t row_number) noexcept
    {
-      return row(1UL)<<(row_number*8);
+      return row(1ULL)<<(row_number*8);
    }
 
    // helpers to get patterns based on column-row coordinates in algebraic notation
@@ -308,6 +308,31 @@ namespace cheapshot
       return detail::diag_sum(s,strict_left_of(s));
    }
 
+   struct up;
+   struct down;
+
+   template<typename T> 
+   uint64_t shift_forward(uint64_t l, char r);
+   
+   template<typename T> 
+   uint64_t shift_backward(uint64_t l, char r);
+   
+   template<> 
+   constexpr uint64_t 
+   shift_forward<up>(uint64_t l, char r){return l<<r;}
+
+   template<>
+   constexpr uint64_t  
+   shift_backward<up>(uint64_t l, char r){return l>>r;}
+
+   template<> 
+   constexpr uint64_t 
+   shift_forward<down>(uint64_t l, char r){return l>>r;}
+
+   template<>
+   constexpr uint64_t  
+   shift_backward<down>(uint64_t l, char r){return l<<r;}
+
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
    // not including en-passant captures
    template<typename T>
@@ -315,8 +340,8 @@ namespace cheapshot
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
       return
-         (T::shift_forward(s,7)|T::shift_forward(s,9)) & // possible_pawn_captures
-         row(T::shift_forward(s,8)) & // next row
+         (shift_forward<T>(s,7)|shift_forward<T>(s,9)) & // possible_pawn_captures
+         row(shift_forward<T>(s,8)) & // next row
          obstacles;
    }
 
@@ -350,32 +375,13 @@ namespace cheapshot
       return move_king_simple(s);
    }
 
-   // used to set pawn-move directions
-   struct up
-   {
-      const static detail::shift shift_forward;
-      const static detail::shift shift_backward;
-   };
-
-   const detail::shift up::shift_forward=detail::left_shift;
-   const detail::shift up::shift_backward=detail::right_shift;
-
-   struct down
-   {
-      const static detail::shift shift_forward;
-      const static detail::shift shift_backward;
-   };
-
-   const detail::shift down::shift_forward=detail::right_shift;
-   const detail::shift down::shift_backward=detail::left_shift;
-
    template<typename T>
    constexpr uint64_t
    move_pawn(uint64_t s) noexcept
    {
          return
-            T::shift_forward(s,8)|
-            T::shift_forward(s&(row_with_number(1)|row_with_number(6)),16);
+            shift_forward<T>(s,8)|
+            shift_forward<T>(s&(row_with_number(1)|row_with_number(6)),16);
    }
 
    namespace detail
@@ -390,7 +396,7 @@ namespace cheapshot
          // assert((s&obstacles)==0);
          return
             in_between(
-               highest_bit_no_zero(1UL|(smaller(s)&(obstacles&movement))), // bottom left obstacle
+               highest_bit_no_zero(1ULL|(smaller(s)&(obstacles&movement))), // bottom left obstacle
                (lowest_bit(bigger(s)&(obstacles&movement))<<1)) // top right obstacle + offset
             &movement; // originally allowed
       }
@@ -482,9 +488,9 @@ namespace cheapshot
    constexpr uint64_t
    en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
    {
-      return T::shift_backward(((pawns_before_move ^ pawns) &
-                                (T::shift_forward(pawns_before_move ^ pawns,16)))&
-                               (row_with_number(3)|row_with_number(4)),8);
+      return shift_backward<T>(
+         (pawns_before_move^pawns)&(shift_forward<T>(pawns_before_move^pawns,16)),
+         8);
    }
 
    template<typename T>
@@ -492,8 +498,8 @@ namespace cheapshot
    en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept
    {
       return pawns&
-         (T::shift_backward(ep_info,7)|T::shift_backward(ep_info,9))&
-         row(T::shift_backward(ep_info,8));
+         (shift_backward<T>(ep_info,7)|shift_backward<T>(ep_info,9))&
+         row(shift_backward<T>(ep_info,8));
    }
 
    template<typename T>
@@ -508,7 +514,7 @@ namespace cheapshot
    promotion_mask(uint64_t s) noexcept
    {
       // last row
-      return T::shift_forward(row_with_number(3)|row_with_number(4),8*4);
+      return shift_forward<T>(row_with_number(3)|row_with_number(4),8*4);
    }
 } // cheapshot
 
