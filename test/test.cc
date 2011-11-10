@@ -284,7 +284,7 @@ bool rook_test(const char* canvas)
       //                 scan_canvas(canvas,'r'),
       //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
       BOOST_CHECK_EQUAL(slide_rook(scan_canvas(canvas,'r'),
-                                   scan_canvas(canvas,'o','O')),
+                                   scan_canvas(canvas,'o','O','r')),
                         scan_canvas(canvas,'X','r','O'));
 }
 
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
          "........\n"
          "........\n";
       BOOST_CHECK_EQUAL(slide_bishop(scan_canvas(canvas,'b'),
-                                     scan_canvas(canvas,'o')),
+                                     scan_canvas(canvas,'o','O','b')),
                         scan_canvas(canvas,'X','b','o'));
    }
 }
@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
 
       BOOST_CHECK_EQUAL(slide_queen(
                            scan_canvas(canvas,'q'),
-                           scan_canvas(canvas,'o','O')),
+                           scan_canvas(canvas,'o','O','q')),
                         scan_canvas(canvas,'X','q','O'));
    }
 }
@@ -537,7 +537,7 @@ inline void
 slide_pawn_check(const char* canvas)
 {
    uint64_t pawns=scan_canvas(canvas,'P');
-   uint64_t opposing=scan_canvas(canvas,'o');
+   uint64_t opposing=scan_canvas(canvas,'o','P');
    uint64_t result=scan_canvas(canvas,'X');
    // print_position(slide_pawn<up>(pawns,opposing,std::cout));
    BOOST_CHECK_EQUAL(slide_pawn<up>(pawns,opposing),result);
@@ -1062,6 +1062,43 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       score_t s=analyze_position(bm,check);
       BOOST_CHECK(check.is_position_reached());
    }
+}
+
+BOOST_AUTO_TEST_CASE( analyze_promotion_test )
+{
+   board_t promotion_initial=scan_board(
+      "....k...\n"
+      "..P.....\n"
+      ".....K..\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n");
+
+   board_t promotion_mate=scan_board(
+      "..Q.k...\n"
+      "........\n"
+      ".....K..\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n");
+
+   {
+      board_metrics bm(promotion_initial,color::white);
+      move_checker check({promotion_initial,promotion_mate});
+      score_t s=analyze_position(bm,check);
+      BOOST_CHECK(check.is_position_reached());
+   }
+   {
+      board_metrics bm(mirror(promotion_initial),color::black);
+      move_checker check({mirror(promotion_initial),mirror(promotion_mate)});
+      score_t s=analyze_position(bm,check);
+      BOOST_CHECK(check.is_position_reached());
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE( find_mate_test )

@@ -65,7 +65,6 @@ namespace cheapshot
       uint64_t all;
       uint64_t last_ep_info; // en passant
 
-      explicit
       board_metrics(board_t& board_, color turn_, uint64_t ep_info=0UL):
          board(board_),
          turn(turn_),
@@ -78,7 +77,6 @@ namespace cheapshot
       {}
 
       // delegating constructors, anyone ??
-      explicit
       board_metrics(board_t&& board_, color turn_, uint64_t ep_info=0):
          board(board_),
          turn(turn_),
@@ -235,12 +233,25 @@ namespace cheapshot
    }
 
    constexpr piece piece_promotions[]={
-      piece::queen,piece::knight,piece::rook,piece::bishop};
+      piece::pawn,piece::queen,piece::knight,piece::rook,piece::bishop};
+
+   inline const piece*
+   promotions_begin()
+   {
+      return std::begin(piece_promotions);
+   }
+
+   inline const piece*
+   promotions_end()
+   {
+      return std::end(piece_promotions)-1;
+   }
 
    inline void
-   make_promotion(uint64_t& pawn_loc, board_side& other_side)
+   make_promotion(board_side& own_side, const piece* piece_iter, uint64_t promoted_location)
    {
-      // TODO
+      own_side[idx(*piece_iter)]^=promoted_location;
+      own_side[idx(*(piece_iter+1))]^=promoted_location;
    }
 
    // opponent en-passant captures cannot capture kings
@@ -271,6 +282,7 @@ namespace cheapshot
    score_t
    recurse_and_evaluate(score_t last_score,board_metrics& bm, EngineController& engine_controller);
 
+   // templatize according to the current turn
    template<typename EngineController>
    score_t
    analyze_position(board_metrics& bm, EngineController engine_controller)
@@ -300,6 +312,7 @@ namespace cheapshot
 
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
       const pawn_functions_t& pawn_functions=pawn_functions_array[idx(bm.turn)];
+
       score_t score{score_t::no_valid_move};
 
       // evaluate moves
@@ -307,11 +320,27 @@ namespace cheapshot
       {
          if(moves_it->moved_piece==piece::pawn)
          {
+            // std::cout << "trying promo: " << moves_it->destinations.remaining() << std::endl;
+            uint64_t prom_mask=promotion_mask(moves_it->destinations.remaining());
+            if(prom_mask)
+            {
+               board_t new_board=bm.board; // other engines undo moves ??
+               make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
+                         new_board[idx(other_color(bm.turn))],*moves_it->origin,
+                         moves_it->destinations.remaining());
+               auto prom_it_end=promotions_end();
+               for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
+               {
+                  make_promotion(new_board[idx(bm.turn)],prom_it,prom_mask);
+                  print_board(new_board,std::cout);
+                  board_metrics new_bm(new_board,other_color(bm.turn));
+                  score=recurse_and_evaluate(score,new_bm,engine_controller);
+               }
+            }
             for(bit_iterator& dest_iter=moves_it->destinations;
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
-               // TODO: check if promotion and loop over them
                board_t new_board=bm.board; // other engines undo moves ??
                make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
                          new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
@@ -323,7 +352,7 @@ namespace cheapshot
             }
          }
          else
-         { 
+         {
             for(bit_iterator& dest_iter=moves_it->destinations;
                 dest_iter!=bit_iterator();
                 ++dest_iter)

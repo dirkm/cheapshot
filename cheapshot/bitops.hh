@@ -63,21 +63,34 @@ namespace cheapshot
       return __builtin_popcountl(p);
    }
 
+   class up;
+   class down;
+
+   template<typename T>
+   uint64_t shift_forward(uint64_t l, char r) noexcept;
+
+   template<typename T>
+   uint64_t shift_backward(uint64_t l, char r) noexcept;
+
+   template<>
+   constexpr uint64_t
+   shift_forward<up>(uint64_t l, char r)  noexcept {return l<<r;}
+
+   template<>
+   constexpr uint64_t
+   shift_backward<up>(uint64_t l, char r) noexcept {return l>>r;}
+
+   template<>
+   constexpr uint64_t
+   shift_forward<down>(uint64_t l, char r) noexcept {return l>>r;}
+
+   template<>
+   constexpr uint64_t
+   shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
+
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
    {
-      constexpr uint64_t
-      left_shift(uint64_t l, char r) noexcept
-      {
-         return l<<r;
-      }
-
-      constexpr uint64_t
-      right_shift(uint64_t l, char r) noexcept
-      {
-         return l>>r;
-      }
-
       // i is used as a geometrical progression
       template<uint64_t (*Shift)(uint64_t, char) noexcept>
       constexpr uint64_t
@@ -92,13 +105,13 @@ namespace cheapshot
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
          // TODO: limitation should be made explicit by interface-change
-         return p*aliased_move_helper<left_shift>(1ULL,n,step,i);
+         return p*aliased_move_helper<shift_forward<up> >(1ULL,n,step,i);
       }
 
       constexpr uint64_t
       aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i=0) noexcept
       {
-         return aliased_move_helper<right_shift>(p,n,step,i);
+         return aliased_move_helper<shift_forward<down> >(p,n,step,i);
       }
 
       constexpr uint64_t
@@ -303,31 +316,6 @@ namespace cheapshot
       return detail::diag_sum(s,strict_left_of(s));
    }
 
-   class up;
-   class down;
-
-   template<typename T>
-   uint64_t shift_forward(uint64_t l, char r) noexcept;
-
-   template<typename T>
-   uint64_t shift_backward(uint64_t l, char r) noexcept;
-
-   template<>
-   constexpr uint64_t
-   shift_forward<up>(uint64_t l, char r)  noexcept {return l<<r;}
-
-   template<>
-   constexpr uint64_t
-   shift_backward<up>(uint64_t l, char r) noexcept {return l>>r;}
-
-   template<>
-   constexpr uint64_t
-   shift_forward<down>(uint64_t l, char r) noexcept {return l>>r;}
-
-   template<>
-   constexpr uint64_t
-   shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
-
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
    // not including en-passant captures
    template<typename T>
@@ -388,7 +376,6 @@ namespace cheapshot
       slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
       {
          // assert(is_single_bit(s));
-         // assert((s&obstacles)==0);
          return
             in_between(
                highest_bit_no_zero(1ULL|(smaller(s)&(obstacles&movement))), // bottom left obstacle
@@ -466,6 +453,7 @@ namespace cheapshot
    constexpr uint64_t
    slide_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
+      // integrating move and slide would probably speed up pawn-moves
       return
          detail::slide_optimised_for_pawns<T>(move_pawn<T>(s),obstacles);
    }
@@ -502,12 +490,11 @@ namespace cheapshot
       return capture_with_pawn<T>(s,last_ep_info);
    }
 
-   template<typename T>
    constexpr uint64_t
    promotion_mask(uint64_t s) noexcept
    {
       // last row
-      return shift_forward<T>(row_with_number(3)|row_with_number(4),8*4);
+      return s&(row_with_number(0)|row_with_number(7));
    }
 } // cheapshot
 

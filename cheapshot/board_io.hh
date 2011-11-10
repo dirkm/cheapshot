@@ -108,7 +108,7 @@ namespace cheapshot
    }
 
    template<typename... Chars>
-   uint64_t 
+   uint64_t
    scan_canvas(const char* canvas, char char1, Chars... chars)
    {
       return scan_canvas(canvas,char1)|scan_canvas(canvas,chars...);
@@ -142,7 +142,7 @@ namespace cheapshot
    scan_fen_position(const char* fen)
    {
       board_t b={0};
-      for(uint8_t i=0;i<8;++i)
+      for(uint8_t i=0;;++i)
       {
          int num_inc;
          for(uint8_t j=0;j<8;j+=num_inc,++fen)
@@ -165,16 +165,15 @@ namespace cheapshot
                num_inc=1;
             }
          }
-         if(i!=7)
+         if(i==7)
+            break;
+         if(*fen!='/')
          {
-            if(*fen!='/')
-            {
-               std::stringstream oss;
-               oss << "unexpected character in fen: " << *fen << " ('/' expected )";
-               throw std::runtime_error(oss.str());
-            }
-            ++fen;
+            std::stringstream oss;
+            oss << "unexpected character in fen: " << *fen << " ('/' expected )";
+            throw std::runtime_error(oss.str());
          }
+         ++fen;
       }
       return b;
    }
