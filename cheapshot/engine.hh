@@ -332,24 +332,24 @@ namespace cheapshot
                for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
                {
                   make_promotion(new_board[idx(bm.turn)],prom_it,prom_mask);
-                  print_board(new_board,std::cout);
                   board_metrics new_bm(new_board,other_color(bm.turn));
                   score=recurse_and_evaluate(score,new_bm,engine_controller);
                }
             }
-            for(bit_iterator& dest_iter=moves_it->destinations;
-                dest_iter!=bit_iterator();
-                ++dest_iter)
-            {
-               board_t new_board=bm.board; // other engines undo moves ??
-               make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
-                         new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-               uint64_t en_passant_info=pawn_functions.ep_info(
-                  bm.own_side()[idx(piece::pawn)],
-                  new_board[idx(bm.turn)][idx(piece::pawn)]);
-               board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
-               score=recurse_and_evaluate(score,new_bm,engine_controller);
-            }
+            else 
+               for(bit_iterator& dest_iter=moves_it->destinations;
+                   dest_iter!=bit_iterator();
+                   ++dest_iter)
+               {
+                  board_t new_board=bm.board; // other engines undo moves ??
+                  make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
+                            new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
+                  uint64_t en_passant_info=pawn_functions.ep_info(
+                     bm.own_side()[idx(piece::pawn)],
+                     new_board[idx(bm.turn)][idx(piece::pawn)]);
+                  board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
+                  score=recurse_and_evaluate(score,new_bm,engine_controller);
+               }
          }
          else
          {
