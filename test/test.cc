@@ -628,6 +628,27 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
       ".Po.....\n"
       "..o.....\n"
       "........\n");
+
+   capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      ".......o\n"
+      "oOo....o\n"
+      "Po.....o\n"
+      ".o......\n"
+      "........\n");
+
+   capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "o.......\n"
+      "o....oOo\n"
+      "o......P\n"
+      "........\n"
+      "........\n");
+
 }
 
 inline void

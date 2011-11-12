@@ -35,6 +35,7 @@ namespace cheapshot
       uint64_t (*ep_info)(uint64_t, uint64_t);
       uint64_t (*ep_candidates)(uint64_t, uint64_t);
       uint64_t (*ep_captures)(uint64_t, uint64_t);
+      uint64_t (*ep_promotion_mask)(uint64_t);
    };
 
    constexpr pawn_functions_t pawn_functions_array[count<color>()]=
@@ -42,12 +43,14 @@ namespace cheapshot
       {
          en_passant_info<up>,
          en_passant_candidates<up>,
-         en_passant_capture<up>
+         en_passant_capture<up>,
+         promotion_mask<up>
       },
       {
          en_passant_info<down>,
          en_passant_candidates<down>,
-         en_passant_capture<down>
+         en_passant_capture<down>,
+         promotion_mask<down>
       }
    };
 
@@ -321,7 +324,7 @@ namespace cheapshot
          if(moves_it->moved_piece==piece::pawn)
          {
             // std::cout << "trying promo: " << moves_it->destinations.remaining() << std::endl;
-            uint64_t prom_mask=promotion_mask(moves_it->destinations.remaining());
+            uint64_t prom_mask=pawn_functions.ep_promotion_mask(moves_it->destinations.remaining());
             if(prom_mask)
             {
                board_t new_board=bm.board; // other engines undo moves ??

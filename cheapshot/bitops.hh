@@ -31,10 +31,10 @@ namespace cheapshot
 // all moves are generic (white, black) apart from pawn-moves, which have a separate up and down version
 
 /*
-   uint64_t operator "" u64(uint64_t c)
-   {
-      return c;
-   }
+  uint64_t operator "" u64(uint64_t c)
+  {
+  return c;
+  }
 */
 
    constexpr bool
@@ -67,6 +67,21 @@ namespace cheapshot
    class down;
 
    template<typename T>
+   struct other;
+
+   template<>
+   struct other<up>
+   {
+      typedef down type;
+   };
+
+   template<>
+   struct other<down>
+   {
+      typedef up type;
+   };
+
+   template<typename T>
    uint64_t shift_forward(uint64_t l, char r) noexcept;
 
    template<typename T>
@@ -87,6 +102,30 @@ namespace cheapshot
    template<>
    constexpr uint64_t
    shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
+
+   template<typename T>
+   constexpr uint8_t 
+   top_index() noexcept;
+
+   template<typename T>
+   constexpr uint8_t 
+   bottom_index() noexcept;
+
+   template<>
+   constexpr uint8_t 
+   top_index<up>() noexcept { return 7; }
+
+   template<>
+   constexpr uint8_t 
+   bottom_index<up>() noexcept { return 0; }
+
+   template<>
+   constexpr uint8_t 
+   top_index<down>() noexcept { return 0; }
+
+   template<>
+   constexpr uint8_t 
+   bottom_index<down>() noexcept { return 7; }
 
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
@@ -318,13 +357,31 @@ namespace cheapshot
 
    // if obstacles include our own pieces, they have to be excluded explicitly afterward
    // not including en-passant captures
+
+   namespace detail
+   {
+      template<typename T>
+      constexpr uint64_t
+      unalias_forward(uint64_t p)
+      {
+         return p&~column_with_number(top_index<T>());
+      }
+
+      template<typename T>
+      constexpr uint64_t
+      unalias_backward(uint64_t p)
+      {
+         return p&~column_with_number(bottom_index<T>());
+      }
+   }
+
    template<typename T>
    constexpr uint64_t
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      return
-         (shift_forward<T>(s,7)|shift_forward<T>(s,9)) & // possible_pawn_captures
-         row(shift_forward<T>(s,8)) & // next row
+      return 
+         (shift_forward<T>(detail::unalias_backward<T>(s),7)|
+          shift_forward<T>(detail::unalias_forward<T>(s),9))&
          obstacles;
    }
 
@@ -362,9 +419,9 @@ namespace cheapshot
    constexpr uint64_t
    move_pawn(uint64_t s) noexcept
    {
-         return
-            shift_forward<T>(s,8)|
-            shift_forward<T>(s&(row_with_number(1)|row_with_number(6)),16);
+      return
+         shift_forward<T>(s,8)|
+         shift_forward<T>(s&(row_with_number(1)|row_with_number(6)),16);
    }
 
    namespace detail
@@ -478,9 +535,7 @@ namespace cheapshot
    constexpr uint64_t
    en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept
    {
-      return pawns&
-         (shift_backward<T>(ep_info,7)|shift_backward<T>(ep_info,9))&
-         row(shift_backward<T>(ep_info,8));
+      return capture_with_pawn<typename other<T>::type>(ep_info,pawns);
    }
 
    template<typename T>
@@ -490,11 +545,12 @@ namespace cheapshot
       return capture_with_pawn<T>(s,last_ep_info);
    }
 
+   template<typename T>
    constexpr uint64_t
    promotion_mask(uint64_t s) noexcept
    {
       // last row
-      return s&(row_with_number(0)|row_with_number(7));
+      return s&row_with_number(top_index<T>());
    }
 } // cheapshot
 
