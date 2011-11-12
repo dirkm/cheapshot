@@ -67,6 +67,7 @@ namespace cheapshot
       uint64_t opposing;
       uint64_t all;
       uint64_t last_ep_info; // en passant
+      uint64_t castle_mask;
 
       board_metrics(board_t& board_, color turn_, uint64_t ep_info=0UL):
          board(board_),
@@ -257,6 +258,18 @@ namespace cheapshot
       own_side[idx(*(piece_iter+1))]^=promoted_location;
    }
 
+   inline void
+   move_long_castle(board_metrics& bm, uint64_t castle_mask, uint64_t own_under_attack)
+   {
+      // TODO
+   }
+
+   inline void
+   move_short_castle(board_metrics& bm, uint64_t castle_mask, uint64_t own_under_attack)
+   {
+      // TODO
+   }
+
    // opponent en-passant captures cannot capture kings
    // castling cannot be used to avoid mate in 1
    // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
@@ -323,7 +336,6 @@ namespace cheapshot
       {
          if(moves_it->moved_piece==piece::pawn)
          {
-            // std::cout << "trying promo: " << moves_it->destinations.remaining() << std::endl;
             uint64_t prom_mask=pawn_functions.ep_promotion_mask(moves_it->destinations.remaining());
             if(prom_mask)
             {
@@ -401,12 +413,6 @@ namespace cheapshot
       score_t score=analyze_position(bm,engine_controller);
       last_score.value=std::max(last_score.value,-score.value);
       return last_score;
-   }
-
-   inline void
-   move_castle(board_metrics& bm, uint64_t own_under_attack)
-   {
-      // TODO
    }
 
    namespace detail

@@ -459,6 +459,33 @@ BOOST_AUTO_TEST_CASE( move_king_test )
       BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
                         scan_canvas(canvas,'X','k'));
    }
+   {
+      constexpr char canvas[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "XX......\n"
+         "kX......\n";
+      BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
+                        scan_canvas(canvas,'X','k'));
+   }
+   {
+      constexpr char canvas[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "......XX\n"
+         "......Xk\n"
+         "......XX\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
+                        scan_canvas(canvas,'X','k'));
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE( mirror_test )
@@ -657,7 +684,7 @@ capture_pawn_en_passant_check(const char* canvas)
    uint64_t ep_pawns_before_move=scan_canvas(canvas,'1');
    uint64_t ep_pawns=scan_canvas(canvas,'2');
    uint64_t own_pawn=scan_canvas(canvas,'X');
-   uint64_t captures=scan_canvas(canvas,'x'); // TODO: 2 should go after capture
+   uint64_t captures=scan_canvas(canvas,'x');
    {
       uint64_t last_ep_info=en_passant_info<down>(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(last_ep_info));
@@ -1097,7 +1124,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       "........\n"
       "........\n");
 
-   board_t promotion_mate=scan_board(
+   board_t promotion_mate_queen=scan_board(
       "..Q.k...\n"
       "........\n"
       ".....K..\n"
@@ -1106,20 +1133,34 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       "........\n"
       "........\n"
       "........\n");
-
    {
       board_metrics bm(promotion_initial,color::white);
-      move_checker check({promotion_initial,promotion_mate});
+      move_checker check({promotion_initial,promotion_mate_queen});
+      score_t s=analyze_position(bm,check);
+      BOOST_CHECK(check.is_position_reached());
+   }
+   {
+      board_t promotion_knight=scan_board(
+         "..N.k...\n"
+         "........\n"
+         ".....K..\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n");
+      board_metrics bm(promotion_initial,color::white);
+      move_checker check({promotion_initial,promotion_knight});
       score_t s=analyze_position(bm,check);
       BOOST_CHECK(check.is_position_reached());
    }
    {
       board_metrics bm(mirror(promotion_initial),color::black);
-      move_checker check({mirror(promotion_initial),mirror(promotion_mate)});
+      move_checker check({mirror(promotion_initial),mirror(promotion_mate_queen)});
       score_t s=analyze_position(bm,check);
       BOOST_CHECK(check.is_position_reached());
+      BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
    }
-
 }
 
 BOOST_AUTO_TEST_CASE( find_mate_test )
@@ -1182,31 +1223,31 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          board_t btemp=b5;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<1>()),
-                           score_t({-score_t::checkmate}));
+                           score_t{-score_t::checkmate});
       }
       {
          board_t btemp=b4;
          board_metrics bm(btemp,color::white);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<2>()),
-                           score_t({score_t::checkmate}));
+                           score_t{score_t::checkmate});
       }
       {
          board_t btemp=b3;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<3>()),
-                           score_t({-score_t::checkmate}));
+                           score_t{-score_t::checkmate});
       }
       {
          board_t btemp=b2;
          board_metrics bm(btemp,color::white);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<4>()),
-                           score_t({score_t::checkmate}));
+                           score_t{score_t::checkmate});
       }
       {
          board_t btemp=b1;
          board_metrics bm(btemp,color::black);
          BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<5>()),
-                           score_t({-score_t::checkmate}));
+                           score_t{-score_t::checkmate});
       }
       // {
       //    board_t btemp=b;
