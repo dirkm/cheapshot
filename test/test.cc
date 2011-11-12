@@ -444,7 +444,7 @@ BOOST_AUTO_TEST_CASE( move_king_test )
          ".XkX....\n"
          ".XXX....\n";
       BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
-                        scan_canvas(canvas,'X'));
+                        scan_canvas(canvas,'X','k'));
    }
    {
       constexpr char canvas[]=
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE( move_king_test )
          ".XXX....\n"
          ".XkX....\n";
       BOOST_CHECK_EQUAL(move_king_simple(scan_canvas(canvas,'k')),
-                        scan_canvas(canvas,'X'));
+                        scan_canvas(canvas,'X','k'));
    }
 }
 

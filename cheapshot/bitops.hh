@@ -19,6 +19,8 @@ namespace cheapshot
 // p position (multiple pieces in a single uint64_t)
 // s single piece (single bit set in uint64_t)
 
+// The set of own and opposing pieces are called "obstacles". 
+
 // move: movement of a piece without taking obstacles in account
 // slide: move until an obstacle is met (captures included - even captures of own pieces)
 // jump: knights jump
@@ -28,9 +30,12 @@ namespace cheapshot
 // this file is built-up from low-level (top of the file) to high-level (bottom of the file) functions.
 // piece-moves are found towards the bottom of the file
 
-// all moves are generic (white, black) apart from pawn-moves, which have a separate up and down version
+// all moves are generic (white, black) apart from pawn-moves, which have a separate templated up and down version
 
-/*
+// piece moves can include the null-move. They have to be filtered out by the caller
+
+/* 
+   // wait for gcc 4.7
   uint64_t operator "" u64(uint64_t c)
   {
   return c;
@@ -67,24 +72,24 @@ namespace cheapshot
    class down;
 
    template<typename T>
-   struct other;
+   struct other_direction;
 
    template<>
-   struct other<up>
+   struct other_direction<up>
    {
       typedef down type;
    };
 
    template<>
-   struct other<down>
+   struct other_direction<down>
    {
       typedef up type;
    };
 
-   template<typename T>
+   template<typename T=up>
    uint64_t shift_forward(uint64_t l, char r) noexcept;
 
-   template<typename T>
+   template<typename T=up>
    uint64_t shift_backward(uint64_t l, char r) noexcept;
 
    template<>
@@ -103,11 +108,11 @@ namespace cheapshot
    constexpr uint64_t
    shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
 
-   template<typename T>
+   template<typename T=up>
    constexpr uint8_t 
    top_index() noexcept;
 
-   template<typename T>
+   template<typename T=up>
    constexpr uint8_t 
    bottom_index() noexcept;
 
@@ -144,13 +149,13 @@ namespace cheapshot
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
          // TODO: limitation should be made explicit by interface-change
-         return p*aliased_move_helper<shift_forward<up> >(1ULL,n,step,i);
+         return p*aliased_move_helper<shift_forward>(1ULL,n,step,i);
       }
 
       constexpr uint64_t
       aliased_move_decreasing(uint64_t p, int n=6, int step=1, int i=0) noexcept
       {
-         return aliased_move_helper<shift_forward<down> >(p,n,step,i);
+         return aliased_move_helper<shift_backward>(p,n,step,i);
       }
 
       constexpr uint64_t
@@ -355,34 +360,30 @@ namespace cheapshot
       return detail::diag_sum(s,strict_left_of(s));
    }
 
-   // if obstacles include our own pieces, they have to be excluded explicitly afterward
-   // not including en-passant captures
-
    namespace detail
    {
-      template<typename T>
+      template<typename T=up>
       constexpr uint64_t
       unalias_forward(uint64_t p)
       {
          return p&~column_with_number(top_index<T>());
       }
 
-      template<typename T>
+      template<typename T=up>
       constexpr uint64_t
       unalias_backward(uint64_t p)
       {
          return p&~column_with_number(bottom_index<T>());
       }
-   }
-
-   template<typename T>
-   constexpr uint64_t
-   capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
-   {
-      return 
-         (shift_forward<T>(detail::unalias_backward<T>(s),7)|
-          shift_forward<T>(detail::unalias_forward<T>(s),9))&
-         obstacles;
+      
+      constexpr uint64_t
+      unalias_widen(uint64_t p)
+      {
+         return 
+            shift_forward(detail::unalias_forward(p),1)|
+            shift_backward(detail::unalias_backward(p),1)|
+            p;
+      }
    }
 
    constexpr uint64_t
@@ -404,8 +405,7 @@ namespace cheapshot
    move_king_simple(uint64_t s) noexcept
    {
       return
-         detail::aliased_widen(detail::aliased_widen(s,1)&row(s),8)^
-         s;
+         detail::aliased_widen(detail::unalias_widen(s),8);
    }
 
 // with obstacles to get uniform interface
@@ -415,20 +415,10 @@ namespace cheapshot
       return move_king_simple(s);
    }
 
-   template<typename T>
-   constexpr uint64_t
-   move_pawn(uint64_t s) noexcept
-   {
-      return
-         shift_forward<T>(s,8)|
-         shift_forward<T>(s&(row_with_number(1)|row_with_number(6)),16);
-   }
-
    namespace detail
    {
       // s: moving piece
       // movement: movement in a single direction (for pawns, bishops, rooks, queens)
-      // obstacles: own pieces plus opposing pieces (except the moving piece itself)
       constexpr uint64_t
       slide(uint64_t s, uint64_t movement, uint64_t obstacles) noexcept
       {
@@ -478,41 +468,37 @@ namespace cheapshot
          slide_rook(s,obstacles)|slide_bishop(s,obstacles);
    }
 
-   namespace detail
-   {
-      template<typename T>
-      constexpr uint64_t
-      slide_optimised_for_pawns(uint64_t movement, uint64_t obstacles) noexcept;
-
-      template<>
-      constexpr uint64_t
-      slide_optimised_for_pawns<up>(uint64_t movement, uint64_t obstacles) noexcept
-      {
-         return 
-            smaller(lowest_bit(obstacles&movement))& // blocking_top
-            movement;
-      }
-
-      template<>
-      constexpr uint64_t
-      slide_optimised_for_pawns<down>(uint64_t movement, uint64_t obstacles) noexcept
-      {
-         return
-            ~detail::aliased_move_decreasing(obstacles&movement,1,8)&
-            movement;
-      }
-   }
-
    // pawns are allowed to reach the end of the board. promotions are done
    //  in the eval-loop
 
    template<typename T>
    constexpr uint64_t
+   capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
+   {
+      return 
+         (shift_forward<T>(detail::unalias_backward<T>(s),7)|
+          shift_forward<T>(detail::unalias_forward<T>(s),9))&
+         obstacles;
+   }
+
+   namespace detail
+   {
+      template<typename T>
+      constexpr uint64_t
+      slide_2_squares(uint64_t single_pawn_move, uint64_t obstacles, 
+                     uint64_t third_row=shift_forward<T>(row_with_number(bottom_index<T>()),2*8)) noexcept
+      {
+         return 
+            (shift_forward<T>(single_pawn_move&third_row,8)&~obstacles)|
+            single_pawn_move;
+      }
+   }
+
+   template<typename T>
+   constexpr uint64_t
    slide_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      // integrating move and slide would probably speed up pawn-moves
-      return
-         detail::slide_optimised_for_pawns<T>(move_pawn<T>(s),obstacles);
+      return detail::slide_2_squares<T>(shift_forward<T>(s,8)&~obstacles,obstacles);
    }
 
    template<typename T>
@@ -535,7 +521,7 @@ namespace cheapshot
    constexpr uint64_t
    en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept
    {
-      return capture_with_pawn<typename other<T>::type>(ep_info,pawns);
+      return capture_with_pawn<typename other_direction<T>::type>(ep_info,pawns);
    }
 
    template<typename T>
