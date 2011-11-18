@@ -25,4 +25,6 @@ namespace cheapshot
    static_assert(count_bits_set(0xFFF0000FFF0000UL)==24,"");
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
+
+   constexpr castling_t ci=cheapshot::long_castle_info<up>();
 }

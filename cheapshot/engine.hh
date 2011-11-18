@@ -30,27 +30,27 @@ namespace cheapshot
       }
    };
 
-   struct pawn_functions_t
+   struct specific_functions_t
    {
       uint64_t (*ep_info)(uint64_t, uint64_t);
       uint64_t (*ep_candidates)(uint64_t, uint64_t);
       uint64_t (*ep_captures)(uint64_t, uint64_t);
-      uint64_t (*ep_promotion_mask)(uint64_t);
+      uint64_t (*promoting_pawns)(uint64_t);
    };
 
-   constexpr pawn_functions_t pawn_functions_array[count<color>()]=
+   constexpr specific_functions_t specific_functions_array[count<color>()]=
    {
       {
          en_passant_info<up>,
          en_passant_candidates<up>,
          en_passant_capture<up>,
-         promotion_mask<up>
+         promoting_pawns<up>
       },
       {
          en_passant_info<down>,
          en_passant_candidates<down>,
          en_passant_capture<down>,
-         promotion_mask<down>
+         promoting_pawns<down>
       }
    };
 
@@ -258,16 +258,24 @@ namespace cheapshot
       own_side[idx(*(piece_iter+1))]^=promoted_location;
    }
 
-   inline void
-   move_long_castle(board_metrics& bm, uint64_t castle_mask, uint64_t own_under_attack)
+   // TODO: set flag in case of rook or king move
+
+   constexpr castling_t castling[][idx(color::count)]=
    {
-      // TODO
-   }
+      {
+         short_castle_info<up>(),
+         long_castle_info<up>(),
+      },
+      {
+         short_castle_info<down>(),
+         long_castle_info<down>(),
+      }
+   };
 
    inline void
-   move_short_castle(board_metrics& bm, uint64_t castle_mask, uint64_t own_under_attack)
+   castle(board_side& own_side, const castling_t& castling_info)
    {
-      // TODO
+      castling_info.do_castle(own_side[idx(piece::king)],own_side[idx(piece::rook)]);
    }
 
    // opponent en-passant captures cannot capture kings
@@ -327,16 +335,29 @@ namespace cheapshot
       // TODO: moves should be sorted in a list of candidate-moves
 
       bool king_under_attack=bm.own_side()[idx(piece::king)]&own_under_attack;
-      const pawn_functions_t& pawn_functions=pawn_functions_array[idx(bm.turn)];
+
+      const specific_functions_t& functs=specific_functions_array[idx(bm.turn)];
 
       score_t score{score_t::no_valid_move};
+
+      for(auto cit=std::begin(castling[idx(bm.turn)]);cit!=std::end(castling[idx(bm.turn)]);++cit)
+      {
+         if(cit->castling_allowed(bm.own,own_under_attack))
+         {
+            // TODO: add castling permissions
+            board_t new_board=bm.board;
+            castle(new_board[idx(bm.turn)],*cit);
+            board_metrics new_bm(new_board,other_color(bm.turn));
+            score=recurse_and_evaluate(score,new_bm,engine_controller);
+         }
+      }
 
       // evaluate moves
       for(auto moves_it=begin(basic_moves);moves_it!=basic_moves_end;++moves_it)
       {
          if(moves_it->moved_piece==piece::pawn)
          {
-            uint64_t prom_mask=pawn_functions.ep_promotion_mask(moves_it->destinations.remaining());
+            uint64_t prom_mask=functs.promoting_pawns(moves_it->destinations.remaining());
             if(prom_mask)
             {
                board_t new_board=bm.board; // other engines undo moves ??
@@ -351,7 +372,7 @@ namespace cheapshot
                   score=recurse_and_evaluate(score,new_bm,engine_controller);
                }
             }
-            else 
+            else
                for(bit_iterator& dest_iter=moves_it->destinations;
                    dest_iter!=bit_iterator();
                    ++dest_iter)
@@ -359,7 +380,7 @@ namespace cheapshot
                   board_t new_board=bm.board; // other engines undo moves ??
                   make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
                             new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-                  uint64_t en_passant_info=pawn_functions.ep_info(
+                  uint64_t en_passant_info=functs.ep_info(
                      bm.own_side()[idx(piece::pawn)],
                      new_board[idx(bm.turn)][idx(piece::pawn)]);
                   board_metrics new_bm(new_board,other_color(bm.turn),en_passant_info);
@@ -382,11 +403,11 @@ namespace cheapshot
       }
 
       // en passant captures
-      for(auto origin_iter=bit_iterator(pawn_functions.ep_candidates(bm.own_side()[idx(piece::pawn)],bm.last_ep_info));
+      for(auto origin_iter=bit_iterator(functs.ep_candidates(bm.own_side()[idx(piece::pawn)],bm.last_ep_info));
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t destinations=pawn_functions.ep_captures(*origin_iter,bm.last_ep_info);
+         uint64_t destinations=functs.ep_captures(*origin_iter,bm.last_ep_info);
          for(auto dest_iter=bit_iterator(destinations);
              dest_iter!=bit_iterator();
              ++dest_iter)

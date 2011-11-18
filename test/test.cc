@@ -1025,6 +1025,86 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
+bool 
+is_castling_allowed(board_metrics& bm, const castling_t& ci)
+{
+   bm.switch_side();
+   uint64_t own_under_attack=
+      get_coverage(moves_iterator(bm),moves_iterator_end());
+   bm.switch_side();
+   return ci.castling_allowed(bm.own,own_under_attack);
+}
+
+BOOST_AUTO_TEST_CASE( castle_test )
+{
+   constexpr auto sci=short_castle_info<up>();
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....PPP\n"
+         "....K..R\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,sci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....PPP\n"
+         "....K.NR\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(!is_castling_allowed(bm,sci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "...b....\n"
+         ".....PPP\n"
+         "....K..R\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(!is_castling_allowed(bm,sci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....PPP\n"
+         "...nK..R\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,sci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".......r\n"
+         "........\n"
+         ".....PP.\n"
+         "...nK..R\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,sci));
+   }
+}
+
 BOOST_AUTO_TEST_CASE( game_finish_test )
 {
    {
@@ -1325,7 +1405,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b,color::white);
-      volatile moves_iterator moves_it(bm);
+      /*volatile*/ moves_iterator moves_it(bm);
       for_all_moves(moves_it,
                     [&r](piece_moves p){
                        r|=p.destinations.remaining();

@@ -5,6 +5,9 @@ CFLAGS := -g -O3  -I. -std=c++0x -march=native -mtune=native
 LIBS :=
 LDFLAGS := 
 
+# with package gcc-snapshot
+# CXX := /usr/lib/gcc-snapshot/bin/g++
+
 ## to use gprof, compile with the flags below
 #CFLAGS := -g -O3 -pg -I. -std=c++0x -march=native -mtune=native
 #LDFLAGS := -pg

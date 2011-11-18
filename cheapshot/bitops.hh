@@ -19,7 +19,7 @@ namespace cheapshot
 // p position (multiple pieces in a single uint64_t)
 // s single piece (single bit set in uint64_t)
 
-// The set of own and opposing pieces are called "obstacles". 
+// The set of own and opposing pieces are called "obstacles".
 
 // move: movement of a piece without taking obstacles in account
 // slide: move until an obstacle is met (captures included - even captures of own pieces)
@@ -34,7 +34,7 @@ namespace cheapshot
 
 // piece moves can include the null-move. They have to be filtered out by the caller
 
-/* 
+/*
    // wait for gcc 4.7
   uint64_t operator "" u64(uint64_t c)
   {
@@ -87,56 +87,56 @@ namespace cheapshot
    };
 
    template<typename T=up>
-   uint64_t shift_forward(uint64_t l, char r) noexcept;
+   uint64_t shift_forward(uint64_t l, uint8_t r) noexcept;
 
    template<typename T=up>
-   uint64_t shift_backward(uint64_t l, char r) noexcept;
+   uint64_t shift_backward(uint64_t l, uint8_t r) noexcept;
 
    template<>
    constexpr uint64_t
-   shift_forward<up>(uint64_t l, char r)  noexcept {return l<<r;}
+   shift_forward<up>(uint64_t l, uint8_t r)  noexcept {return l<<r;}
 
    template<>
    constexpr uint64_t
-   shift_backward<up>(uint64_t l, char r) noexcept {return l>>r;}
+   shift_backward<up>(uint64_t l, uint8_t r) noexcept {return l>>r;}
 
    template<>
    constexpr uint64_t
-   shift_forward<down>(uint64_t l, char r) noexcept {return l>>r;}
+   shift_forward<down>(uint64_t l, uint8_t r) noexcept {return l>>r;}
 
    template<>
    constexpr uint64_t
-   shift_backward<down>(uint64_t l, char r) noexcept {return l<<r;}
+   shift_backward<down>(uint64_t l, uint8_t r) noexcept {return l<<r;}
 
    template<typename T=up>
-   constexpr uint8_t 
+   constexpr uint8_t
    top_index() noexcept;
 
    template<typename T=up>
-   constexpr uint8_t 
+   constexpr uint8_t
    bottom_index() noexcept;
 
    template<>
-   constexpr uint8_t 
+   constexpr uint8_t
    top_index<up>() noexcept { return 7; }
 
    template<>
-   constexpr uint8_t 
+   constexpr uint8_t
    bottom_index<up>() noexcept { return 0; }
 
    template<>
-   constexpr uint8_t 
+   constexpr uint8_t
    top_index<down>() noexcept { return 0; }
 
    template<>
-   constexpr uint8_t 
+   constexpr uint8_t
    bottom_index<down>() noexcept { return 7; }
 
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
    {
       // i is used as a geometrical progression
-      template<uint64_t (*Shift)(uint64_t, char) noexcept>
+      template<uint64_t (*Shift)(uint64_t, uint8_t) noexcept>
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
       {
@@ -255,7 +255,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   to_the_right(uint64_t s,char n) noexcept
+   to_the_right(uint64_t s,uint8_t n) noexcept
    {
       return in_between(s,s<<n);
    }
@@ -375,11 +375,11 @@ namespace cheapshot
       {
          return p&~column_with_number(bottom_index<T>());
       }
-      
+
       constexpr uint64_t
-      unalias_widen(uint64_t p)
+      widen_with_unalias(uint64_t p)
       {
-         return 
+         return
             shift_forward(detail::unalias_forward(p),1)|
             shift_backward(detail::unalias_backward(p),1)|
             p;
@@ -405,7 +405,7 @@ namespace cheapshot
    move_king_simple(uint64_t s) noexcept
    {
       return
-         detail::aliased_widen(detail::unalias_widen(s),8);
+         detail::aliased_widen(detail::widen_with_unalias(s),8);
    }
 
 // with obstacles to get uniform interface
@@ -475,7 +475,7 @@ namespace cheapshot
    constexpr uint64_t
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      return 
+      return
          (shift_forward<T>(detail::unalias_backward<T>(s),7)|
           shift_forward<T>(detail::unalias_forward<T>(s),9))&
          obstacles;
@@ -485,10 +485,11 @@ namespace cheapshot
    {
       template<typename T>
       constexpr uint64_t
-      slide_2_squares(uint64_t single_pawn_move, uint64_t obstacles, 
-                     uint64_t third_row=shift_forward<T>(row_with_number(bottom_index<T>()),2*8)) noexcept
+      slide_2_squares(
+         uint64_t single_pawn_move, uint64_t obstacles, uint64_t third_row
+         =shift_forward<T>(row_with_number(bottom_index<T>()),2*8)) noexcept
       {
-         return 
+         return
             (shift_forward<T>(single_pawn_move&third_row,8)&~obstacles)|
             single_pawn_move;
       }
@@ -533,10 +534,54 @@ namespace cheapshot
 
    template<typename T>
    constexpr uint64_t
-   promotion_mask(uint64_t s) noexcept
+   promoting_pawns(uint64_t s) noexcept
    {
       // last row
       return s&row_with_number(top_index<T>());
+   }
+
+   struct castling_t
+   {
+      uint64_t rook1; // smallest value
+      uint64_t rook2;
+      uint64_t king1; // smallest value
+      uint64_t king2;
+
+      constexpr bool
+      castling_allowed(uint64_t all_pieces,uint64_t under_attack) const
+      {
+         return!((all_pieces&((~rook1)&in_between(rook1,rook2)))|
+                 (under_attack&in_between(king1,king2<<1)));
+      }
+
+      void
+      do_castle(uint64_t& king,uint64_t& rook) const
+      {
+         king^=(king1|king2);
+         rook^=(rook1|rook2);
+      }
+   };
+
+   template<typename T>
+   constexpr castling_t
+   short_castle_info() noexcept
+   {
+      return
+      {
+         position(5,bottom_index<T>()),position(7,bottom_index<T>()),
+         position(4,bottom_index<T>()),position(6,bottom_index<T>())
+      };
+   }
+
+   template<typename T>
+   constexpr castling_t
+   long_castle_info() noexcept
+   {
+      return
+      {
+         position(0,bottom_index<T>()),position(3,bottom_index<T>()),
+         position(2,bottom_index<T>()),position(4,bottom_index<T>())
+      };
    }
 } // cheapshot
 
