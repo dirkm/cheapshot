@@ -1103,6 +1103,87 @@ BOOST_AUTO_TEST_CASE( castle_test )
       board_metrics bm(b,color::white);
       BOOST_CHECK(is_castling_allowed(bm,sci));
    }
+
+   constexpr auto lci=long_castle_info<up>();
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "PPPP....\n"
+         "R...K...\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "PPPP....\n"
+         "RN..K...\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(!is_castling_allowed(bm,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....b..\n"
+         "PPPP....\n"
+         "R...K...\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(!is_castling_allowed(bm,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "PPPP....\n"
+         "R...Kn..\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".r......\n"
+         "........\n"
+         "P.PP....\n"
+         "R...Kn..\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(is_castling_allowed(bm,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "..r.....\n"
+         "........\n"
+         "PP.P....\n"
+         "R...Kn..\n");
+      board_metrics bm(b,color::white);
+      BOOST_CHECK(!is_castling_allowed(bm,lci));
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE( game_finish_test )
