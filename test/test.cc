@@ -1025,7 +1025,7 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
-bool 
+bool
 is_castling_allowed(board_metrics& bm, const castling_t& ci)
 {
    bm.switch_side();
@@ -1050,6 +1050,19 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "....K..R\n");
       board_metrics bm(b,color::white);
       BOOST_CHECK(is_castling_allowed(bm,sci));
+
+      castle(bm.own_side(),sci);
+      boost::test_tools::output_test_stream ots;
+      print_board(b,ots);
+      BOOST_CHECK(ots.is_equal(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....PPP\n"
+         ".....RK.\n"));
    }
    {
       board_t b=scan_board(
@@ -1143,6 +1156,20 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "R...K...\n");
       board_metrics bm(b,color::white);
       BOOST_CHECK(!is_castling_allowed(bm,lci));
+
+      castle(bm.own_side(),lci);
+      boost::test_tools::output_test_stream ots;
+      print_board(b,ots);
+      BOOST_CHECK(ots.is_equal(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....b..\n"
+         "PPPP....\n"
+         "..KR....\n"));
+
    }
    {
       board_t b=scan_board(
