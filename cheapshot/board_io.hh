@@ -24,19 +24,19 @@ namespace cheapshot
    {
       switch(p)
       {
-         case 'B': return std::tuple<color,piece>{color::white,piece::bishop};
-         case 'K': return std::tuple<color,piece>{color::white,piece::king};
-         case 'N': return std::tuple<color,piece>{color::white,piece::knight};
-         case 'P': return std::tuple<color,piece>{color::white,piece::pawn};
-         case 'Q': return std::tuple<color,piece>{color::white,piece::queen};
-         case 'R': return std::tuple<color,piece>{color::white,piece::rook};
-         case 'b': return std::tuple<color,piece>{color::black,piece::bishop};
-         case 'k': return std::tuple<color,piece>{color::black,piece::king};
-         case 'n': return std::tuple<color,piece>{color::black,piece::knight};
-         case 'p': return std::tuple<color,piece>{color::black,piece::pawn};
-         case 'q': return std::tuple<color,piece>{color::black,piece::queen};
-         case 'r': return std::tuple<color,piece>{color::black,piece::rook};
-         default: return std::tuple<color,piece>{color::count,piece::count};
+         case 'B': return std::make_tuple(color::white,piece::bishop);
+         case 'K': return std::make_tuple(color::white,piece::king);
+         case 'N': return std::make_tuple(color::white,piece::knight);
+         case 'P': return std::make_tuple(color::white,piece::pawn);
+         case 'Q': return std::make_tuple(color::white,piece::queen);
+         case 'R': return std::make_tuple(color::white,piece::rook);
+         case 'b': return std::make_tuple(color::black,piece::bishop);
+         case 'k': return std::make_tuple(color::black,piece::king);
+         case 'n': return std::make_tuple(color::black,piece::knight);
+         case 'p': return std::make_tuple(color::black,piece::pawn);
+         case 'q': return std::make_tuple(color::black,piece::queen);
+         case 'r': return std::make_tuple(color::black,piece::rook);
+         default : return std::make_tuple(color::count,piece::count);
       }
    }
 
@@ -138,52 +138,170 @@ namespace cheapshot
 
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 
-   inline board_t
-   scan_fen_position(const char* fen)
+   struct io_error: public std::runtime_error
    {
-      board_t b={0};
-      for(uint8_t i=0;;++i)
+      // using std::runtime_error::runtime_error; // gcc 4.7
+
+      io_error(const std::string& s):
+         std::runtime_error(s)
+      {}
+   };
+
+   namespace fen
+   {
+      inline board_t
+      scan_position(char const *& rs)
       {
-         int num_inc;
-         for(uint8_t j=0;j<8;j+=num_inc,++fen)
+         board_t b={0};
+         for(uint8_t i=0;;++i)
          {
-            if(std::isdigit(*fen))
-               num_inc=(*fen-'0');
-            else
+            int num_inc;
+            for(uint8_t j=0;j<8;j+=num_inc,++rs)
             {
-               color c;
-               piece p;
-               std::tie(c,p)=character_to_piece(*fen);
-               if(c!=color::count)
-                  b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
+               if(std::isdigit(*rs))
+                  num_inc=(*rs-'0');
                else
                {
-                  std::stringstream oss;
-                  oss << "unexpected character in fen: " << *fen;
-                  throw std::runtime_error(oss.str());
+                  color c;
+                  piece p;
+                  std::tie(c,p)=character_to_piece(*rs);
+                  if(c!=color::count)
+                     b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
+                  else
+                  {
+                     std::stringstream oss;
+                     oss << "unexpected character in fen: '" << *rs << "'";
+                     throw io_error(oss.str());
+                  }
+                  num_inc=1;
                }
-               num_inc=1;
+            }
+            if(i==7)
+               break;
+            if(*rs!='/')
+            {
+               std::stringstream oss;
+               oss << "unexpected character in fen: '" << *rs << "' ('/' expected )";
+               throw io_error(oss.str());
+            }
+            ++rs;
+         }
+         return b;
+      }
+
+      inline color
+      scan_color(const char*& rs)
+      {
+         char ch=*rs++;
+         switch (ch)
+         {
+            case 'w': return color::white;
+            case 'b': return color::black;
+            default:
+            {
+               std::stringstream oss;
+               oss << "unexpected character as color: '" << ch << "'";
+               throw io_error(oss.str());
             }
          }
-         if(i==7)
-            break;
-         if(*fen!='/')
+      }
+
+      inline uint64_t
+      scan_castling_rights(const char*& rs)
+      {
+         char ch=*rs++;
+         uint64_t r=
+            short_castle_info<up>().mask()|
+            short_castle_info<down>().mask()|
+            long_castle_info<up>().mask()|
+            long_castle_info<down>().mask();
+
+         if(ch!='-')
+            while(true)
+            {
+               switch(ch)
+               {
+                  case 'K':
+                     r^=short_castle_info<up>().mask();
+                     break;
+                  case 'Q':
+                     r^=long_castle_info<up>().mask();
+                     break;
+                  case 'k':
+                     r^=short_castle_info<down>().mask();
+                     break;
+                  case 'q':
+                     r^=long_castle_info<down>().mask();
+                     break;
+                  default:
+                     return r;
+               }
+               ch=*rs++;
+            }
+         return r;
+      }
+
+      inline uint64_t
+      scan_ep_info(const char*& rs)
+      {
+         char ch1=*rs++;
+         if(ch1=='-')
+            return 0ULL;
+         if(ch1<='A' || ch1>='H')
          {
             std::stringstream oss;
-            oss << "unexpected character in fen: " << *fen << " ('/' expected )";
-            throw std::runtime_error(oss.str());
+            oss << "invalid characted in en passant info: '" << ch1 << "'";
+            throw io_error(oss.str());
          }
-         ++fen;
+         char ch2=*rs++;
+         if(ch2<='0' || ch2>='9')
+         {
+            std::stringstream oss;
+            oss << "invalid characted in en passant info: " << ch2 << "'";
+            throw io_error(oss.str());
+         }
+         return algpos(ch1,ch2);
       }
-      return b;
+
+      inline int
+      scan_number(const char*& rs)
+      {
+         std::size_t idx;
+         int n=std::stol(rs,&idx);
+         rs+=idx;
+         return n;
+      }
+
+      inline void
+      skip_whitespace(const char*& rs)
+      {
+         while((std::isspace(*rs))&&(*rs!='\x0'))
+         {
+            ++rs;
+         }
+      }
    }
+
+   // classic fen only
 
    // start position
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-   inline board_t
-   scan_fen(const char* fen)
+   inline std::tuple<board_t,context>
+   scan_fen(const char* s)
    {
-      // TODO
+      std::tuple<board_t,context> r;
+      std::get<0>(r)=fen::scan_position(s);
+      fen::skip_whitespace(s);
+      color c=fen::scan_color(s);
+      fen::skip_whitespace(s);
+      std::get<1>(r).castling_rights=fen::scan_castling_rights(s);
+      fen::skip_whitespace(s);
+      std::get<1>(r).ep_info=fen::scan_ep_info(s);
+      fen::skip_whitespace(s);
+      int halfmove_clock=fen::scan_number(s);
+      fen::skip_whitespace(s);
+      int fullmove_number=fen::scan_number(s);
+      return r;
    }
 }
 

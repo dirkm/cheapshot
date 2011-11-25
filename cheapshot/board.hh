@@ -44,6 +44,13 @@ namespace cheapshot
    // extended format
    typedef std::array<board_side,count<color>()> board_t;
 
+   struct context
+   {
+      uint64_t ep_info; // en passant
+      uint64_t castling_rights; // white and black together
+      // score_t last_score;
+   };
+
    constexpr board_side init_white_board=
    {
       row_with_algebraic_number(2), // p

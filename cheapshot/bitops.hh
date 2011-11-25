@@ -542,9 +542,9 @@ namespace cheapshot
 
    struct castling_t
    {
-      uint64_t rook1; // smallest value
+      uint64_t rook1; // smallest value -- origin or destination is irrelevant
       uint64_t rook2;
-      uint64_t king1; // smallest value
+      uint64_t king1; // smallest value -- origin or destination is irrelevant
       uint64_t king2;
 
       constexpr bool
@@ -559,6 +559,12 @@ namespace cheapshot
       {
          king^=(king1|king2);
          rook^=(rook1|rook2);
+      }
+
+      constexpr uint64_t
+      mask() const
+      {
+         return in_between(king1,king2)&~king1;
       }
    };
 
@@ -583,6 +589,26 @@ namespace cheapshot
          position(2,bottom_index<T>()),position(4,bottom_index<T>())
       };
    }
+
+   template<typename T>
+   constexpr uint64_t
+   castling_block_mask(uint64_t rooks, uint64_t king,
+                       uint64_t rooks_init_pos=(position(0,bottom_index<T>())|
+                                               position(7,bottom_index<T>())),
+                       uint64_t king_init_pos=position(4,bottom_index<T>()))
+   {
+      return
+         detail::aliased_split(((rooks^rooks_init_pos)|rooks_init_pos)|
+                               ((king^king_init_pos)|king_init_pos),1);
+   }
+
+   template<typename T>
+   constexpr uint64_t
+   castling_block_mask_simple(uint64_t rooks, uint64_t king)
+   {
+      return castling_block_mask<T>(rooks,king);
+   }
+
 } // cheapshot
 
 #endif
