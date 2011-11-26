@@ -55,7 +55,7 @@ namespace cheapshot
          fill_canvas(*bi,c,*pi);
    }
 
-   inline std::ostream&
+   inline void
    print_canvas(canvas_t& c,std::ostream& os)
    {
       for(int i=7;i>=0;--i)
@@ -64,26 +64,25 @@ namespace cheapshot
             os << c[j];
          os << "\n";
       }
-      return os;
    }
 
-   inline std::ostream&
+   inline void
    print_board(const board_t& board, std::ostream& os)
    {
       canvas_t canvas;
       canvas.fill('.');
       fill_canvas_side(board[idx(color::white)],canvas,repr_pieces_white);
       fill_canvas_side(board[idx(color::black)],canvas,repr_pieces_black);
-      return print_canvas(canvas,os);
+      print_canvas(canvas,os);
    }
 
-   inline std::ostream&
+   inline void
    print_position(uint64_t t, std::ostream& os,char p='X')
    {
       canvas_t c;
       c.fill('.');
       fill_canvas(t,c,p);
-      return print_canvas(c,os);
+      print_canvas(c,os);
    }
 
    constexpr uint64_t
@@ -211,10 +210,10 @@ namespace cheapshot
       {
          char ch=*rs++;
          uint64_t r=
-            short_castle_info<up>().mask()|
-            short_castle_info<down>().mask()|
-            long_castle_info<up>().mask()|
-            long_castle_info<down>().mask();
+            short_castling_info<up>().mask()|
+            short_castling_info<down>().mask()|
+            long_castling_info<up>().mask()|
+            long_castling_info<down>().mask();
 
          if(ch!='-')
             while(true)
@@ -222,16 +221,16 @@ namespace cheapshot
                switch(ch)
                {
                   case 'K':
-                     r^=short_castle_info<up>().mask();
+                     r^=short_castling_info<up>().mask();
                      break;
                   case 'Q':
-                     r^=long_castle_info<up>().mask();
+                     r^=long_castling_info<up>().mask();
                      break;
                   case 'k':
-                     r^=short_castle_info<down>().mask();
+                     r^=short_castling_info<down>().mask();
                      break;
                   case 'q':
-                     r^=long_castle_info<down>().mask();
+                     r^=long_castling_info<down>().mask();
                      break;
                   default:
                      return r;
@@ -286,21 +285,21 @@ namespace cheapshot
 
    // start position
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-   inline std::tuple<board_t,context>
+   inline std::tuple<board_t,color,context>
    scan_fen(const char* s)
    {
-      std::tuple<board_t,context> r;
+      std::tuple<board_t,color,context> r;
       std::get<0>(r)=fen::scan_position(s);
       fen::skip_whitespace(s);
-      color c=fen::scan_color(s);
+      std::get<1>(r)=fen::scan_color(s);
       fen::skip_whitespace(s);
-      std::get<1>(r).castling_rights=fen::scan_castling_rights(s);
+      std::get<2>(r).castling_rights=fen::scan_castling_rights(s);
       fen::skip_whitespace(s);
-      std::get<1>(r).ep_info=fen::scan_ep_info(s);
+      std::get<2>(r).ep_info=fen::scan_ep_info(s);
       fen::skip_whitespace(s);
-      int halfmove_clock=fen::scan_number(s);
+      std::get<2>(r).halfmove_clock=fen::scan_number(s);
       fen::skip_whitespace(s);
-      int fullmove_number=fen::scan_number(s);
+      std::get<2>(r).fullmove_number=fen::scan_number(s);
       return r;
    }
 }

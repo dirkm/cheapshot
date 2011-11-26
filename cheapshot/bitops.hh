@@ -570,7 +570,7 @@ namespace cheapshot
 
    template<typename T>
    constexpr castling_t
-   short_castle_info() noexcept
+   short_castling_info() noexcept
    {
       return
       {
@@ -581,7 +581,7 @@ namespace cheapshot
 
    template<typename T>
    constexpr castling_t
-   long_castle_info() noexcept
+   long_castling_info() noexcept
    {
       return
       {

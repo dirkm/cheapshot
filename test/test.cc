@@ -30,6 +30,14 @@ namespace
       "PPPPPPPP\n"
       "RNBQKBNR\n";
 
+   constexpr context null_context=
+   {
+      0ULL, /*ep_info*/
+      0ULL, /*castling_rights*/
+      1, // halfmove clock
+      1 // fullmove number
+   };
+
    class TimeOperation
    {
    public:
@@ -892,9 +900,11 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       static const char initial_pos[]=
          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
       board_t b;
+      color turn;
       context ctx;
-      std::tie(b,ctx)=scan_fen(initial_pos);
+      std::tie(b,turn,ctx)=scan_fen(initial_pos);
       BOOST_CHECK(b==initial_board());
+      BOOST_CHECK(turn==color::white);
       BOOST_CHECK(ctx.ep_info==0ULL);
       BOOST_CHECK(ctx.castling_rights==0ULL);
    }
@@ -1050,7 +1060,7 @@ is_castling_allowed(board_metrics& bm, const castling_t& ci)
 
 BOOST_AUTO_TEST_CASE( castle_test )
 {
-   constexpr auto sci=short_castle_info<up>();
+   constexpr auto sci=short_castling_info<up>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1130,7 +1140,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
       BOOST_CHECK(is_castling_allowed(bm,sci));
    }
 
-   constexpr auto lci=long_castle_info<up>();
+   constexpr auto lci=long_castling_info<up>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1228,11 +1238,10 @@ BOOST_AUTO_TEST_CASE( castle_test )
 
 BOOST_AUTO_TEST_CASE( game_finish_test )
 {
-   context ctx={0ULL,0ULL};
    {
       board_t mate_board=scan_board(canvas_mate_board1);
       board_metrics bm(mate_board,color::white);
-      BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<1>()),
+      BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<1>()),
                         score_t({-score_t::checkmate}));
    }
    {
@@ -1247,7 +1256,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".PB...P.\n"
          "..B...K.\n");
       board_metrics bm(mate_board,color::black);
-      BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<1>()),
+      BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<1>()),
                         score_t({-score_t::checkmate}));
    }
    {
@@ -1262,7 +1271,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n");
       board_metrics bm(stalemate_board,color::black);
-      BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<1>()),
+      BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<1>()),
                         score_t({-score_t::stalemate}));
    }
 }
@@ -1302,16 +1311,14 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
    {
       board_metrics bm(en_passant_initial,color::black);
       move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
-      context ctx={0ULL,0ULL};
-      score_t s=analyze_position(bm,ctx,check);
+      score_t s=analyze_position(bm,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
    {
       board_metrics bm(mirror(en_passant_initial),color::white);
       move_checker check
          ({mirror(en_passant_initial),mirror(en_passant_double_move),mirror(en_passant_after_capture)});
-      context ctx={0ULL,0ULL};
-      score_t s=analyze_position(bm,ctx,check);
+      score_t s=analyze_position(bm,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
 }
@@ -1340,8 +1347,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
    {
       board_metrics bm(promotion_initial,color::white);
       move_checker check({promotion_initial,promotion_mate_queen});
-      context ctx={0ULL,0ULL};
-      score_t s=analyze_position(bm,ctx,check);
+      score_t s=analyze_position(bm,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
    {
@@ -1356,15 +1362,13 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
          "........\n");
       board_metrics bm(promotion_initial,color::white);
       move_checker check({promotion_initial,promotion_knight});
-      context ctx={0ULL,0ULL};
-      score_t s=analyze_position(bm,ctx,check);
+      score_t s=analyze_position(bm,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
    {
       board_metrics bm(mirror(promotion_initial),color::black);
       move_checker check({mirror(promotion_initial),mirror(promotion_mate_queen)});
-      context ctx={0ULL,0ULL};
-      score_t s=analyze_position(bm,ctx,check);
+      score_t s=analyze_position(bm,null_context,check);
       BOOST_CHECK(check.is_position_reached());
       BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
    }
@@ -1419,41 +1423,40 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "..P....P\n"
          "P.P...P.\n"
          ".R....K.\n");
-      context ctx={0ULL,0ULL};
       {
          board_metrics bm(b,color::white);
          move_checker check({b,b1,b2,b3,b4,b5});
-         analyze_position(bm,ctx,check);
+         analyze_position(bm,null_context,check);
          BOOST_CHECK(check.is_position_reached());
       }
       {
          board_t btemp=b5;
          board_metrics bm(btemp,color::black);
-         BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<1>()),
+         BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<1>()),
                            score_t{-score_t::checkmate});
       }
       {
          board_t btemp=b4;
          board_metrics bm(btemp,color::white);
-         BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<2>()),
+         BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<2>()),
                            score_t{score_t::checkmate});
       }
       {
          board_t btemp=b3;
          board_metrics bm(btemp,color::black);
-         BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<3>()),
+         BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<3>()),
                            score_t{-score_t::checkmate});
       }
       {
          board_t btemp=b2;
          board_metrics bm(btemp,color::white);
-         BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<4>()),
+         BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<4>()),
                            score_t{score_t::checkmate});
       }
       {
          board_t btemp=b1;
          board_metrics bm(btemp,color::black);
-         BOOST_CHECK_EQUAL(analyze_position(bm,ctx,max_plie_cutoff<5>()),
+         BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<5>()),
                            score_t{-score_t::checkmate});
       }
       // {
@@ -1560,11 +1563,10 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    volatile color turn=color::white;
    TimeOperation time_op;
    constexpr long ops=100000;
-   context ctx={0ULL,0ULL};
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(mate_board,turn);
-      analyze_position(bm,ctx,max_plie_cutoff<1>());
+      analyze_position(bm,null_context,max_plie_cutoff<1>());
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }

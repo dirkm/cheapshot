@@ -207,7 +207,7 @@ namespace cheapshot
       // the higher the value, the more special the result
       //   the engine will take the minimum of a newer and older position
       //   no_valid_move is internal and should not be moved in between calls
-      static const int checkmate=std::numeric_limits<int>::max()-2;
+      static const int checkmate=std::numeric_limits<int>::max()-1;
       static const int stalemate=checkmate-1;
       static const int no_valid_move=std::numeric_limits<int>::min();
       int value;
@@ -264,12 +264,12 @@ namespace cheapshot
    constexpr castling_t castling[][idx(color::count)]=
    {
       {
-         short_castle_info<up>(),
-         long_castle_info<up>(),
+         short_castling_info<up>(),
+         long_castling_info<up>(),
       },
       {
-         short_castle_info<down>(),
-         long_castle_info<down>(),
+         short_castling_info<down>(),
+         long_castling_info<down>(),
       }
    };
 
@@ -339,7 +339,7 @@ namespace cheapshot
          bm.own_side()[idx(piece::rook)],
          bm.own_side()[idx(piece::king)]);
 
-      context new_ctx={0ULL,cm};
+      context new_ctx={0ULL,cm,1,1}; // TODO
 
       score_t score{score_t::no_valid_move};
 
