@@ -57,11 +57,11 @@ namespace cheapshot
    constexpr board_side init_white_board=
    {
       row_with_algebraic_number(2), // p
-      algpos('B',1)|algpos('G',1), // n
-      algpos('C',1)|algpos('F',1), // b
-      algpos('A',1)|algpos('H',1), // r
-      algpos('D',1), // q
-      algpos('E',1) // k
+      algpos('b',1)|algpos('g',1), // n
+      algpos('c',1)|algpos('f',1), // b
+      algpos('a',1)|algpos('h',1), // r
+      algpos('d',1), // q
+      algpos('e',1) // k
    };
 
    inline void

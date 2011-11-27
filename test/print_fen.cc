@@ -21,7 +21,7 @@ main(int argc, const char* argv[])
    {
       std::cerr << "usage: print_fen fen\n"
          "prints a fen-string in a more human readable format.\n"
-         "fen: fen string escaped as a single parameter\n"
+         "fen: fen-string as a single parameter (e.g. escaped with \"'s)\n"
                 << std::endl;
       return 1;
    }

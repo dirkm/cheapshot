@@ -301,7 +301,7 @@ namespace cheapshot
    constexpr uint64_t
    algpos(char column, uint8_t row) noexcept
    {
-      return position(column-'A',row-1);
+      return position(column-'a',row-1);
    }
 
    constexpr uint64_t
@@ -313,7 +313,7 @@ namespace cheapshot
    constexpr uint64_t
    column_with_algebraic_number(uint8_t col) noexcept
    {
-      return column_with_number(col-'A');
+      return column_with_number(col-'a');
    }
 
    // specialized patterns for piece moves

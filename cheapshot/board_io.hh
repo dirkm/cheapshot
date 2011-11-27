@@ -215,28 +215,28 @@ namespace cheapshot
             long_castling_info<up>().mask()|
             long_castling_info<down>().mask();
 
-         if(ch!='-')
-            while(true)
-            {
-               switch(ch)
-               {
-                  case 'K':
-                     r^=short_castling_info<up>().mask();
-                     break;
-                  case 'Q':
-                     r^=long_castling_info<up>().mask();
-                     break;
-                  case 'k':
-                     r^=short_castling_info<down>().mask();
-                     break;
-                  case 'q':
-                     r^=long_castling_info<down>().mask();
-                     break;
-                  default:
-                     return r;
-               }
-               ch=*rs++;
-            }
+         if (ch=='-')
+            return r;
+         if(ch=='K')
+         {
+            r^=short_castling_info<up>().mask();
+            ch=*rs++;
+         }
+         if(ch=='Q')
+         {
+            r^=long_castling_info<up>().mask();
+            ch=*rs++;
+         }
+         if(ch=='k')
+         {
+            r^=short_castling_info<down>().mask();
+            ch=*rs++;
+         }
+         if(ch=='q')
+         {
+            r^=long_castling_info<down>().mask();
+            ch=*rs++;
+         }
          return r;
       }
 
@@ -246,14 +246,14 @@ namespace cheapshot
          char ch1=*rs++;
          if(ch1=='-')
             return 0ULL;
-         if(ch1<='A' || ch1>='H')
+         if(ch1<'a' || ch1>'h')
          {
             std::stringstream oss;
             oss << "invalid characted in en passant info: '" << ch1 << "'";
             throw io_error(oss.str());
          }
          char ch2=*rs++;
-         if(ch2<='0' || ch2>='9')
+         if((ch2!='3') && (ch2!='6'))
          {
             std::stringstream oss;
             oss << "invalid characted in en passant info: " << ch2 << "'";
@@ -289,18 +289,19 @@ namespace cheapshot
    scan_fen(const char* s)
    {
       std::tuple<board_t,color,context> r;
-      std::get<0>(r)=fen::scan_position(s);
+      board_t b=fen::scan_position(s);
       fen::skip_whitespace(s);
-      std::get<1>(r)=fen::scan_color(s);
+      color c=fen::scan_color(s);
       fen::skip_whitespace(s);
-      std::get<2>(r).castling_rights=fen::scan_castling_rights(s);
+      context ctx;
+      ctx.castling_rights=fen::scan_castling_rights(s);
       fen::skip_whitespace(s);
-      std::get<2>(r).ep_info=fen::scan_ep_info(s);
+      ctx.ep_info=fen::scan_ep_info(s);
       fen::skip_whitespace(s);
-      std::get<2>(r).halfmove_clock=fen::scan_number(s);
+      ctx.halfmove_clock=fen::scan_number(s);
       fen::skip_whitespace(s);
-      std::get<2>(r).fullmove_number=fen::scan_number(s);
-      return r;
+      ctx.fullmove_number=fen::scan_number(s);
+      return std::make_tuple(b,c,ctx);
    }
 }
 

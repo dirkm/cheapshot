@@ -298,13 +298,13 @@ bool rook_test(const char* canvas)
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
-   BOOST_CHECK_EQUAL(slide_rook(algpos('A',1),row_with_algebraic_number(2)),
-                     ((row_with_algebraic_number(1)|algpos('A',1))|algpos('A',2)));
-   BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),row_with_algebraic_number(2)),
-                     (column_with_algebraic_number('D')|row_with_algebraic_number(3))&
+   BOOST_CHECK_EQUAL(slide_rook(algpos('a',1),row_with_algebraic_number(2)),
+                     ((row_with_algebraic_number(1)|algpos('a',1))|algpos('a',2)));
+   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),row_with_algebraic_number(2)),
+                     (column_with_algebraic_number('d')|row_with_algebraic_number(3))&
                      ~row_with_algebraic_number(1));
-   BOOST_CHECK_EQUAL(slide_rook(algpos('D',3),algpos('D',2)|algpos('D',4)),
-                     (algpos('D',2)|algpos('D',4)|row_with_algebraic_number(3)));
+   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),algpos('d',2)|algpos('d',4)),
+                     (algpos('d',2)|algpos('d',4)|row_with_algebraic_number(3)));
    {
       static constexpr char canvas[]=
          "........\n"
@@ -905,8 +905,52 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       BOOST_CHECK(b==initial_board());
       BOOST_CHECK(turn==color::white);
-      BOOST_CHECK(ctx.ep_info==0ULL);
-      BOOST_CHECK(ctx.castling_rights==0ULL);
+      BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
+      BOOST_CHECK_EQUAL(ctx.castling_rights,0ULL);
+   }
+   {
+      // see http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
+      static const char initial_pos[]=
+         "r1b2rk1/pp1p1pp1/1b1p2B1/n1qQ2p1/8/5N2/P3RPPP/4R1K1 w - - 0 1";
+      board_t b;
+      color turn;
+      context ctx;
+      std::tie(b,turn,ctx)=scan_fen(initial_pos);
+      // BOOST_CHECK(b==initial_board());
+      BOOST_CHECK(turn==color::white);
+      BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
+      BOOST_CHECK_EQUAL(ctx.castling_rights,
+                        scan_canvas(
+                           "...B.B..\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "...B.B..\n"
+                           ,'B'));
+   }
+   {
+      // see http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
+      static const char ep_pos[]=
+         "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
+      board_t b;
+      color turn;
+      context ctx;
+      std::tie(b,turn,ctx)=scan_fen(ep_pos);
+      // BOOST_CHECK(b==initial_board());
+      BOOST_CHECK(turn==color::white);
+      BOOST_CHECK_EQUAL(ctx.ep_info,scan_canvas(
+                           "........\n"
+                           "........\n"
+                           "..P.....\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           ,'P'));
    }
 }
 

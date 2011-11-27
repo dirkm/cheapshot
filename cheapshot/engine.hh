@@ -303,6 +303,12 @@ namespace cheapshot
       return r;
    }
 
+   // TODO:
+   // 1: put methods in a separate file called loop.hh
+   // 2: make turn a template parameter
+   // 3: don't pass board_metrics but boards, (metrics can be recalculated)
+   // 4: make and undo moves in the same board instead of creating new boards.
+
    // templatize according to the current turn
    template<typename EngineController>
    score_t
