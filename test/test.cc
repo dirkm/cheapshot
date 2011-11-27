@@ -1420,6 +1420,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
 
 BOOST_AUTO_TEST_CASE( find_mate_test )
 {
+   // TODO: should be refactored to avoid code-duplication
    {
       board_t b=test_board2;
       const board_t b1=scan_board(
@@ -1503,12 +1504,65 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<5>()),
                            score_t{-score_t::checkmate});
       }
-      // {
-      //    board_t btemp=b;
-      //    board_metrics bm(btemp,color::white);
-      //    BOOST_CHECK_EQUAL(analyze_position(bm,max_plie_cutoff<6>()),
-      //                      score_t({score_t::status_t::normal,score_t::checkmate}));
-      // }
+   }
+   {
+      // http://www.chess.com/forum/view/game-showcase/castle-into-mate-in-2
+      //  (adapted position)
+      board_t b=scan_board(
+         "r.qk...r\n"
+         "p.p.pppp\n"
+         "..Q.....\n"
+         "........\n"
+         "........\n"
+         ".PP.P...\n"
+         "PB...PPP\n"
+         "R...K..R\n"
+         );
+      board_t b1=scan_board(
+         "r.qk...r\n"
+         "p.p.pppp\n"
+         "..Q.....\n"
+         "........\n"
+         "........\n"
+         ".PP.P...\n"
+         "PB...PPP\n"
+         "..KR...R\n"
+         );
+      board_t b2=scan_board(
+         "r..k...r\n"
+         "p.pqpppp\n"
+         "..Q.....\n"
+         "........\n"
+         "........\n"
+         ".PP.P...\n"
+         "PB...PPP\n"
+         "..KR...R\n"
+         );
+      board_t b3=scan_board(
+         "r..k...r\n"
+         "p.pQpppp\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".PP.P...\n"
+         "PB...PPP\n"
+         "..KR...R\n"
+         );
+      {
+         board_t btemp=b;
+         board_metrics bm(btemp,color::white);
+         constexpr auto lci=short_castling_info<up>();
+         BOOST_CHECK(is_castling_allowed(bm,lci));
+         move_checker check({b,b1,b2,b3});
+         analyze_position(bm,null_context,check);
+         BOOST_CHECK(check.is_position_reached());
+         {
+            board_t btemp=b;
+            board_metrics bm(btemp,color::white);
+            BOOST_CHECK_EQUAL(analyze_position(bm,null_context,max_plie_cutoff<4>()),
+                              score_t{score_t::checkmate});
+         }
+      }
    }
 }
 
@@ -1559,10 +1613,10 @@ void time_move(T fun, long count, const char* description)
 BOOST_AUTO_TEST_CASE( time_moves )
 {
    // each timing takes about 1 sec on my machine
-   time_move(&slide_pawn<up>,300000000,"slide pawn up");
-   time_move(&slide_pawn<down>,300000000,"slide pawn down");
-   time_move(&capture_with_pawn<up>,200000000,"capture with pawn up");
-   time_move(&capture_with_pawn<down>,200000000,"capture with pawn down");
+   time_move(&slide_pawn<up>,100000000,"slide pawn up");
+   time_move(&slide_pawn<down>,100000000,"slide pawn down");
+   time_move(&capture_with_pawn<up>,100000000,"capture with pawn up");
+   time_move(&capture_with_pawn<down>,100000000,"capture with pawn down");
    time_move(&jump_knight,100000000,"knight jump");
    time_move(&slide_bishop,40000000,"slide bishop");
    time_move(&slide_rook,40000000,"slide rook");

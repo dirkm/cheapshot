@@ -30,8 +30,8 @@ main(int argc, const char* argv[])
       auto r=cheapshot::scan_fen(argv[1]);
       std::cout << "board:\n";
       cheapshot::print_board(std::get<0>(r),std::cout);
-      std::cout << "turn: " << 
-         (std::get<1>(r)==cheapshot::color::white?"white":"black") << 
+      std::cout << "turn: " <<
+         (std::get<1>(r)==cheapshot::color::white?"white":"black") <<
          "\n";
       print_context(std::get<2>(r),std::cout);
       return 0;

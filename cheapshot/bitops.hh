@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <iostream>
+// #include <iostream>
 
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
@@ -548,10 +548,10 @@ namespace cheapshot
       uint64_t king2;
 
       constexpr bool
-      castling_allowed(uint64_t all_pieces,uint64_t under_attack) const
+      castling_allowed(uint64_t all_pieces,uint64_t own_under_attack) const
       {
          return!((all_pieces&((~rook1)&in_between(rook1,rook2)))|
-                 (under_attack&in_between(king1,king2<<1)));
+                 (own_under_attack&in_between(king1,king2<<1)));
       }
 
       void
@@ -594,12 +594,12 @@ namespace cheapshot
    constexpr uint64_t
    castling_block_mask(uint64_t rooks, uint64_t king,
                        uint64_t rooks_init_pos=(position(0,bottom_index<T>())|
-                                               position(7,bottom_index<T>())),
+                                                position(7,bottom_index<T>())),
                        uint64_t king_init_pos=position(4,bottom_index<T>()))
    {
       return
-         detail::aliased_split(((rooks^rooks_init_pos)|rooks_init_pos)|
-                               ((king^king_init_pos)|king_init_pos),1);
+         detail::aliased_split(((rooks^rooks_init_pos)&rooks_init_pos)|
+                               ((king^king_init_pos)&king_init_pos),1);
    }
 
    template<typename T>
