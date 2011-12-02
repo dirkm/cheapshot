@@ -3,10 +3,35 @@
 
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
-#include "cheapshot/iterator.hh"
+#include "cheapshot/loop.hh"
 
 namespace cheapshot
 {
+   class max_plie_cutoff
+   {
+   public:
+      explicit constexpr max_plie_cutoff(int max_depth_):
+         i(0),
+         max_depth(max_depth_)
+      {}
+
+      bool
+      try_position(const board_t& board, const board_metrics& bm)
+      {
+         bool r=(i++)<max_depth;
+         // if (!r)
+         // {
+         //    print_board(bm.board,std::cout);
+         //    std::cout << std::endl << std::endl;
+         // }
+         return r;
+      }
+
+   private:
+      int i;
+      const int max_depth;
+   };
+
    // TODO: optimize
    struct move_info
    {
@@ -17,13 +42,6 @@ namespace cheapshot
       uint64_t dest_xor_mask; // 0 when move without capture
 
    };
-
-   // TODO: returns lambda with enough info todo undo
-   inline std::function<void (board_t&)>
-   make_move_with_undo(uint64_t& piece_loc, board_side& other_side,
-                       uint64_t origin, uint64_t destination)
-   {
-   }
 
    namespace detail
    {

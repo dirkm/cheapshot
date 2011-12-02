@@ -35,7 +35,7 @@ main(int argc, const char* argv[])
       std::cerr << "usage: print_canvas canvas\n"
          "prints a representation of the board in ASCII.\n"
          "canvas: uint64_t representation of a chess canvas as used in cheapshot.\n"
-         "\tdecimal and hexadecimal (prefixed with 0x) input is accepted.\n"
+         "\tdecimal and hexadecimal (prefixed with 0x) input is accepted."
                 << std::endl;
       return 1;
    }

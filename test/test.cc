@@ -10,9 +10,9 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 #include "cheapshot/board_io.hh"
-// #include "cheapshot/engine.hh"
-#include "cheapshot/loop.hh"
+#include "cheapshot/engine.hh"
 #include "cheapshot/iterator.hh"
+#include "cheapshot/loop.hh"
 
 #include "cheapshot/extra_bitops.hh"
 
@@ -112,31 +112,6 @@ namespace
       "...q.P..\n"
       "PP.....P\n"
       "RNB.K..R\n");
-
-   class max_plie_cutoff
-   {
-   public:
-      constexpr max_plie_cutoff(int max_depth_):
-         i(0),
-         max_depth(max_depth_)
-      {}
-
-      bool
-      try_position(const board_t& board, const board_metrics& bm)
-      {
-         bool r=(i++)<max_depth;
-         // if (!r)
-         // {
-         //    print_board(bm.board,std::cout);
-         //    std::cout << std::endl << std::endl;
-         // }
-         return r;
-      }
-
-   private:
-      int i;
-      const int max_depth;
-   };
 
    class move_checker
    {
@@ -292,12 +267,12 @@ BOOST_AUTO_TEST_CASE( row_and_column_test )
 
 bool rook_test(const char* canvas)
 {
-      // print_position(slide_rook(
-      //                 scan_canvas(canvas,'r'),
-      //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
-      BOOST_CHECK_EQUAL(slide_rook(scan_canvas(canvas,'r'),
-                                   scan_canvas(canvas,'o','O','r')),
-                        scan_canvas(canvas,'X','r','O'));
+   // print_position(slide_rook(
+   //                 scan_canvas(canvas,'r'),
+   //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
+   BOOST_CHECK_EQUAL(slide_rook(scan_canvas(canvas,'r'),
+                                scan_canvas(canvas,'o','O','r')),
+                     scan_canvas(canvas,'X','r','O'));
 }
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
@@ -1125,14 +1100,14 @@ BOOST_AUTO_TEST_CASE( castle_test )
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
-         "....k...\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         ".....PPP\n"
-         ".....RK.\n"));
+                     "....k...\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     ".....PPP\n"
+                     ".....RK.\n"));
    }
    {
       board_t b=scan_board(
@@ -1224,14 +1199,14 @@ BOOST_AUTO_TEST_CASE( castle_test )
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
-         "....k...\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         ".....b..\n"
-         "PPPP....\n"
-         "..KR....\n"));
+                     "....k...\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     ".....b..\n"
+                     "PPPP....\n"
+                     "..KR....\n"));
 
    }
    {
@@ -1415,7 +1390,7 @@ template<typename T>
 void
 scan_mate(int depth, board_t b)
 {
-   const score_t s=std::is_same<T,up>::value?
+   constexpr score_t s=std::is_same<T,up>::value?
       score_t{score_t::checkmate}:
       score_t{-score_t::checkmate};
    BOOST_CHECK_EQUAL(analyze_position<T>(b,null_context,max_plie_cutoff(depth)),s);

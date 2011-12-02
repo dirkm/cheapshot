@@ -1,6 +1,8 @@
 #ifndef CHEAPSHOT_LOOP_HH
 #define CHEAPSHOT_LOOP_HH
 
+#include <limits>
+
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
 #include "cheapshot/iterator.hh"
