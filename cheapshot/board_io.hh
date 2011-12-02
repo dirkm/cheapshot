@@ -86,7 +86,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   charpos_to_bitmask(uint8_t row, uint8_t column)
+   charpos_to_bitmask(uint8_t row, uint8_t column) noexcept
    {
       return 1UL<<(((row^'\x7')*8)|column); // rows reverse order
    }
@@ -135,8 +135,6 @@ namespace cheapshot
       return b;
    }
 
-   // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
-
    struct io_error: public std::runtime_error
    {
       // using std::runtime_error::runtime_error; // gcc 4.7
@@ -148,6 +146,7 @@ namespace cheapshot
 
    namespace fen
    {
+      // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
       inline board_t
       scan_position(char const *& rs)
       {

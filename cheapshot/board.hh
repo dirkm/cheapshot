@@ -21,7 +21,8 @@ namespace cheapshot
       return idx(T::count);
    }
 
-   enum class piece { pawn, knight, bishop, rook, queen, king, count };
+   // TODO: consider using another type
+   enum class piece: uint8_t { pawn, knight, bishop, rook, queen, king, count };
 
    inline piece
    operator++(piece& rs)
@@ -30,7 +31,7 @@ namespace cheapshot
       return rs;
    }
 
-   enum class color { white, black, count };
+   enum class color: uint8_t { white, black, count };
 
    constexpr color
    other_color(color c)
@@ -43,6 +44,42 @@ namespace cheapshot
 // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
    typedef std::array<board_side,count<color>()> board_t;
+   
+   template<typename T>
+   constexpr board_side&
+   side(board_t&);
+
+   template<>
+   constexpr board_side&
+   side<up>(board_t& b)
+   {
+      return b[0];
+   }
+
+   template<>
+   constexpr board_side&
+   side<down>(board_t& b)
+   {
+      return b[1];
+   }
+
+   template<typename T>
+   constexpr const board_side&
+   side(const board_t&);
+
+   template<>
+   constexpr const board_side&
+   side<up>(const board_t& b)
+   {
+      return b[0];
+   }
+
+   template<>
+   constexpr const board_side&
+   side<down>(const board_t& b)
+   {
+      return b[1];
+   }
 
    struct context
    {

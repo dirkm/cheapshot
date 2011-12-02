@@ -61,7 +61,6 @@ namespace cheapshot
       return p&(~p+1);
    }
 
-   // accepts max 14 bits
    constexpr uint64_t
    count_bits_set(uint64_t p) noexcept
    {
@@ -236,7 +235,7 @@ namespace cheapshot
    constexpr uint64_t
    aliased_move(uint64_t p) noexcept
    {
-      return detail::aliased_move_increasing(p,3,D)|p;
+      return detail::aliased_move_increasing(p,3,D);
    }
 
    enum direction_down
@@ -251,7 +250,7 @@ namespace cheapshot
    constexpr uint64_t
    aliased_move(uint64_t p) noexcept
    {
-      return detail::aliased_move_decreasing(p,3,D)|p;
+      return detail::aliased_move_decreasing(p,3,D);
    }
 
    constexpr uint64_t

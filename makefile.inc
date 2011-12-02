@@ -1,7 +1,7 @@
 #; -*-makefile-*-
 CXX := g++
 
-CFLAGS := -g -O3  -I. -std=c++0x -march=native -mtune=native
+CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native
 LIBS :=
 LDFLAGS := 
 

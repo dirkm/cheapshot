@@ -69,21 +69,8 @@ namespace cheapshot
       uint64_t own;
       uint64_t opposing;
       uint64_t all;
-      // uint64_t ep_info; // en passant
-      // uint64_t castle_mask; // white and black together // TODO
 
       board_metrics(board_t& board_, color turn_):
-         board(board_),
-         turn(turn_),
-         p_own_side(&board[idx(turn)]),
-         p_own_movegen(&move_generator_array[idx(turn)]),
-         own(obstacles(*p_own_side)),
-         opposing(obstacles(board[idx(other_color(turn))])),
-         all(opposing|own)
-      {}
-
-      // delegating constructors, anyone ??
-      board_metrics(board_t&& board_, color turn_):
          board(board_),
          turn(turn_),
          p_own_side(&board[idx(turn)]),
@@ -116,22 +103,36 @@ namespace cheapshot
       }
    };
 
-   struct piece_moves
+   // TODO: rename to basic move-set
+   struct move_set
    {
       piece moved_piece;
       bit_iterator origin;
       bit_iterator destinations;
    };
 
+   // TODO: optimize
+   struct move_info
+   {
+      piece origin_piece;
+      piece dest_piece; 
+      color dest_color; // same color when castling
+      uint64_t origin_xor_mask;
+      uint64_t dest_xor_mask; // 0 when move without capture
+      
+   };
+
+   // TODO: class temp_move which undoes move in destructor
+
    struct moves_iterator_end{};
 
    class moves_iterator
-      : public std::iterator<std::forward_iterator_tag,piece_moves>
+      : public std::iterator<std::forward_iterator_tag,move_set>
    {
    private:
       const board_metrics& metrics;
       move_generator_t movegen;
-      piece_moves ref;
+      move_set ref;
    public:
       explicit moves_iterator(board_metrics& bm):
          metrics(bm),
@@ -167,16 +168,16 @@ namespace cheapshot
          return !(*this==other);
       }
 
-      piece_moves&
+      move_set&
       operator*() { return ref; }
 
-      const piece_moves&
+      const move_set&
       operator*() const { return ref; }
 
-      piece_moves*
+      move_set*
       operator->() { return &ref; }
 
-      const piece_moves*
+      const move_set*
       operator->() const { return &ref; }
 
    private:
@@ -207,7 +208,7 @@ namespace cheapshot
       // the higher the value, the more special the result
       //   the engine will take the minimum of a newer and older position
       //   no_valid_move is internal and should not be moved in between calls
-      static const int checkmate=std::numeric_limits<int>::max()-1;
+      static const int checkmate=std::numeric_limits<int>::max()-2;
       static const int stalemate=checkmate-1;
       static const int no_valid_move=std::numeric_limits<int>::min();
       int value;
@@ -284,10 +285,10 @@ namespace cheapshot
    // pawns at the 8 row do not have to be promoted yet to make a difference avoiding mate
    //  this should make the loop easier
 
-   inline std::array<piece_moves,16>::iterator
-   store_basic_moves(std::array<piece_moves,16>& piece_moves,board_metrics& bm)
+   inline std::array<move_set,16>::iterator
+   store_basic_moves(std::array<move_set,16>& move_set,board_metrics& bm)
    {
-      auto out_it=begin(piece_moves);
+      auto out_it=begin(move_set);
       for(moves_iterator it(bm);it!=moves_iterator_end();++it,++out_it)
          *out_it=*it;
       return out_it;
@@ -312,9 +313,11 @@ namespace cheapshot
    // templatize according to the current turn
    template<typename EngineController>
    score_t
-   analyze_position(board_metrics& bm, const context& ctx, EngineController engine_controller)
+   analyze_position(board_t& board, color turn, context ctx, EngineController engine_controller)
    {
-      std::array<piece_moves,16> basic_moves; // 16 is the max nr of pieces per color
+      std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
+
+      board_metrics bm(board,turn);
       const auto basic_moves_end=store_basic_moves(basic_moves,bm);
 
       uint64_t opponent_under_attack=
@@ -341,22 +344,21 @@ namespace cheapshot
 
       const specific_functions_t& functs=specific_functions_array[idx(bm.turn)];
 
-      const uint64_t cm=ctx.castling_rights|functs.castling_block_mask(
+      ctx.castling_rights|=functs.castling_block_mask(
          bm.own_side()[idx(piece::rook)],
          bm.own_side()[idx(piece::king)]);
-
-      context new_ctx={0ULL,cm,1,1}; // TODO
+      uint64_t last_ep_info=ctx.ep_info;
+      ctx.ep_info=0ULL;
 
       score_t score{score_t::no_valid_move};
 
       for(auto cit=std::begin(castling[idx(bm.turn)]);cit!=std::end(castling[idx(bm.turn)]);++cit)
       {
-         if(cit->castling_allowed(bm.own|new_ctx.castling_rights,own_under_attack))
+         if(cit->castling_allowed(bm.own|ctx.castling_rights,own_under_attack))
          {
             board_t new_board=bm.board;
             castle(new_board[idx(bm.turn)],*cit);
-            board_metrics new_bm(new_board,other_color(bm.turn));
-            score=recurse_and_evaluate(score,new_bm,new_ctx,engine_controller);
+            score=recurse_and_evaluate(score,new_board,other_color(bm.turn),ctx,engine_controller);
          }
       }
 
@@ -376,8 +378,7 @@ namespace cheapshot
                for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
                {
                   make_promotion(new_board[idx(bm.turn)],prom_it,prom_mask);
-                  board_metrics new_bm(new_board,other_color(bm.turn));
-                  score=recurse_and_evaluate(score,new_bm,new_ctx,engine_controller);
+                  score=recurse_and_evaluate(score,new_board,other_color(bm.turn),ctx,engine_controller);
                }
             }
             else
@@ -388,11 +389,10 @@ namespace cheapshot
                   board_t new_board=bm.board; // other engines undo moves ??
                   make_move(new_board[idx(bm.turn)][idx(piece::pawn)],
                             new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-                  new_ctx.ep_info=functs.ep_info(
+                  ctx.ep_info=functs.ep_info(
                      bm.own_side()[idx(piece::pawn)],
                      new_board[idx(bm.turn)][idx(piece::pawn)]);
-                  board_metrics new_bm(new_board,other_color(bm.turn));
-                  score=recurse_and_evaluate(score,new_bm,new_ctx,engine_controller);
+                  score=recurse_and_evaluate(score,new_board,other_color(bm.turn),ctx,engine_controller);
                }
          }
          else
@@ -404,18 +404,17 @@ namespace cheapshot
                board_t new_board=bm.board; // other engines undo moves ??
                make_move(new_board[idx(bm.turn)][idx(moves_it->moved_piece)],
                          new_board[idx(other_color(bm.turn))],*moves_it->origin,*dest_iter);
-               board_metrics new_bm(new_board,other_color(bm.turn));
-               score=recurse_and_evaluate(score,new_bm,new_ctx,engine_controller);
+               score=recurse_and_evaluate(score,new_board,other_color(bm.turn),ctx,engine_controller);
             }
          }
       }
 
       // en passant captures
-      for(auto origin_iter=bit_iterator(functs.ep_candidates(bm.own_side()[idx(piece::pawn)],ctx.ep_info));
+      for(auto origin_iter=bit_iterator(functs.ep_candidates(bm.own_side()[idx(piece::pawn)],last_ep_info));
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t destinations=functs.ep_captures(*origin_iter,ctx.ep_info);
+         uint64_t destinations=functs.ep_captures(*origin_iter,last_ep_info);
          for(auto dest_iter=bit_iterator(destinations);
              dest_iter!=bit_iterator();
              ++dest_iter)
@@ -426,8 +425,7 @@ namespace cheapshot
                new_board[idx(other_color(bm.turn))][idx(piece::pawn)],
                *origin_iter,*dest_iter);
             // en_passant_info is zero here
-            board_metrics new_bm(new_board,other_color(bm.turn));
-            score=recurse_and_evaluate(score,new_bm,new_ctx,engine_controller);
+            score=recurse_and_evaluate(score,new_board,other_color(bm.turn),ctx,engine_controller);
          }
       }
       if(score.value==score_t::no_valid_move)
@@ -437,9 +435,9 @@ namespace cheapshot
 
    template<typename EngineController>
    inline score_t
-   recurse_and_evaluate(score_t last_score,board_metrics& bm, const context& ctx, EngineController& engine_controller)
+   recurse_and_evaluate(score_t last_score,board_t& board, color turn, const context& ctx, EngineController& engine_controller)
    {
-      score_t score=analyze_position(bm,ctx,engine_controller);
+      score_t score=analyze_position(board,turn,ctx,engine_controller);
       last_score.value=std::max(last_score.value,-score.value);
       return last_score;
    }
