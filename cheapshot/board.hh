@@ -21,7 +21,6 @@ namespace cheapshot
       return idx(T::count);
    }
 
-   // TODO: consider using another type
    enum class piece: uint8_t { pawn, knight, bishop, rook, queen, king, count };
 
    inline piece
@@ -33,15 +32,9 @@ namespace cheapshot
 
    enum class color: uint8_t { white, black, count };
 
-   constexpr color
-   other_color(color c)
-   {
-      return color(idx(c)^1);
-   }
-
    typedef std::array<uint64_t,count<piece>()> board_side;
 
-// total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
+   // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
    typedef std::array<board_side,count<color>()> board_t;
    
@@ -143,14 +136,6 @@ namespace cheapshot
       return b;
    }
 
-   inline uint64_t
-   obstacles(const board_side& scb)
-   {
-      uint64_t r=0;
-      for(uint64_t p: scb)
-         r|=p;
-      return r;
-   }
    // compressed format
 
    // hash-function

@@ -5,10 +5,8 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/iterator.hh"
 
-namespace cheapshot2
+namespace cheapshot
 {
-   using namespace cheapshot;
-
    inline uint64_t
    obstacles(const board_side& scb)
    {
@@ -55,8 +53,9 @@ namespace cheapshot2
 
    template<typename T, typename Op>
    void
-   basic_moves(const board_t& board, const board_metrics& bm, Op op)
+   generate_basic_moves(const board_t& board, const board_metrics& bm, Op op)
    {
+      typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
       static constexpr move_generator_t moves[count<piece>()]=
          {
             slide_and_capture_with_pawn<T>,
@@ -76,6 +75,34 @@ namespace cheapshot2
       }
    }
 
+   inline void
+   castle(board_side& own_side, const castling_t& castling_info)
+   {
+      castling_info.do_castle(own_side[idx(piece::king)],own_side[idx(piece::rook)]);
+   }
+
+   constexpr piece piece_promotions[]={
+      piece::pawn,piece::queen,piece::knight,piece::rook,piece::bishop};
+
+   inline const piece*
+   promotions_begin()
+   {
+      return std::begin(piece_promotions);
+   }
+
+   inline const piece*
+   promotions_end()
+   {
+      return std::end(piece_promotions)-1;
+   }
+
+   inline void
+   make_promotion(board_side& own_side, const piece* piece_iter, uint64_t promoted_location)
+   {
+      own_side[idx(*piece_iter)]^=promoted_location;
+      own_side[idx(*(piece_iter+1))]^=promoted_location;
+   }
+
    struct score_t
    {
       // doesn't change sign in between turns
@@ -92,6 +119,37 @@ namespace cheapshot2
    const int score_t::stalemate;
    const int score_t::no_valid_move;
 
+   struct move_set
+   {
+      piece moved_piece;
+      bit_iterator origin;
+      bit_iterator destinations;
+   };
+
+   inline void
+   make_move(uint64_t& piece_loc, board_side& other_side,
+             uint64_t origin, uint64_t destination)
+   {
+      piece_loc^=(origin|destination);
+      for(auto& v: other_side)
+         v&=~destination;
+   }
+
+   inline void
+   make_en_passant_move(uint64_t& pawn_loc, uint64_t& other_pawn_loc,
+                        uint64_t origin, uint64_t destination)
+   {
+      pawn_loc^=(origin|destination);
+      // row and column calculations are not the fastest way,
+      //   but this avoids another function-parameter
+      //   and en-passant captures are relatively rare
+      other_pawn_loc&=~row(origin)&column(destination);
+   }
+
+   template<typename T,typename EngineController>
+   score_t
+   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& engine_controller);
+
    template<typename T, typename EngineController>
    score_t
    analyze_position(board_t& board, context ctx, EngineController engine_controller)
@@ -103,16 +161,16 @@ namespace cheapshot2
       auto basic_moves_end=basic_moves.begin();
       uint64_t opponent_under_attack=0ULL;
 
-      cheapshot2::basic_moves<T>(
+      generate_basic_moves<T>(
          board,bm,[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
             *basic_moves_end++=move_set{p,bit_iterator(orig),bit_iterator(dests)};
             opponent_under_attack|=dests;
          });
 
-      typedef typename other_direction<T>::type Other;
+      typedef typename other_direction<T>::type OtherT;
       {
-         const bool king_en_prise=side<Other>(board)[idx(piece::king)]&opponent_under_attack;
+         const bool king_en_prise=side<OtherT>(board)[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
             return {-score_t::no_valid_move};
       }
@@ -121,7 +179,7 @@ namespace cheapshot2
          return {0}; // TODO: better eval-function than returning 0
 
       uint64_t own_under_attack=0ULL;
-      cheapshot2::basic_moves<Other>(
+      generate_basic_moves<OtherT>(
          board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
             own_under_attack|=dests;
@@ -149,7 +207,7 @@ namespace cheapshot2
          {
             board_t new_board=board;
             castle(side<T>(new_board),cit);
-            score=recurse_and_evaluate<Other>(score,new_board,ctx,engine_controller);
+            score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
          }
 
       // evaluate moves
@@ -162,13 +220,13 @@ namespace cheapshot2
             {
                board_t new_board=board; // other engines undo moves ??
                make_move(side<T>(new_board)[idx(piece::pawn)],
-                         side<Other>(new_board),*mv.origin,
+                         side<OtherT>(new_board),*mv.origin,
                          mv.destinations.remaining());
                auto prom_it_end=promotions_end();
                for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
                {
                   make_promotion(side<T>(new_board),prom_it,prom_mask);
-                  score=recurse_and_evaluate<Other>(score,new_board,ctx,engine_controller);
+                  score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
                }
             }
             else
@@ -178,11 +236,11 @@ namespace cheapshot2
                {
                   board_t new_board=board; // other engines undo moves ??
                   make_move(side<T>(new_board)[idx(piece::pawn)],
-                            side<Other>(new_board),*mv.origin,*dest_iter);
+                            side<OtherT>(new_board),*mv.origin,*dest_iter);
                   ctx.ep_info=en_passant_info<T>(
                      side<T>(board)[idx(piece::pawn)],
                      side<T>(new_board)[idx(piece::pawn)]);
-                  score=recurse_and_evaluate<Other>(score,new_board,ctx,engine_controller);
+                  score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
                }
          }
          else
@@ -193,8 +251,8 @@ namespace cheapshot2
             {
                board_t new_board=board; // other engines undo moves ??
                make_move(side<T>(new_board)[idx(mv.moved_piece)],
-                         side<Other>(new_board),*mv.origin,*dest_iter);
-               score=recurse_and_evaluate<Other>(score,new_board,ctx,engine_controller);
+                         side<OtherT>(new_board),*mv.origin,*dest_iter);
+               score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
             }
          }
       }
@@ -212,10 +270,10 @@ namespace cheapshot2
             board_t new_board=board;
             make_en_passant_move(
                side<T>(new_board)[idx(piece::pawn)],
-               side<Other>(new_board)[idx(piece::pawn)],
+               side<OtherT>(new_board)[idx(piece::pawn)],
                *origin_iter,*dest_iter);
             // en_passant_info is zero here
-            score=recurse_and_evaluate<Other>(score,new_board,ctx,engine_controller);
+            score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
          }
       }
 
