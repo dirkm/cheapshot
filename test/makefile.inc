@@ -2,6 +2,8 @@
 
 EXEC += $~test $~print_position $~print_fen $~forced_mate
 
+$(EXEC): $(LIBCHEAPSHOT)
+
 $~test: LDFLAGS += -lboost_unit_test_framework
 
 $~test.o: $(call depend, $~test.cc)

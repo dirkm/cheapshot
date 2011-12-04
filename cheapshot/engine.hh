@@ -40,7 +40,6 @@ namespace cheapshot
       color dest_color; // same color when castling
       uint64_t origin_xor_mask;
       uint64_t dest_xor_mask; // 0 when move without capture
-
    };
 
    namespace detail

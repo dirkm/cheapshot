@@ -27,13 +27,16 @@ main(int argc, const char* argv[])
    }
    try
    {
-      auto r=cheapshot::scan_fen(argv[1]);
+      cheapshot::board_t b;
+      cheapshot::color c;
+      cheapshot::context ctx;
+      std::tie(b,c,ctx)=cheapshot::scan_fen(argv[1]);
       std::cout << "board:\n";
-      cheapshot::print_board(std::get<0>(r),std::cout);
+      cheapshot::print_board(b,std::cout);
       std::cout << "turn: " <<
-         (std::get<1>(r)==cheapshot::color::white?"white":"black") <<
+         (c==cheapshot::color::white?"white":"black") <<
          "\n";
-      print_context(std::get<2>(r),std::cout);
+      print_context(ctx,std::cout);
       return 0;
    }
    catch(const std::exception& ex)

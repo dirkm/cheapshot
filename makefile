@@ -22,7 +22,7 @@ rest = $(wordlist 2,$(words $(1)),$(1))
 get_dirlist = $(inc_before) $~$(firstword $(1))/makefile.inc $(wildcard $~$(firstword $(1))/*.d) $(inc_after) $(if $(rest),$(call get_dirlist,$(rest)),)
 scan_subdirs = $(eval dirlist:=$(SUBDIRS) $(dirlist)) $(call get_dirlist,$(SUBDIRS))
 
-SUBDIRS := test
+SUBDIRS := cheapshot test
 
 include $(scan_subdirs)
 
