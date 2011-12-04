@@ -467,9 +467,6 @@ namespace cheapshot
          slide_rook(s,obstacles)|slide_bishop(s,obstacles);
    }
 
-   // pawns are allowed to reach the end of the board. promotions are done
-   //  in the eval-loop
-
    template<typename T>
    constexpr uint64_t
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
@@ -500,6 +497,9 @@ namespace cheapshot
    {
       return detail::slide_2_squares<T>(shift_forward<T>(s,8)&~obstacles,obstacles);
    }
+
+   // pawns are allowed to reach the end of the board. promotions are done
+   //  in the eval-loop
 
    template<typename T>
    constexpr uint64_t
@@ -599,13 +599,6 @@ namespace cheapshot
       return
          detail::aliased_split(((rooks^rooks_init_pos)&rooks_init_pos)|
                                ((king^king_init_pos)&king_init_pos),1);
-   }
-
-   template<typename T>
-   constexpr uint64_t
-   castling_block_mask_simple(uint64_t rooks, uint64_t king)
-   {
-      return castling_block_mask<T>(rooks,king);
    }
 
 } // cheapshot

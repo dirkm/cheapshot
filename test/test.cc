@@ -1615,4 +1615,35 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }
 
+BOOST_AUTO_TEST_CASE( time_simple_check )
+{
+   // http://www.mychessblog.com/7-endgame-positions-with-endgame-tactics-for-quick-checkmate-part-1/
+   // board_t rook_queen_mate=scan_board(
+   //    "........\n"
+   //    "........\n"
+   //    "........\n"
+   //    "...k....\n"
+   //    "..R.....\n"
+   //    "........\n"
+   //    "........\n"
+   //    "....Q.R.\n");
+   board_t rook_queen_mate=scan_board(
+      "........\n"
+      "........\n"
+      "........\n"
+      "...k....\n"
+      "..R.Q...\n"
+      "........\n"
+      "........\n"
+      "......R.\n");
+   TimeOperation time_op;
+   constexpr long ops=12;
+   for(long i=0;i<ops;++i)
+   {
+      BOOST_CHECK_EQUAL(analyze_position<down>(rook_queen_mate,null_context,max_plie_cutoff(6)),
+                        score_t({-score_t::checkmate}));
+   }
+   time_op.time_report("endgame mate in 6 plies",ops);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

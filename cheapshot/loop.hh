@@ -3,8 +3,8 @@
 
 #include <limits>
 
-#include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
+#include "cheapshot/board.hh"
 #include "cheapshot/iterator.hh"
 
 namespace cheapshot
@@ -22,8 +22,7 @@ namespace cheapshot
    {
       board_metrics(const board_t& board):
          white(obstacles(side<up>(board))),
-         black(obstacles(side<down>(board))),
-         all(white|black)
+         black(obstacles(side<down>(board)))
       {}
 
       template<typename T>
@@ -34,7 +33,6 @@ namespace cheapshot
 
       uint64_t white;
       uint64_t black;
-      uint64_t all;
    };
 
    template<>
@@ -67,12 +65,14 @@ namespace cheapshot
             slide_queen,
             move_king
          };
+
+      const uint64_t all=bm.white|bm.black;
       auto p=std::begin(side<T>(board));
       auto t=piece::pawn;
       for(auto movegen: moves)
       {
          for(auto it=bit_iterator(*p);it!=bit_iterator();++it)
-            op(t,*it,(**movegen)(*it,bm.all)&~bm.own<T>());
+            op(t,*it,movegen(*it,all)&~bm.own<T>());
          ++p;++t;
       }
    }
@@ -107,10 +107,9 @@ namespace cheapshot
 
    struct score_t
    {
-      // doesn't change sign in between turns
-      // the higher the value, the more special the result
-      //   the engine will take the minimum of a newer and older position
-      //   no_valid_move is internal and should not be moved in between calls
+      // high scores mean a better position for the color with the move
+      // no_valid_move is used internally, to flag an invalid position
+      // the engine strives to maximize the score for each color per turn
       static const int checkmate=std::numeric_limits<int>::max()-2;
       static const int stalemate=checkmate-1;
       static const int no_valid_move=std::numeric_limits<int>::min();
@@ -124,7 +123,7 @@ namespace cheapshot
    struct move_set
    {
       piece moved_piece;
-      bit_iterator origin;
+      uint64_t origin;
       bit_iterator destinations;
    };
 
@@ -166,7 +165,7 @@ namespace cheapshot
       generate_basic_moves<T>(
          board,bm,[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
-            *basic_moves_end++=move_set{p,bit_iterator(orig),bit_iterator(dests)};
+            *basic_moves_end++=move_set{p,orig,bit_iterator(dests)};
             opponent_under_attack|=dests;
          });
 
@@ -222,7 +221,7 @@ namespace cheapshot
             {
                board_t new_board=board; // other engines undo moves ??
                make_move(side<T>(new_board)[idx(piece::pawn)],
-                         side<OtherT>(new_board),*mv.origin,
+                         side<OtherT>(new_board),mv.origin,
                          mv.destinations.remaining());
                auto prom_it_end=promotions_end();
                for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
@@ -238,7 +237,7 @@ namespace cheapshot
                {
                   board_t new_board=board; // other engines undo moves ??
                   make_move(side<T>(new_board)[idx(piece::pawn)],
-                            side<OtherT>(new_board),*mv.origin,*dest_iter);
+                            side<OtherT>(new_board),mv.origin,*dest_iter);
                   ctx.ep_info=en_passant_info<T>(
                      side<T>(board)[idx(piece::pawn)],
                      side<T>(new_board)[idx(piece::pawn)]);
@@ -253,7 +252,7 @@ namespace cheapshot
             {
                board_t new_board=board; // other engines undo moves ??
                make_move(side<T>(new_board)[idx(mv.moved_piece)],
-                         side<OtherT>(new_board),*mv.origin,*dest_iter);
+                         side<OtherT>(new_board),mv.origin,*dest_iter);
                score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
             }
          }
