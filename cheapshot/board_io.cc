@@ -256,6 +256,34 @@ namespace cheapshot
             ++rs;
          }
       }
+
+      extern void
+      print_fen_position(const board_t& board, std::ostream& os)
+      {
+         canvas_t canvas;
+         canvas.fill('.');
+         fill_canvas_side(board[idx(color::white)],canvas,repr_pieces_white);
+         fill_canvas_side(board[idx(color::black)],canvas,repr_pieces_black);
+         for(int i=7;i>=0;--i)
+         {
+            int offset=0;
+            for(int j=i*8;j<(i+1)*8;++j)
+            {
+               if(j=='.')
+               {
+                  ++offset;
+                  continue;
+               }
+               if(offset)
+               {
+                  std::cout << offset;
+                  offset=0;
+               }
+               os << canvas[j];
+            }
+            os << "/";
+         }
+      }
    }
 
    // classic fen only
