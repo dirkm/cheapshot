@@ -8,29 +8,32 @@
 
 namespace cheapshot
 {
-   typedef std::array<char,count<piece>()> piece_to_character_t;
-
-   constexpr piece_to_character_t repr_pieces_white={'P','N','B','R','Q','K'};
-   constexpr piece_to_character_t repr_pieces_black={'p','n','b','r','q','k'};
-
-   std::tuple<color,piece>
-   character_to_piece(char p)
+   namespace
    {
-      switch(p)
+      typedef std::array<char,count<piece>()> piece_to_character_t;
+      
+      constexpr piece_to_character_t repr_pieces_white={'P','N','B','R','Q','K'};
+      constexpr piece_to_character_t repr_pieces_black={'p','n','b','r','q','k'};
+      
+      std::tuple<color,piece>
+      character_to_piece(char p)
       {
-         case 'B': return std::make_tuple(color::white,piece::bishop);
-         case 'K': return std::make_tuple(color::white,piece::king);
-         case 'N': return std::make_tuple(color::white,piece::knight);
-         case 'P': return std::make_tuple(color::white,piece::pawn);
-         case 'Q': return std::make_tuple(color::white,piece::queen);
-         case 'R': return std::make_tuple(color::white,piece::rook);
-         case 'b': return std::make_tuple(color::black,piece::bishop);
-         case 'k': return std::make_tuple(color::black,piece::king);
-         case 'n': return std::make_tuple(color::black,piece::knight);
-         case 'p': return std::make_tuple(color::black,piece::pawn);
-         case 'q': return std::make_tuple(color::black,piece::queen);
-         case 'r': return std::make_tuple(color::black,piece::rook);
-         default : return std::make_tuple(color::count,piece::count);
+         switch(p)
+         {
+            case 'B': return std::make_tuple(color::white,piece::bishop);
+            case 'K': return std::make_tuple(color::white,piece::king);
+            case 'N': return std::make_tuple(color::white,piece::knight);
+            case 'P': return std::make_tuple(color::white,piece::pawn);
+            case 'Q': return std::make_tuple(color::white,piece::queen);
+            case 'R': return std::make_tuple(color::white,piece::rook);
+            case 'b': return std::make_tuple(color::black,piece::bishop);
+            case 'k': return std::make_tuple(color::black,piece::king);
+            case 'n': return std::make_tuple(color::black,piece::knight);
+            case 'p': return std::make_tuple(color::black,piece::pawn);
+            case 'q': return std::make_tuple(color::black,piece::queen);
+            case 'r': return std::make_tuple(color::black,piece::rook);
+            default : return std::make_tuple(color::count,piece::count);
+         }
       }
    }
 
@@ -41,12 +44,15 @@ namespace cheapshot
          c[*it]=piece;
    }
 
-   void
-   fill_canvas_side(const board_side& side,canvas_t& c, const piece_to_character_t& p_to_c) noexcept
+   namespace
    {
-      auto pi=begin(p_to_c);
-      for(auto bi=begin(side);bi!=end(side);++bi,++pi)
-         fill_canvas(*bi,c,*pi);
+      void
+      fill_canvas_side(const board_side& side,canvas_t& c, const piece_to_character_t& p_to_c) noexcept
+      {
+         auto pi=begin(p_to_c);
+         for(auto bi=begin(side);bi!=end(side);++bi,++pi)
+            fill_canvas(*bi,c,*pi);
+      }
    }
 
    extern void
@@ -226,14 +232,14 @@ namespace cheapshot
          if(ch1<'a' || ch1>'h')
          {
             std::stringstream oss;
-            oss << "invalid characted in en passant info: '" << ch1 << "'";
+            oss << "invalid character in en passant info: '" << ch1 << "'";
             throw io_error(oss.str());
          }
          char ch2=*rs++;
          if((ch2!='3') && (ch2!='6'))
          {
             std::stringstream oss;
-            oss << "invalid characted in en passant info: " << ch2 << "'";
+            oss << "invalid character in en passant info: " << ch2 << "'";
             throw io_error(oss.str());
          }
          return algpos(ch1,ch2);
@@ -293,7 +299,6 @@ namespace cheapshot
    extern std::tuple<board_t,color,context>
    scan_fen(const char* s)
    {
-      std::tuple<board_t,color,context> r;
       board_t b=fen::scan_position(s);
       fen::skip_whitespace(s);
       color c=fen::scan_color(s);

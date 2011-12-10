@@ -510,7 +510,7 @@ namespace cheapshot
 
    template<typename T>
    constexpr uint64_t
-   en_passant_info(uint64_t pawns_before_move, uint64_t pawns) noexcept
+   en_passant_mask(uint64_t pawns_before_move, uint64_t pawns) noexcept
    {
       return shift_backward<T>(
          (pawns_before_move^pawns)&(shift_forward<T>(pawns_before_move^pawns,16)),
@@ -551,13 +551,6 @@ namespace cheapshot
       {
          return!((all_pieces&((~rook1)&in_between(rook1,rook2)))|
                  (own_under_attack&in_between(king1,king2<<1)));
-      }
-
-      void
-      do_castle(uint64_t& king,uint64_t& rook) const
-      {
-         king^=(king1|king2);
-         rook^=(rook1|rook2);
       }
 
       constexpr uint64_t

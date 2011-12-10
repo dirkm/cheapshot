@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <tuple>
 
-#include "cheapshot/iterator.hh"
 #include "cheapshot/board.hh"
 
 namespace cheapshot

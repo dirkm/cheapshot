@@ -84,7 +84,7 @@ namespace cheapshot
       // score_t last_score;
    };
 
-   constexpr board_side init_white_board=
+   constexpr board_side init_white_side=
    {
       row_with_algebraic_number(2), // p
       algpos('b',1)|algpos('g',1), // n
@@ -131,7 +131,7 @@ namespace cheapshot
    inline board_t
    initial_board()
    {
-      board_t b={init_white_board,init_white_board};
+      board_t b={init_white_side,init_white_side};
       mirror_inplace(b[idx(color::black)]);
       return b;
    }

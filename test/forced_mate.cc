@@ -23,8 +23,9 @@ main(int argc, const char* argv[])
       cheapshot::board_t b;
       cheapshot::color c;
       cheapshot::context ctx;
-      cheapshot::max_plie_cutoff cutoff(std::atoi(argv[1]));
       std::tie(b,c,ctx)=cheapshot::scan_fen(argv[2]);
+
+      cheapshot::max_plie_cutoff cutoff(std::atoi(argv[1]));
       cheapshot::score_t s=(c==cheapshot::color::white)?
          cheapshot::analyze_position<cheapshot::up>(b,ctx,cutoff):
          cheapshot::analyze_position<cheapshot::down>(b,ctx,cutoff);

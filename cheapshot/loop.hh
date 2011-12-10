@@ -10,10 +10,10 @@
 namespace cheapshot
 {
    inline uint64_t
-   obstacles(const board_side& scb)
+   obstacles(const board_side& side)
    {
       uint64_t r=0;
-      for(uint64_t p: scb)
+      for(uint64_t p: side)
          r|=p;
       return r;
    }
@@ -77,33 +77,114 @@ namespace cheapshot
       }
    }
 
-   inline void
-   castle(board_side& own_side, const castling_t& castling_info)
+   struct move_info
    {
-      castling_info.do_castle(own_side[idx(piece::king)],own_side[idx(piece::rook)]);
+      uint64_t& piece;
+      uint64_t mask;
+   };
+
+   typedef std::array<move_info,2> move_info2;
+
+   // TODO: this can be used directly
+   template<typename T>
+   inline move_info
+   basic_move_info(board_t& board, piece p, uint64_t origin, uint64_t destination)
+   {
+      return
+         move_info{side<T>(board)[idx(p)],origin|destination};
    }
 
-   constexpr piece piece_promotions[]={
-      piece::pawn,piece::queen,piece::knight,piece::rook,piece::bishop};
-
-   inline const piece*
-   promotions_begin()
+   template<typename T>
+   move_info2
+   basic_capture_info(board_t& board, piece p, uint64_t origin, uint64_t destination)
    {
-      return std::begin(piece_promotions);
+      typedef typename other_direction<T>::type OtherT;
+      board_side& other_side=side<OtherT>(board);
+
+      uint64_t dest_xor_mask=0ULL;
+      auto it=std::begin(other_side);
+
+      for(;it!=std::end(other_side)-1;++it)
+      {
+         dest_xor_mask=(*it)&destination;
+         if(dest_xor_mask)
+            break;
+      }
+
+      move_info2 mi2={
+         basic_move_info<T>(board,p,origin,destination),
+         move_info{*it,dest_xor_mask}
+      };
+      return mi2;
    }
 
-   inline const piece*
-   promotions_end()
+   template<typename T>
+   move_info2
+   castle_info(board_t& board, const castling_t& ci)
    {
-      return std::end(piece_promotions)-1;
+      move_info2 mi2={
+         move_info{side<T>(board)[idx(piece::king)],ci.king1|ci.king2},
+         move_info{side<T>(board)[idx(piece::rook)],ci.rook1|ci.rook2}
+      };
+      return mi2;
    }
 
-   inline void
-   make_promotion(board_side& own_side, const piece* piece_iter, uint64_t promoted_location)
+   template<typename T>
+   move_info2
+   promotion_info(board_t& board, piece prom, uint64_t promoted_loc)
    {
-      own_side[idx(*piece_iter)]^=promoted_location;
-      own_side[idx(*(piece_iter+1))]^=promoted_location;
+      move_info2 mi2={
+         move_info{side<T>(board)[idx(piece::pawn)],promoted_loc},
+         move_info{side<T>(board)[idx(prom)],promoted_loc}
+      };
+      return mi2;
    }
+
+   template<typename T>
+   move_info2
+   en_passant_info(board_t& board,uint64_t origin, uint64_t destination)
+   {
+      typedef typename other_direction<T>::type OtherT;
+      // TODO: can be optimised
+      move_info2 mi2={
+         move_info{side<T>(board)[idx(piece::pawn)],origin|destination},
+         move_info{side<OtherT>(board)[idx(piece::pawn)],row(origin)&column(destination)}
+      };
+      return mi2;
+   }
+
+   class scoped_move
+   {
+   public:
+      explicit scoped_move(const move_info& mi_):
+         mi(mi_)
+      {
+         mi.piece^=mi.mask;
+      }
+
+      ~scoped_move()
+      {
+         mi.piece^=mi.mask;
+      }
+
+      scoped_move(const scoped_move&) = delete;
+      scoped_move& operator=(const scoped_move&) = delete;
+   private:
+      const move_info& mi;
+   };
+
+   // TODO: unhappy with this
+   class scoped_move2
+   {
+   public:
+      explicit scoped_move2(const move_info2& mi):
+         scoped_move0(mi[0]),
+         scoped_move1(mi[1])
+      {}
+   private:
+      scoped_move scoped_move0;
+      scoped_move scoped_move1;
+   };
 
    struct score_t
    {
@@ -124,28 +205,8 @@ namespace cheapshot
    {
       piece moved_piece;
       uint64_t origin;
-      bit_iterator destinations;
+      uint64_t destinations;
    };
-
-   inline void
-   make_move(uint64_t& piece_loc, board_side& other_side,
-             uint64_t origin, uint64_t destination)
-   {
-      piece_loc^=(origin|destination);
-      for(auto& v: other_side)
-         v&=~destination;
-   }
-
-   inline void
-   make_en_passant_move(uint64_t& pawn_loc, uint64_t& other_pawn_loc,
-                        uint64_t origin, uint64_t destination)
-   {
-      pawn_loc^=(origin|destination);
-      // row and column calculations are not the fastest way,
-      //   but this avoids another function-parameter
-      //   and en-passant captures are relatively rare
-      other_pawn_loc&=~row(origin)&column(destination);
-   }
 
    template<typename T,typename EngineController>
    score_t
@@ -158,14 +219,13 @@ namespace cheapshot
       board_metrics bm(board);
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
-
       auto basic_moves_end=basic_moves.begin();
       uint64_t opponent_under_attack=0ULL;
 
       generate_basic_moves<T>(
          board,bm,[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
-            *basic_moves_end++=move_set{p,orig,bit_iterator(dests)};
+            *basic_moves_end++=move_set{p,orig,dests};
             opponent_under_attack|=dests;
          });
 
@@ -206,54 +266,43 @@ namespace cheapshot
       for(auto& cit: castling)
          if(cit.castling_allowed(bm.own<T>()|ctx.castling_rights,own_under_attack))
          {
-            board_t new_board=board;
-            castle(side<T>(new_board),cit);
-            score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
+            scoped_move2 scope(castle_info<T>(board,cit));
+            score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
          }
 
       // evaluate moves
-      for(auto& mv: basic_moves)
+      for(auto mv_it=std::begin(basic_moves);mv_it!=basic_moves_end;++mv_it)
       {
+         auto mv=*mv_it;
+         bit_iterator dest_iter(mv.destinations);
          if(mv.moved_piece==piece::pawn)
          {
-            uint64_t prom_mask=promoting_pawns<T>(mv.destinations.remaining());
+            uint64_t prom_mask=promoting_pawns<T>(mv.destinations);
             if(prom_mask)
             {
-               board_t new_board=board; // other engines undo moves ??
-               make_move(side<T>(new_board)[idx(piece::pawn)],
-                         side<OtherT>(new_board),mv.origin,
-                         mv.destinations.remaining());
-               auto prom_it_end=promotions_end();
-               for(auto prom_it=promotions_begin();prom_it<prom_it_end;++prom_it)
+               static constexpr piece piece_promotions[]={piece::queen,piece::knight,piece::rook,piece::bishop};
+               scoped_move2 scope(basic_capture_info<T>(board,piece::pawn,mv.origin,mv.destinations));
+               for(auto prom: piece_promotions)
                {
-                  make_promotion(side<T>(new_board),prom_it,prom_mask);
-                  score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
+                  scoped_move2 scope2(promotion_info<T>(board,prom,prom_mask));
+                  score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
                }
             }
             else
-               for(bit_iterator& dest_iter=mv.destinations;
-                   dest_iter!=bit_iterator();
-                   ++dest_iter)
+               for(;dest_iter!=bit_iterator();++dest_iter)
                {
-                  board_t new_board=board; // other engines undo moves ??
-                  make_move(side<T>(new_board)[idx(piece::pawn)],
-                            side<OtherT>(new_board),mv.origin,*dest_iter);
-                  ctx.ep_info=en_passant_info<T>(
-                     side<T>(board)[idx(piece::pawn)],
-                     side<T>(new_board)[idx(piece::pawn)]);
-                  score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
+                  uint64_t oldpawnloc=side<T>(board)[idx(piece::pawn)];
+                  scoped_move2 scope(basic_capture_info<T>(board,piece::pawn,mv.origin,*dest_iter));
+                  ctx.ep_info=en_passant_mask<T>(oldpawnloc,side<T>(board)[idx(piece::pawn)]);
+                  score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
                }
          }
          else
          {
-            for(bit_iterator& dest_iter=mv.destinations;
-                dest_iter!=bit_iterator();
-                ++dest_iter)
+            for(;dest_iter!=bit_iterator();++dest_iter)
             {
-               board_t new_board=board; // other engines undo moves ??
-               make_move(side<T>(new_board)[idx(mv.moved_piece)],
-                         side<OtherT>(new_board),mv.origin,*dest_iter);
-               score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
+               scoped_move2 scope(basic_capture_info<T>(board,mv.moved_piece,mv.origin,*dest_iter));
+               score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
             }
          }
       }
@@ -263,18 +312,13 @@ namespace cheapshot
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t destinations=en_passant_capture<T>(*origin_iter,last_ep_info);
-         for(auto dest_iter=bit_iterator(destinations);
-             dest_iter!=bit_iterator();
-             ++dest_iter)
+         uint64_t captures=en_passant_capture<T>(*origin_iter,last_ep_info);
+         for(auto capt_iter=bit_iterator(captures);
+             capt_iter!=bit_iterator();
+             ++capt_iter)
          {
-            board_t new_board=board;
-            make_en_passant_move(
-               side<T>(new_board)[idx(piece::pawn)],
-               side<OtherT>(new_board)[idx(piece::pawn)],
-               *origin_iter,*dest_iter);
-            // en_passant_info is zero here
-            score=recurse_and_evaluate<OtherT>(score,new_board,ctx,engine_controller);
+            scoped_move2 scope(en_passant_info<T>(board,*origin_iter,*capt_iter));
+            score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
          }
       }
 
@@ -285,7 +329,7 @@ namespace cheapshot
    }
 
    template<typename T,typename EngineController>
-   inline score_t
+   score_t
    recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& engine_controller)
    {
       score_t score=analyze_position<T>(board,ctx,engine_controller);

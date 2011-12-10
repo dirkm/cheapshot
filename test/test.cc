@@ -673,7 +673,7 @@ capture_pawn_en_passant_check(const char* canvas)
    uint64_t own_pawn=scan_canvas(canvas,'X');
    uint64_t captures=scan_canvas(canvas,'x');
    {
-      uint64_t last_ep_info=en_passant_info<down>(ep_pawns_before_move, ep_pawns);
+      uint64_t last_ep_info=en_passant_mask<down>(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(last_ep_info));
       BOOST_CHECK_EQUAL(en_passant_capture<up>(own_pawn, last_ep_info),captures);
    }
@@ -682,7 +682,7 @@ capture_pawn_en_passant_check(const char* canvas)
    mirror_inplace(own_pawn);
    mirror_inplace(captures);
    {
-      uint64_t last_ep_info=en_passant_info<up>(ep_pawns_before_move, ep_pawns);
+      uint64_t last_ep_info=en_passant_mask<up>(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(last_ep_info));
       BOOST_CHECK_EQUAL(en_passant_capture<down>(own_pawn, last_ep_info),captures);
    }
@@ -951,7 +951,7 @@ basic_moves_generator_test(const char* board_layout, const char* captures)
    BOOST_CHECK(ots.is_equal(captures));
 }
 
-BOOST_AUTO_TEST_CASE( moves_iterator_test )
+BOOST_AUTO_TEST_CASE( moves_generator_test )
 {
    basic_moves_generator_test(
       "rnbqkbnr\n"
@@ -1067,6 +1067,39 @@ BOOST_AUTO_TEST_CASE( moves_iterator_test )
    }
 }
 
+BOOST_AUTO_TEST_CASE( scoped_move_test )
+{
+   const char c[]=
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "......k.\n"
+      "........\n"
+      "......p.\n"
+      "......K.\n";
+   board_t b=scan_board(c);
+
+   piece moved_piece=piece::king;
+   uint64_t origin=scan_canvas(c,'K');
+   uint64_t dest=scan_canvas(c,'p');
+   // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
+   {
+      scoped_move2 scope(basic_capture_info<up>(b,moved_piece,origin,dest));
+      boost::test_tools::output_test_stream ots;
+      BOOST_CHECK(b==scan_board(
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "......k.\n"
+                     "........\n"
+                     "......K.\n"
+                     "........\n"));
+   }
+   BOOST_CHECK(b==scan_board(c));
+}
+
 template<typename T>
 bool
 is_castling_allowed(const board_t& board, const castling_t& ci)
@@ -1095,8 +1128,8 @@ BOOST_AUTO_TEST_CASE( castle_test )
          ".....PPP\n"
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<up>(b,sci));
-
-      castle(side<up>(b),sci);
+      
+      scoped_move2 scope(castle_info<up>(b,sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1195,7 +1228,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "R...K...\n");
       BOOST_CHECK(!is_castling_allowed<up>(b,lci));
 
-      castle(side<up>(b),lci);
+      scoped_move2 scope(castle_info<up>(b,lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1615,7 +1648,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_simple_check )
+BOOST_AUTO_TEST_CASE( time_simple_mate )
 {
    // http://www.mychessblog.com/7-endgame-positions-with-endgame-tactics-for-quick-checkmate-part-1/
    // board_t rook_queen_mate=scan_board(

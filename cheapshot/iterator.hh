@@ -71,6 +71,8 @@ namespace cheapshot
       uint64_t m_v; // piece layout, gets zeroed out while incrementing
    };
 
+// using board_iterator=boost::transform_iterator<BoardPosFunction, bit_iterator>;
+//     (using based type aliasing not implemented yet)
    typedef uint_fast8_t (*BoardPosFunction)(uint64_t);
 
    constexpr uint_fast8_t
@@ -79,14 +81,14 @@ namespace cheapshot
       return __builtin_ctzll(s);
    }
 
-// using board_iterator=boost::transform_iterator<BoardPosFunction, bit_iterator>;
-//     (using based type aliasing not implemented yet)
-   typedef boost::transform_iterator<BoardPosFunction, bit_iterator> board_iterator;
 
+   typedef boost::transform_iterator<BoardPosFunction, bit_iterator> board_iterator;
+      
    inline board_iterator
    make_board_iterator(uint64_t val)
    {
       return board_iterator(bit_iterator(val),&get_board_pos);
    }
+   
 } // cheapshot
 #endif
