@@ -126,6 +126,7 @@ namespace
       try_position(const board_t& board, const board_metrics& bm)
       {
          int idx=i++;
+         // std::cout << "trying i " << i << std::endl;
          if(idx>=positions->size())
             return false;
          if((*positions)[idx]!=board)
@@ -1116,7 +1117,7 @@ is_castling_allowed(const board_t& board, const castling_t& ci)
 
 BOOST_AUTO_TEST_CASE( castle_test )
 {
-   constexpr auto sci=short_castling_info<up>();
+   constexpr auto sci=short_castling<up>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1128,7 +1129,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          ".....PPP\n"
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<up>(b,sci));
-      
+
       scoped_move2 scope(castle_info<up>(b,sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
@@ -1191,7 +1192,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
       BOOST_CHECK(is_castling_allowed<up>(b,sci));
    }
 
-   constexpr auto lci=long_castling_info<up>();
+   constexpr auto lci=long_castling<up>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1372,33 +1373,19 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
 
 BOOST_AUTO_TEST_CASE( analyze_promotion_test )
 {
-   board_t promotion_initial=scan_board(
-      "....k...\n"
-      "..P.....\n"
-      ".....K..\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n");
+   {
+      board_t promotion_initial=scan_board(
+         "....k...\n"
+         "..P.....\n"
+         ".....K..\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n");
 
-   board_t promotion_mate_queen=scan_board(
-      "..Q.k...\n"
-      "........\n"
-      ".....K..\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n");
-   {
-      move_checker check({promotion_initial,promotion_mate_queen});
-      score_t s=analyze_position<up>(promotion_initial,null_context,check);
-      BOOST_CHECK(check.is_position_reached());
-   }
-   {
-      board_t promotion_knight=scan_board(
-         "..N.k...\n"
+      board_t promotion_mate_queen=scan_board(
+         "..Q.k...\n"
          "........\n"
          ".....K..\n"
          "........\n"
@@ -1406,16 +1393,85 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
          "........\n"
          "........\n"
          "........\n");
-      move_checker check({promotion_initial,promotion_knight});
-      score_t s=analyze_position<up>(promotion_initial,null_context,check);
-      BOOST_CHECK(check.is_position_reached());
+      {
+         move_checker check({promotion_initial,promotion_mate_queen});
+         score_t s=analyze_position<up>(promotion_initial,null_context,check);
+         BOOST_CHECK(check.is_position_reached());
+      }
+      {
+         board_t promotion_knight=scan_board(
+            "..N.k...\n"
+            "........\n"
+            ".....K..\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n");
+         move_checker check({promotion_initial,promotion_knight});
+         score_t s=analyze_position<up>(promotion_initial,null_context,check);
+         BOOST_CHECK(check.is_position_reached());
+      }
+      {
+         board_t bmirror=mirror(promotion_initial);
+         move_checker check({bmirror,mirror(promotion_mate_queen)});
+         score_t s=analyze_position<down>(bmirror,null_context,check);
+         BOOST_CHECK(check.is_position_reached());
+         BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
+      }
    }
    {
-      board_t bmirror=mirror(promotion_initial);
-      move_checker check({bmirror,mirror(promotion_mate_queen)});
-      score_t s=analyze_position<down>(bmirror,null_context,check);
-      BOOST_CHECK(check.is_position_reached());
-      BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
+      board_t multiple_promotions_initial=scan_board(
+         ".n.qk...\n"
+         "..P.....\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".......K\n");
+      {
+         board_t multiple_promotions1=scan_board(
+            ".R.qk...\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            ".......K\n");
+         move_checker check1({multiple_promotions_initial,multiple_promotions1});
+         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check1);
+         BOOST_CHECK(check1.is_position_reached());
+      }
+      {
+         board_t multiple_promotions2=scan_board(
+            ".nQqk...\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            ".......K\n");
+         move_checker check2({multiple_promotions_initial,multiple_promotions2});
+         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check2);
+         BOOST_CHECK(check2.is_position_reached());
+      }
+      {
+         board_t multiple_promotions3=scan_board(
+            ".n.Qk...\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            "........\n"
+            ".......K\n");
+         move_checker check3({multiple_promotions_initial,multiple_promotions3});
+         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check3);
+         BOOST_CHECK(check3.is_position_reached());
+      }
    }
 }
 
@@ -1425,7 +1481,7 @@ scan_mate(int depth, board_t b)
 {
    constexpr score_t s=std::is_same<T,up>::value?
       score_t{score_t::checkmate}:
-      score_t{-score_t::checkmate};
+   score_t{-score_t::checkmate};
    BOOST_CHECK_EQUAL(analyze_position<T>(b,null_context,max_plie_cutoff(depth)),s);
 }
 
@@ -1538,7 +1594,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          );
       {
          board_t btemp=b;
-         constexpr auto lci=short_castling_info<up>();
+         constexpr auto lci=short_castling<up>();
          BOOST_CHECK(is_castling_allowed<up>(btemp,lci));
          move_checker check({b,b1,b2,b3});
          analyze_position<up>(btemp,null_context,check);

@@ -41,7 +41,10 @@ namespace cheapshot
    fill_canvas(const uint64_t& p,canvas_t& c,char piece) noexcept
    {
       for(auto it=make_board_iterator(p);it!=board_iterator();++it)
+      {
+         assert(c[*it]=='.');
          c[*it]=piece;
+      }
    }
 
    namespace
@@ -193,31 +196,31 @@ namespace cheapshot
       {
          char ch=*rs++;
          uint64_t r=
-            short_castling_info<up>().mask()|
-            short_castling_info<down>().mask()|
-            long_castling_info<up>().mask()|
-            long_castling_info<down>().mask();
+            short_castling<up>().mask()|
+            short_castling<down>().mask()|
+            long_castling<up>().mask()|
+            long_castling<down>().mask();
 
          if (ch=='-')
             return r;
          if(ch=='K')
          {
-            r^=short_castling_info<up>().mask();
+            r^=short_castling<up>().mask();
             ch=*rs++;
          }
          if(ch=='Q')
          {
-            r^=long_castling_info<up>().mask();
+            r^=long_castling<up>().mask();
             ch=*rs++;
          }
          if(ch=='k')
          {
-            r^=short_castling_info<down>().mask();
+            r^=short_castling<down>().mask();
             ch=*rs++;
          }
          if(ch=='q')
          {
-            r^=long_castling_info<down>().mask();
+            r^=long_castling<down>().mask();
             ch=*rs++;
          }
          return r;

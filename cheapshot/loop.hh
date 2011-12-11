@@ -145,7 +145,7 @@ namespace cheapshot
    en_passant_info(board_t& board,uint64_t origin, uint64_t destination)
    {
       typedef typename other_direction<T>::type OtherT;
-      // TODO: can be optimised
+      // TODO: row & column can be sped up
       move_info2 mi2={
          move_info{side<T>(board)[idx(piece::pawn)],origin|destination},
          move_info{side<OtherT>(board)[idx(piece::pawn)],row(origin)&column(destination)}
@@ -259,8 +259,8 @@ namespace cheapshot
 
       static constexpr castling_t castling[]=
          {
-            short_castling_info<T>(),
-            long_castling_info<T>(),
+            short_castling<T>(),
+            long_castling<T>(),
          };
 
       for(auto& cit: castling)
@@ -277,20 +277,27 @@ namespace cheapshot
          bit_iterator dest_iter(mv.destinations);
          if(mv.moved_piece==piece::pawn)
          {
+            // TODO: this is probably not optimal
             uint64_t prom_mask=promoting_pawns<T>(mv.destinations);
             if(prom_mask)
             {
-               static constexpr piece piece_promotions[]={piece::queen,piece::knight,piece::rook,piece::bishop};
-               scoped_move2 scope(basic_capture_info<T>(board,piece::pawn,mv.origin,mv.destinations));
-               for(auto prom: piece_promotions)
+               for(;dest_iter!=bit_iterator();++dest_iter)
                {
-                  scoped_move2 scope2(promotion_info<T>(board,prom,prom_mask));
-                  score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
+                  // pawn to promotion square
+                  scoped_move2 scope(basic_capture_info<T>(board,piece::pawn,mv.origin,*dest_iter));
+                  static constexpr piece piece_promotions[]={piece::queen,piece::knight,piece::rook,piece::bishop};
+                  for(piece prom: piece_promotions)
+                  {
+                     // all promotions
+                     scoped_move2 scope2(promotion_info<T>(board,prom,*dest_iter));
+                     score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
+                  }
                }
             }
             else
                for(;dest_iter!=bit_iterator();++dest_iter)
                {
+                  // normal pawn move
                   uint64_t oldpawnloc=side<T>(board)[idx(piece::pawn)];
                   scoped_move2 scope(basic_capture_info<T>(board,piece::pawn,mv.origin,*dest_iter));
                   ctx.ep_info=en_passant_mask<T>(oldpawnloc,side<T>(board)[idx(piece::pawn)]);
@@ -301,6 +308,7 @@ namespace cheapshot
          {
             for(;dest_iter!=bit_iterator();++dest_iter)
             {
+               // normal piece move
                scoped_move2 scope(basic_capture_info<T>(board,mv.moved_piece,mv.origin,*dest_iter));
                score=recurse_and_evaluate<OtherT>(score,board,ctx,engine_controller);
             }
