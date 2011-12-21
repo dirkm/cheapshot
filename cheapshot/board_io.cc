@@ -15,24 +15,24 @@ namespace cheapshot
       constexpr piece_to_character_t repr_pieces_white={'P','N','B','R','Q','K'};
       constexpr piece_to_character_t repr_pieces_black={'p','n','b','r','q','k'};
       
-      std::tuple<color,piece>
+      std::tuple<side,piece>
       character_to_piece(char p)
       {
          switch(p)
          {
-            case 'B': return std::make_tuple(color::white,piece::bishop);
-            case 'K': return std::make_tuple(color::white,piece::king);
-            case 'N': return std::make_tuple(color::white,piece::knight);
-            case 'P': return std::make_tuple(color::white,piece::pawn);
-            case 'Q': return std::make_tuple(color::white,piece::queen);
-            case 'R': return std::make_tuple(color::white,piece::rook);
-            case 'b': return std::make_tuple(color::black,piece::bishop);
-            case 'k': return std::make_tuple(color::black,piece::king);
-            case 'n': return std::make_tuple(color::black,piece::knight);
-            case 'p': return std::make_tuple(color::black,piece::pawn);
-            case 'q': return std::make_tuple(color::black,piece::queen);
-            case 'r': return std::make_tuple(color::black,piece::rook);
-            default : return std::make_tuple(color::count,piece::count);
+            case 'B': return std::make_tuple(side::white,piece::bishop);
+            case 'K': return std::make_tuple(side::white,piece::king);
+            case 'N': return std::make_tuple(side::white,piece::knight);
+            case 'P': return std::make_tuple(side::white,piece::pawn);
+            case 'Q': return std::make_tuple(side::white,piece::queen);
+            case 'R': return std::make_tuple(side::white,piece::rook);
+            case 'b': return std::make_tuple(side::black,piece::bishop);
+            case 'k': return std::make_tuple(side::black,piece::king);
+            case 'n': return std::make_tuple(side::black,piece::knight);
+            case 'p': return std::make_tuple(side::black,piece::pawn);
+            case 'q': return std::make_tuple(side::black,piece::queen);
+            case 'r': return std::make_tuple(side::black,piece::rook);
+            default : return std::make_tuple(side::white,piece::count); // error case
          }
       }
    }
@@ -74,8 +74,8 @@ namespace cheapshot
    {
       canvas_t canvas;
       canvas.fill('.');
-      fill_canvas_side(board[idx(color::white)],canvas,repr_pieces_white);
-      fill_canvas_side(board[idx(color::black)],canvas,repr_pieces_black);
+      fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
+      fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
       print_canvas(canvas,os);
    }
 
@@ -117,10 +117,10 @@ namespace cheapshot
       {
          for(uint8_t j=0;j<8;++j,++canvas)
          {
-            color c;
+            side c;
             piece p;
             std::tie(c,p)=character_to_piece(*canvas);
-            if(c!=color::count)
+            if(p!=piece::count)
                b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
             else
                assert(*canvas=='.');
@@ -147,10 +147,10 @@ namespace cheapshot
                   num_inc=(*rs-'0');
                else
                {
-                  color c;
+                  side c;
                   piece p;
                   std::tie(c,p)=character_to_piece(*rs);
-                  if(c!=color::count)
+                  if(p!=piece::count)
                      b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
                   else
                   {
@@ -174,14 +174,14 @@ namespace cheapshot
          return b;
       }
 
-      inline color
+      inline side
       scan_color(const char*& rs)
       {
          char ch=*rs++;
          switch (ch)
          {
-            case 'w': return color::white;
-            case 'b': return color::black;
+            case 'w': return side::white;
+            case 'b': return side::black;
             default:
             {
                std::stringstream oss;
@@ -196,31 +196,31 @@ namespace cheapshot
       {
          char ch=*rs++;
          uint64_t r=
-            short_castling<up>().mask()|
-            short_castling<down>().mask()|
-            long_castling<up>().mask()|
-            long_castling<down>().mask();
+            short_castling<side::white>().mask()|
+            short_castling<side::black>().mask()|
+            long_castling<side::white>().mask()|
+            long_castling<side::black>().mask();
 
          if (ch=='-')
             return r;
          if(ch=='K')
          {
-            r^=short_castling<up>().mask();
+            r^=short_castling<side::white>().mask();
             ch=*rs++;
          }
          if(ch=='Q')
          {
-            r^=long_castling<up>().mask();
+            r^=long_castling<side::white>().mask();
             ch=*rs++;
          }
          if(ch=='k')
          {
-            r^=short_castling<down>().mask();
+            r^=short_castling<side::black>().mask();
             ch=*rs++;
          }
          if(ch=='q')
          {
-            r^=long_castling<down>().mask();
+            r^=long_castling<side::black>().mask();
             ch=*rs++;
          }
          return r;
@@ -271,8 +271,8 @@ namespace cheapshot
       {
          canvas_t canvas;
          canvas.fill('.');
-         fill_canvas_side(board[idx(color::white)],canvas,repr_pieces_white);
-         fill_canvas_side(board[idx(color::black)],canvas,repr_pieces_black);
+         fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
+         fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
          for(int i=7;i>=0;--i)
          {
             int offset=0;
@@ -299,12 +299,12 @@ namespace cheapshot
 
    // start position
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-   extern std::tuple<board_t,color,context>
+   extern std::tuple<board_t,side,context>
    scan_fen(const char* s)
    {
       board_t b=fen::scan_position(s);
       fen::skip_whitespace(s);
-      color c=fen::scan_color(s);
+      side c=fen::scan_color(s);
       fen::skip_whitespace(s);
       context ctx;
       ctx.castling_rights=fen::scan_castling_rights(s);

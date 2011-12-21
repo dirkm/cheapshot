@@ -52,7 +52,7 @@ namespace cheapshot
    }
 
    // classic fen only
-   extern std::tuple<board_t,color,context>
+   extern std::tuple<board_t,side,context>
    scan_fen(const char* s);
 }
 

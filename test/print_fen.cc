@@ -28,13 +28,13 @@ main(int argc, const char* argv[])
    try
    {
       cheapshot::board_t b;
-      cheapshot::color c;
+      cheapshot::side c;
       cheapshot::context ctx;
       std::tie(b,c,ctx)=cheapshot::scan_fen(argv[1]);
       std::cout << "board:\n";
       cheapshot::print_board(b,std::cout);
-      std::cout << "turn: " <<
-         (c==cheapshot::color::white?"white":"black") <<
+      std::cout << "side: " <<
+         (c==cheapshot::side::white?"white":"black") <<
          "\n";
       print_context(ctx,std::cout);
       return 0;

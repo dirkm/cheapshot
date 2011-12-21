@@ -18,10 +18,11 @@ namespace cheapshot
       bool
       try_position(const board_t& board, const board_metrics& bm)
       {
+         // assert_valid_board(board);
          bool r=(i++)<max_depth;
          // if (!r)
          // {
-         //    print_board(bm.board,std::cout);
+         //    print_board(board,std::cout);
          //    std::cout << std::endl << std::endl;
          // }
          return r;
@@ -37,7 +38,7 @@ namespace cheapshot
       constexpr uint64_t weight[count<piece>()]=
       {
          1, 3, 3, 5, 9,
-         std::numeric_limits<uint64_t>::max()
+         std::numeric_limits<uint64_t>::max() // TODO
       };
    }
 
@@ -46,6 +47,14 @@ namespace cheapshot
    {
       return detail::weight[idx(p)];
    }
+
+   struct transposition_info
+   {
+      uint64_t eval;
+      move_info best_move;
+   };
+
+   // typedef std::unordered_map<uint64_t>
 
 }
 

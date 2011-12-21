@@ -49,12 +49,12 @@ makefile: makefile.inc
 
 test: unittest ct_test
 
-unittest: test/test
+unittest: test/unittest
 	$^ --catch_system_errors=0
 
 ct_test: $(call depend, test/ct_test.cc) test/ct_test.o
 
-test_report: test/test
+test_report: test/unittest
 	@echo -n "Date: "
 	@date
 	@echo "Compiler info:"

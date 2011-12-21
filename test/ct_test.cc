@@ -26,5 +26,5 @@ namespace cheapshot
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
 
-   constexpr castling_t ci=cheapshot::long_castling<up>();
+   constexpr castling_t ci=cheapshot::long_castling<side::white>();
 }

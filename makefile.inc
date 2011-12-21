@@ -1,5 +1,5 @@
 #; -*-makefile-*-
-CXX := g++
+#CXX := g++
 
 CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native
 LIBS :=
@@ -23,5 +23,8 @@ LDFLAGS :=
 
 ## no optimisations to make gdb more intuitive
 #CFLAGS :=  -g -I. -std=c++0x -march=native -mtune=native
+
+## snapshot release
+#CXX:=/usr/lib/gcc-snapshot/bin/g++
 
 CPPFLAGS := ${CFLAGS} 

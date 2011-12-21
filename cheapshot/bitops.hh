@@ -41,6 +41,7 @@ namespace cheapshot
   return c;
   }
 */
+   enum class side: uint8_t { white, black };
 
    constexpr bool
    is_max_single_bit(uint64_t p) noexcept
@@ -67,69 +68,41 @@ namespace cheapshot
       return __builtin_popcountl(p);
    }
 
-   class up;
-   class down;
-
-   template<typename T>
-   struct other_direction;
-
-   template<>
-   struct other_direction<up>
+   constexpr side
+   other_side(side s)
    {
-      typedef down type;
-   };
+      return (s==side::white)?side::black:side::white;
+   }
 
-   template<>
-   struct other_direction<down>
-   {
-      typedef up type;
-   };
-
-   template<typename T=up>
+   template<side S=side::white>
    uint64_t shift_forward(uint64_t l, uint8_t r) noexcept;
 
-   template<typename T=up>
+   template<side S=side::white>
    uint64_t shift_backward(uint64_t l, uint8_t r) noexcept;
 
    template<>
    constexpr uint64_t
-   shift_forward<up>(uint64_t l, uint8_t r)  noexcept {return l<<r;}
+   shift_forward<side::white>(uint64_t l, uint8_t r)  noexcept {return l<<r;}
 
    template<>
    constexpr uint64_t
-   shift_backward<up>(uint64_t l, uint8_t r) noexcept {return l>>r;}
+   shift_backward<side::white>(uint64_t l, uint8_t r) noexcept {return l>>r;}
 
    template<>
    constexpr uint64_t
-   shift_forward<down>(uint64_t l, uint8_t r) noexcept {return l>>r;}
+   shift_forward<side::black>(uint64_t l, uint8_t r) noexcept {return l>>r;}
 
    template<>
    constexpr uint64_t
-   shift_backward<down>(uint64_t l, uint8_t r) noexcept {return l<<r;}
+   shift_backward<side::black>(uint64_t l, uint8_t r) noexcept {return l<<r;}
 
-   template<typename T=up>
+   template<side S=side::white>
    constexpr uint8_t
-   top_index() noexcept;
+   bottom_index() noexcept { return uint8_t(S) * 7; }
 
-   template<typename T=up>
+   template<side S=side::white>
    constexpr uint8_t
-   bottom_index() noexcept;
-
-   template<>
-   constexpr uint8_t
-   top_index<up>() noexcept { return 7; }
-
-   template<>
-   constexpr uint8_t
-   bottom_index<up>() noexcept { return 0; }
-
-   template<>
-   constexpr uint8_t
-   top_index<down>() noexcept { return 0; }
-
-   template<>
-   constexpr uint8_t
-   bottom_index<down>() noexcept { return 7; }
+   top_index() noexcept { return bottom_index<other_side(S)>(); }
 
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
@@ -361,18 +334,18 @@ namespace cheapshot
 
    namespace detail
    {
-      template<typename T=up>
+      template<side S=side::white>
       constexpr uint64_t
       unalias_forward(uint64_t p)
       {
-         return p&~column_with_number(top_index<T>());
+         return p&~column_with_number(top_index<S>());
       }
 
-      template<typename T=up>
+      template<side S=side::white>
       constexpr uint64_t
       unalias_backward(uint64_t p)
       {
-         return p&~column_with_number(bottom_index<T>());
+         return p&~column_with_number(bottom_index<S>());
       }
 
       constexpr uint64_t
@@ -467,76 +440,76 @@ namespace cheapshot
          slide_rook(s,obstacles)|slide_bishop(s,obstacles);
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
       return
-         (shift_forward<T>(detail::unalias_backward<T>(s),7)|
-          shift_forward<T>(detail::unalias_forward<T>(s),9))&
+         (shift_forward<S>(detail::unalias_backward<S>(s),7)|
+          shift_forward<S>(detail::unalias_forward<S>(s),9))&
          obstacles;
    }
 
    namespace detail
    {
-      template<typename T>
+      template<side S>
       constexpr uint64_t
       slide_2_squares(
          uint64_t single_pawn_move, uint64_t obstacles, uint64_t third_row
-         =shift_forward<T>(row_with_number(bottom_index<T>()),2*8)) noexcept
+         =shift_forward<S>(row_with_number(bottom_index<S>()),2*8)) noexcept
       {
          return
-            (shift_forward<T>(single_pawn_move&third_row,8)&~obstacles)|
+            (shift_forward<S>(single_pawn_move&third_row,8)&~obstacles)|
             single_pawn_move;
       }
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    slide_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      return detail::slide_2_squares<T>(shift_forward<T>(s,8)&~obstacles,obstacles);
+      return detail::slide_2_squares<S>(shift_forward<S>(s,8)&~obstacles,obstacles);
    }
 
    // pawns are allowed to reach the end of the board. promotions are done
    //  in the eval-loop
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    slide_and_capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
-      return slide_pawn<T>(s,obstacles)|capture_with_pawn<T>(s,obstacles);
+      return slide_pawn<S>(s,obstacles)|capture_with_pawn<S>(s,obstacles);
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    en_passant_mask(uint64_t pawns_before_move, uint64_t pawns) noexcept
    {
-      return shift_backward<T>(
-         (pawns_before_move^pawns)&(shift_forward<T>(pawns_before_move^pawns,16)),
+      return shift_backward<S>(
+         (pawns_before_move^pawns)&(shift_forward<S>(pawns_before_move^pawns,16)),
          8);
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    en_passant_candidates(uint64_t pawns, uint64_t ep_info) noexcept
    {
-      return capture_with_pawn<typename other_direction<T>::type>(ep_info,pawns);
+      return capture_with_pawn<other_side(S)>(ep_info,pawns);
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    en_passant_capture(uint64_t s, uint64_t last_ep_info) noexcept
    {
-      return capture_with_pawn<T>(s,last_ep_info);
+      return capture_with_pawn<S>(s,last_ep_info);
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    promoting_pawns(uint64_t s) noexcept
    {
       // last row
-      return s&row_with_number(top_index<T>());
+      return s&row_with_number(top_index<S>());
    }
 
    struct castling_t
@@ -546,11 +519,17 @@ namespace cheapshot
       uint64_t king1; // smallest value -- origin or destination is irrelevant
       uint64_t king2;
 
-      constexpr bool
-      castling_allowed(uint64_t all_pieces,uint64_t own_under_attack) const
+      constexpr uint64_t
+      region() const
       {
-         return!((all_pieces&((~rook1)&in_between(rook1,rook2)))|
-                 (own_under_attack&in_between(king1,king2<<1)));
+         return in_between((rook1<king1?rook1:king1)<<1,rook2>king2?rook2:king2);
+      }
+
+      constexpr bool
+      castling_allowed(uint64_t all_pieces, uint64_t own_under_attack) const
+      {
+         return !((all_pieces&region())|
+                  (own_under_attack&(in_between(king1,king2)|king2)));
       }
 
       constexpr uint64_t
@@ -560,38 +539,36 @@ namespace cheapshot
       }
    };
 
-   template<typename T>
+   template<side S>
    constexpr castling_t
    short_castling() noexcept
    {
       return
       {
-         position(5,bottom_index<T>()),position(7,bottom_index<T>()),
-         position(4,bottom_index<T>()),position(6,bottom_index<T>())
+         position(5,bottom_index<S>()),position(7,bottom_index<S>()),
+         position(4,bottom_index<S>()),position(6,bottom_index<S>())
       };
    }
 
-   template<typename T>
+   template<side S>
    constexpr castling_t
    long_castling() noexcept
    {
       return
       {
-         position(0,bottom_index<T>()),position(3,bottom_index<T>()),
-         position(2,bottom_index<T>()),position(4,bottom_index<T>())
+         position(0,bottom_index<S>()),position(3,bottom_index<S>()),
+         position(2,bottom_index<S>()),position(4,bottom_index<S>())
       };
    }
 
-   template<typename T>
+   template<side S>
    constexpr uint64_t
    castling_block_mask(uint64_t rooks, uint64_t king,
-                       uint64_t rooks_init_pos=(position(0,bottom_index<T>())|
-                                                position(7,bottom_index<T>())),
-                       uint64_t king_init_pos=position(4,bottom_index<T>()))
+                       uint64_t rooks_init_pos=(position(0,bottom_index<S>())|
+                                                position(7,bottom_index<S>())),
+                       uint64_t king_init_pos=position(4,bottom_index<S>()))
    {
-      return
-         detail::aliased_split(((rooks^rooks_init_pos)&rooks_init_pos)|
-                               ((king^king_init_pos)&king_init_pos),1);
+      return detail::aliased_split((~rooks&rooks_init_pos)|(~king&king_init_pos),1);
    }
 
 } // cheapshot

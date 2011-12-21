@@ -555,8 +555,8 @@ slide_pawn_check(const char* canvas)
    uint64_t opposing=scan_canvas(canvas,'o','P');
    uint64_t result=scan_canvas(canvas,'X');
    // print_position(slide_pawn<up>(pawns,opposing,std::cout));
-   BOOST_CHECK_EQUAL(slide_pawn<up>(pawns,opposing),result);
-   BOOST_CHECK_EQUAL(slide_pawn<down>(mirror(pawns),mirror(opposing)),mirror(result));
+   BOOST_CHECK_EQUAL(slide_pawn<side::white>(pawns,opposing),result);
+   BOOST_CHECK_EQUAL(slide_pawn<side::black>(mirror(pawns),mirror(opposing)),mirror(result));
 }
 
 BOOST_AUTO_TEST_CASE( slide_pawn_test )
@@ -618,8 +618,8 @@ capture_pawn_check(const char* canvas)
    uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t captures=scan_canvas(canvas,'O');
    uint64_t opposing=scan_canvas(canvas,'o')|captures;
-   BOOST_CHECK_EQUAL(capture_with_pawn<up>(pawns,opposing),captures);
-   BOOST_CHECK_EQUAL(capture_with_pawn<down>(mirror(pawns),mirror(opposing)),mirror(captures));
+   BOOST_CHECK_EQUAL(capture_with_pawn<side::white>(pawns,opposing),captures);
+   BOOST_CHECK_EQUAL(capture_with_pawn<side::black>(mirror(pawns),mirror(opposing)),mirror(captures));
 }
 
 BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
@@ -674,18 +674,18 @@ capture_pawn_en_passant_check(const char* canvas)
    uint64_t own_pawn=scan_canvas(canvas,'X');
    uint64_t captures=scan_canvas(canvas,'x');
    {
-      uint64_t last_ep_info=en_passant_mask<down>(ep_pawns_before_move, ep_pawns);
+      uint64_t last_ep_info=en_passant_mask<side::black>(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(last_ep_info));
-      BOOST_CHECK_EQUAL(en_passant_capture<up>(own_pawn, last_ep_info),captures);
+      BOOST_CHECK_EQUAL(en_passant_capture<side::white>(own_pawn, last_ep_info),captures);
    }
    mirror_inplace(ep_pawns_before_move);
    mirror_inplace(ep_pawns);
    mirror_inplace(own_pawn);
    mirror_inplace(captures);
    {
-      uint64_t last_ep_info=en_passant_mask<up>(ep_pawns_before_move, ep_pawns);
+      uint64_t last_ep_info=en_passant_mask<side::white>(ep_pawns_before_move, ep_pawns);
       BOOST_CHECK(is_max_single_bit(last_ep_info));
-      BOOST_CHECK_EQUAL(en_passant_capture<down>(own_pawn, last_ep_info),captures);
+      BOOST_CHECK_EQUAL(en_passant_capture<side::black>(own_pawn, last_ep_info),captures);
    }
 
 }
@@ -880,11 +880,11 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       static const char initial_pos[]=
          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
       board_t b;
-      color turn;
+      side turn;
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==color::white);
+      BOOST_CHECK(turn==side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
       BOOST_CHECK_EQUAL(ctx.castling_rights,0ULL);
    }
@@ -893,11 +893,11 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       static const char initial_pos[]=
          "r1b2rk1/pp1p1pp1/1b1p2B1/n1qQ2p1/8/5N2/P3RPPP/4R1K1 w - - 0 1";
       board_t b;
-      color turn;
+      side turn;
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       // BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==color::white);
+      BOOST_CHECK(turn==side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
       BOOST_CHECK_EQUAL(ctx.castling_rights,
                         scan_canvas(
@@ -916,11 +916,11 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       static const char ep_pos[]=
          "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
       board_t b;
-      color turn;
+      side turn;
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(ep_pos);
       // BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==color::white);
+      BOOST_CHECK(turn==side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,scan_canvas(
                            "........\n"
                            "........\n"
@@ -944,7 +944,7 @@ basic_moves_generator_test(const char* board_layout, const char* captures)
    board_t b=scan_board(board_layout);
    board_metrics bm(b);
    uint64_t r=0;
-   generate_basic_moves<up>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+   generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
          r|=dests;
       });
    boost::test_tools::output_test_stream ots;
@@ -995,7 +995,7 @@ BOOST_AUTO_TEST_CASE( moves_generator_test )
       board_t b=test_board1;
       board_metrics bm(b);
       uint64_t r[count<piece>()]={0,0,0,0,0};
-      generate_basic_moves<up>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
             r[idx(p)]|=dests;
          });
 
@@ -1086,8 +1086,7 @@ BOOST_AUTO_TEST_CASE( scoped_move_test )
    uint64_t dest=scan_canvas(c,'p');
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
-      scoped_move2 scope(basic_capture_info<up>(b,moved_piece,origin,dest));
-      boost::test_tools::output_test_stream ots;
+      scoped_move2 scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
       BOOST_CHECK(b==scan_board(
                      "........\n"
                      "........\n"
@@ -1101,23 +1100,23 @@ BOOST_AUTO_TEST_CASE( scoped_move_test )
    BOOST_CHECK(b==scan_board(c));
 }
 
-template<typename T>
+template<side S>
 bool
 is_castling_allowed(const board_t& board, const castling_t& ci)
 {
    board_metrics bm(board);
    uint64_t own_under_attack=0ULL;
-   generate_basic_moves<typename other_direction<T>::type>(
+   generate_basic_moves<other_side(S)>(
       board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
       {
          own_under_attack|=dests;
       });
-   return ci.castling_allowed(bm.own<T>(),own_under_attack);
+   return ci.castling_allowed(bm.own<S>(),own_under_attack);
 }
 
 BOOST_AUTO_TEST_CASE( castle_test )
 {
-   constexpr auto sci=short_castling<up>();
+   constexpr auto sci=short_castling<side::white>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1128,9 +1127,9 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          ".....PPP\n"
          "....K..R\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,sci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
 
-      scoped_move2 scope(castle_info<up>(b,sci));
+      scoped_move2 scope(castle_info<side::white>(b,sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1153,7 +1152,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          ".....PPP\n"
          "....K.NR\n");
-      BOOST_CHECK(!is_castling_allowed<up>(b,sci));
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,sci));
    }
    {
       board_t b=scan_board(
@@ -1165,7 +1164,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "...b....\n"
          ".....PPP\n"
          "....K..R\n");
-      BOOST_CHECK(!is_castling_allowed<up>(b,sci));
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,sci));
    }
    {
       board_t b=scan_board(
@@ -1177,7 +1176,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          ".....PPP\n"
          "...nK..R\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,sci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
    }
    {
       board_t b=scan_board(
@@ -1189,10 +1188,10 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          ".....PP.\n"
          "...nK..R\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,sci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
    }
 
-   constexpr auto lci=long_castling<up>();
+   constexpr auto lci=long_castling<side::white>();
    {
       board_t b=scan_board(
          "....k...\n"
@@ -1203,7 +1202,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          "PPPP....\n"
          "R...K...\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,lci));
    }
    {
       board_t b=scan_board(
@@ -1215,7 +1214,19 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          "PPPP....\n"
          "RN..K...\n");
-      BOOST_CHECK(!is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "PPPP....\n"
+         "R..QK...\n");
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
    }
    {
       board_t b=scan_board(
@@ -1227,9 +1238,9 @@ BOOST_AUTO_TEST_CASE( castle_test )
          ".....b..\n"
          "PPPP....\n"
          "R...K...\n");
-      BOOST_CHECK(!is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
 
-      scoped_move2 scope(castle_info<up>(b,lci));
+      scoped_move2 scope(castle_info<side::white>(b,lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1253,7 +1264,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          "PPPP....\n"
          "R...Kn..\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,lci));
    }
    {
       board_t b=scan_board(
@@ -1265,7 +1276,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          "P.PP....\n"
          "R...Kn..\n");
-      BOOST_CHECK(is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(is_castling_allowed<side::white>(b,lci));
    }
    {
       board_t b=scan_board(
@@ -1277,7 +1288,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "........\n"
          "PP.P....\n"
          "R...Kn..\n");
-      BOOST_CHECK(!is_castling_allowed<up>(b,lci));
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
    }
 
 }
@@ -1288,12 +1299,12 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
 {
    {
       board_t mate_board=scan_board(simple_mate_board);
-      BOOST_CHECK_EQUAL(analyze_position<up>(mate_board,null_context,max_plie_cutoff(1)),
+      BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,max_plie_cutoff(1)),
                         score_t({-score_t::checkmate}));
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      BOOST_CHECK_EQUAL(analyze_position<up>(mate_board,null_context,max_plie_cutoff(1)),
+      BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,max_plie_cutoff(1)),
                         score_t({-score_t::checkmate}));
    }
    {
@@ -1307,9 +1318,9 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      BOOST_CHECK_EQUAL(analyze_position<down>(mate_board,null_context,max_plie_cutoff(1)),
+      BOOST_CHECK_EQUAL(analyze_position<side::black>(mate_board,null_context,max_plie_cutoff(1)),
                         score_t({-score_t::checkmate}));
-   }
+   }         
    {
       // wikipedia stalemate article
       board_t stalemate_board=scan_board(
@@ -1321,7 +1332,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n"
          "........\n");
-      BOOST_CHECK_EQUAL(analyze_position<down>(stalemate_board,null_context,max_plie_cutoff(1)),
+      BOOST_CHECK_EQUAL(analyze_position<side::black>(stalemate_board,null_context,max_plie_cutoff(1)),
                         score_t({-score_t::stalemate}));
    }
 }
@@ -1359,13 +1370,13 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       "....K...\n");
    {
       move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
-      score_t s=analyze_position<down>(en_passant_initial,null_context,check);
+      score_t s=analyze_position<side::black>(en_passant_initial,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
    {
       board_t bmirror=mirror(en_passant_initial);
       move_checker check({bmirror,mirror(en_passant_double_move),mirror(en_passant_after_capture)});
-      score_t s=analyze_position<up>(bmirror,null_context,check);
+      score_t s=analyze_position<side::white>(bmirror,null_context,check);
       BOOST_CHECK(check.is_position_reached());
    }
 
@@ -1395,7 +1406,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
          "........\n");
       {
          move_checker check({promotion_initial,promotion_mate_queen});
-         score_t s=analyze_position<up>(promotion_initial,null_context,check);
+         score_t s=analyze_position<side::white>(promotion_initial,null_context,check);
          BOOST_CHECK(check.is_position_reached());
       }
       {
@@ -1409,13 +1420,13 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n");
          move_checker check({promotion_initial,promotion_knight});
-         score_t s=analyze_position<up>(promotion_initial,null_context,check);
+         score_t s=analyze_position<side::white>(promotion_initial,null_context,check);
          BOOST_CHECK(check.is_position_reached());
       }
       {
          board_t bmirror=mirror(promotion_initial);
          move_checker check({bmirror,mirror(promotion_mate_queen)});
-         score_t s=analyze_position<down>(bmirror,null_context,check);
+         score_t s=analyze_position<side::black>(bmirror,null_context,check);
          BOOST_CHECK(check.is_position_reached());
          BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
       }
@@ -1441,7 +1452,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             ".......K\n");
          move_checker check1({multiple_promotions_initial,multiple_promotions1});
-         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check1);
+         score_t s=analyze_position<side::white>(multiple_promotions_initial,null_context,check1);
          BOOST_CHECK(check1.is_position_reached());
       }
       {
@@ -1455,7 +1466,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             ".......K\n");
          move_checker check2({multiple_promotions_initial,multiple_promotions2});
-         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check2);
+         score_t s=analyze_position<side::white>(multiple_promotions_initial,null_context,check2);
          BOOST_CHECK(check2.is_position_reached());
       }
       {
@@ -1469,28 +1480,28 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             ".......K\n");
          move_checker check3({multiple_promotions_initial,multiple_promotions3});
-         score_t s=analyze_position<up>(multiple_promotions_initial,null_context,check3);
+         score_t s=analyze_position<side::white>(multiple_promotions_initial,null_context,check3);
          BOOST_CHECK(check3.is_position_reached());
       }
    }
 }
 
-template<typename T>
+template<side S>
 void
 scan_mate(int depth, board_t b)
 {
-   constexpr score_t s=std::is_same<T,up>::value?
+   constexpr score_t score=(S==side::white)?
       score_t{score_t::checkmate}:
    score_t{-score_t::checkmate};
-   BOOST_CHECK_EQUAL(analyze_position<T>(b,null_context,max_plie_cutoff(depth)),s);
+   BOOST_CHECK_EQUAL(analyze_position<S>(b,null_context,max_plie_cutoff(depth)),score);
 }
 
-template<typename T, typename... Boards>
+template<side S, typename... Boards>
 void
 scan_mate(int depth, board_t b, Boards... board_pack)
 {
-   scan_mate<typename other_direction<T>::type>(depth-1,board_pack...);
-   scan_mate<T>(depth, b);
+   scan_mate<other_side(S)>(depth-1,board_pack...);
+   scan_mate<S>(depth, b);
 }
 
 BOOST_AUTO_TEST_CASE( find_mate_test )
@@ -1544,11 +1555,56 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ".R....K.\n");
       {
          move_checker check({b,b1,b2,b3,b4,b5});
-         analyze_position<up>(b,null_context,check);
+         analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.is_position_reached());
       }
-      scan_mate<down>(5,b1,b2,b3,b4,b5);
+      scan_mate<side::black>(5,b1,b2,b3,b4,b5);
    }
+   {
+      board_t b=scan_board(
+         "rnbqkbn.\n"
+         "ppppp...\n"
+         ".......r\n"
+         "......pp\n"
+         "...P.p..\n"
+         "...BP.B.\n"
+         "PPP..PPP\n"
+         "RN.QK.NR\n");
+      board_t b1=scan_board(
+         "rnbqkbn.\n"
+         "ppppp...\n"
+         ".......r\n"
+         "......pQ\n"
+         "...P.p..\n"
+         "...BP.B.\n"
+         "PPP..PPP\n"
+         "RN..K.NR\n");
+      board_t b2=scan_board(
+         "rnbqkbn.\n"
+         "ppppp...\n"
+         "........\n"
+         "......pr\n"
+         "...P.p..\n"
+         "...BP.B.\n"
+         "PPP..PPP\n"
+         "RN..K.NR\n");
+      board_t b3=scan_board(
+         "rnbqkbn.\n"
+         "ppppp...\n"
+         "......B.\n"
+         "......pr\n"
+         "...P.p..\n"
+         "....P.B.\n"
+         "PPP..PPP\n"
+         "RN..K.NR\n");
+      {
+         move_checker check({b,b1,b2,b3});
+         analyze_position<side::white>(b,null_context,check);
+         BOOST_CHECK(check.is_position_reached());
+      }
+      scan_mate<side::white>(4,b,b1,b2,b3);
+   }
+
    {
       // http://www.chess.com/forum/view/game-showcase/castle-into-mate-in-2
       //  (adapted position)
@@ -1594,13 +1650,13 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          );
       {
          board_t btemp=b;
-         constexpr auto lci=short_castling<up>();
-         BOOST_CHECK(is_castling_allowed<up>(btemp,lci));
+         constexpr auto lci=short_castling<side::white>();
+         BOOST_CHECK(is_castling_allowed<side::white>(btemp,lci));
          move_checker check({b,b1,b2,b3});
-         analyze_position<up>(btemp,null_context,check);
+         analyze_position<side::white>(btemp,null_context,check);
          BOOST_CHECK(check.is_position_reached());
       }
-      scan_mate<up>(4,b);
+      scan_mate<side::white>(4,b);
    }
 }
 
@@ -1651,10 +1707,10 @@ void time_move(T fun, long count, const char* description)
 BOOST_AUTO_TEST_CASE( time_moves )
 {
    // each timing takes about 1 sec on my machine
-   time_move(&slide_pawn<up>,100000000,"slide pawn up");
-   time_move(&slide_pawn<down>,100000000,"slide pawn down");
-   time_move(&capture_with_pawn<up>,100000000,"capture with pawn up");
-   time_move(&capture_with_pawn<down>,100000000,"capture with pawn down");
+   time_move(&slide_pawn<side::white>,100000000,"slide pawn up");
+   time_move(&slide_pawn<side::black>,100000000,"slide pawn down");
+   time_move(&capture_with_pawn<side::white>,100000000,"capture with pawn up");
+   time_move(&capture_with_pawn<side::black>,100000000,"capture with pawn down");
    time_move(&jump_knight,100000000,"knight jump");
    time_move(&slide_bishop,40000000,"slide bishop");
    time_move(&slide_rook,40000000,"slide rook");
@@ -1671,7 +1727,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      generate_basic_moves<up>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
             r|=dests;
          });
    }
@@ -1699,7 +1755,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    volatile int nrPlies=1;
    for(long i=0;i<ops;++i)
    {
-      analyze_position<up>(mate_board,null_context,max_plie_cutoff(nrPlies));
+      analyze_position<side::white>(mate_board,null_context,max_plie_cutoff(nrPlies));
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }
@@ -1729,7 +1785,7 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    constexpr long ops=12;
    for(long i=0;i<ops;++i)
    {
-      BOOST_CHECK_EQUAL(analyze_position<down>(rook_queen_mate,null_context,max_plie_cutoff(6)),
+      BOOST_CHECK_EQUAL(analyze_position<side::black>(rook_queen_mate,null_context,max_plie_cutoff(6)),
                         score_t({-score_t::checkmate}));
    }
    time_op.time_report("endgame mate in 6 plies",ops);

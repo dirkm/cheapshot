@@ -1,14 +1,14 @@
 #; -*-makefile-*-
 
-EXEC += $~test $~print_position $~print_fen $~forced_mate
+EXEC += $~unittest $~print_position $~print_fen $~forced_mate
 
 $(EXEC): $(LIBCHEAPSHOT)
 
-$~test: LDFLAGS += -lboost_unit_test_framework
+$~unittest: LDFLAGS += -lboost_unit_test_framework
 
-$~test.o: $(call depend, $~test.cc)
+$~unittest.o: $(call depend, $~unittest.cc)
 
-$~test: $~test.o
+$~unittest: $~unittest.o
 	$(CXX) $& $(LDFLAGS) -o $@ $(LIBS)
 
 $~print_position: $(call depend, $~print_position.cc)

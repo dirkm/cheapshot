@@ -1,0 +1,11 @@
+test/forced_mate
+test/print_fen
+test/test
+test/print_position
+
+*.su
+*.cc.d
+*.a
+*.o
+*~
+*.out
