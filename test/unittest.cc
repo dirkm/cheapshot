@@ -887,6 +887,11 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       BOOST_CHECK(turn==side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
       BOOST_CHECK_EQUAL(ctx.castling_rights,0ULL);
+      std::tie(b,turn,ctx)=scan_fen(initial_pos);
+
+      boost::test_tools::output_test_stream ots;
+      print_fen(b,turn,ctx,ots);
+      BOOST_CHECK(ots.is_equal(initial_pos));
    }
    {
       // see http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
@@ -910,6 +915,10 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
                            "........\n"
                            "...B.B..\n"
                            ,'B'));
+
+      boost::test_tools::output_test_stream ots;
+      print_fen(b,turn,ctx,ots);
+      BOOST_CHECK(ots.is_equal(initial_pos));
    }
    {
       // see http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
@@ -931,6 +940,10 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
                            "........\n"
                            "........\n"
                            ,'P'));
+
+      boost::test_tools::output_test_stream ots;
+      print_fen(b,turn,ctx,ots);
+      BOOST_CHECK(ots.is_equal(ep_pos));
    }
 }
 
@@ -1771,7 +1784,7 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    //    "..R.....\n"
    //    "........\n"
    //    "........\n"
-   //    "....Q.R.\n");
+   //    "....Q.K.\n");
    board_t rook_queen_mate=scan_board(
       "........\n"
       "........\n"
@@ -1780,15 +1793,15 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
       "..R.Q...\n"
       "........\n"
       "........\n"
-      "......R.\n");
+      "......K.\n");
    TimeOperation time_op;
-   constexpr long ops=12;
+   constexpr long ops=1;
    for(long i=0;i<ops;++i)
    {
-      BOOST_CHECK_EQUAL(analyze_position<side::black>(rook_queen_mate,null_context,max_plie_cutoff(6)),
+      BOOST_CHECK_EQUAL(analyze_position<side::black>(rook_queen_mate,null_context,max_plie_cutoff(7)),
                         score_t({-score_t::checkmate}));
    }
-   time_op.time_report("endgame mate in 6 plies",ops);
+   time_op.time_report("endgame mate in 7 plies",ops);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -49,11 +49,17 @@ namespace cheapshot
    {
       extern board_t
       scan_position(char const *& rs);
+
+      extern void
+      print_position(const board_t& board, std::ostream& os);
    }
 
    // classic fen only
    extern std::tuple<board_t,side,context>
    scan_fen(const char* s);
+
+   extern void
+   print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
 }
 
 #endif

@@ -43,6 +43,12 @@ namespace cheapshot
 */
    enum class side: uint8_t { white, black };
 
+   constexpr side
+   other_side(side s)
+   {
+      return (s==side::white)?side::black:side::white;
+   }
+
    constexpr bool
    is_max_single_bit(uint64_t p) noexcept
    {
@@ -66,12 +72,6 @@ namespace cheapshot
    count_bits_set(uint64_t p) noexcept
    {
       return __builtin_popcountl(p);
-   }
-
-   constexpr side
-   other_side(side s)
-   {
-      return (s==side::white)?side::black:side::white;
    }
 
    template<side S=side::white>
@@ -154,23 +154,11 @@ namespace cheapshot
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
    // function accepts 0 and returns "all bits set"
-
    constexpr uint64_t
    smaller(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
       return s-1;
-   }
-
-   // s2 is allowed to be 0 (means one bigger than last bit)
-   // s1: single bit (min. 1ULL)
-   // s1 is in result, s2 not
-   constexpr uint64_t
-   in_between(uint64_t s1,uint64_t s2) noexcept
-   {
-      // assert(is_max_single_bit(s1));
-      // assert(is_max_single_bit(s2));
-      return s2-s1;
    }
 
    // function accepts 0 and returns "all bits set"
@@ -193,6 +181,17 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       return ~smaller(s);
+   }
+
+   // s2 is allowed to be 0 (means one bigger than last bit)
+   // s1: single bit (min. 1ULL)
+   // s1 is in result, s2 not
+   constexpr uint64_t
+   in_between(uint64_t s1,uint64_t s2) noexcept
+   {
+      // assert(is_max_single_bit(s1));
+      // assert(is_max_single_bit(s2));
+      return s2-s1;
    }
 
    // sliding moves

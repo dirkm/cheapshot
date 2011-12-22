@@ -106,22 +106,30 @@ namespace cheapshot
       return b;
    }
 
-   inline uint64_t
+   inline void
    assert_valid_board(const board_t& b)
    {
       uint64_t r=0;
       for(const board_side& bs: b)
+      {
+         uint64_t bsmap=r;
          for(uint64_t p: bs)
          {
             assert((r&p)==0ULL);
             r|=p;
          }
+         bsmap^=r;
+         assert(count_bits_set(bsmap)<=16); // no more than 16 pieces per side
+         assert(is_single_bit(bs[idx(piece::king)])); // exactly one king
+         assert(count_bits_set(bs[idx(piece::pawn)])<=8);
+      }
    }
 
    // hash-function
 
+   // a bitmixer is used instead of a PRNG-table
    inline uint64_t
-   bitmixer(uint64_t p)
+   bit_mixer(uint64_t p)
    {
       // finalizer of Murmurhash 3
       p ^= p >> 33;
@@ -132,15 +140,49 @@ namespace cheapshot
       return p;
    }
 
-   inline uint64_t
-   zorbist_hash(const board_t& board)
+   constexpr uint64_t
+   piece_mixer(side c,piece p)
    {
+      return 0001000100010001ULL<<(idx(p)<<idx(c));
+   }
+
+   inline uint64_t
+   zobrist_hash(side c, piece p, uint64_t pos)
+   {
+      return bit_mixer(piece_mixer(c,p)^pos);
+   }
+
+   inline uint64_t
+   zobrist_hash(side c,const board_side& bs)
+   {
+      uint64_t r=0ULL;
+      for(piece p=piece::pawn;p<piece::count;++p)
+         r^=zobrist_hash(c, p, bs[idx(p)]);
+      return r;
+   }
+
+   inline uint64_t
+   zobrist_hash(const board_t& board)
+   {
+      uint64_t r=zobrist_hash(side::white,board[idx(side::white)]);
+      r^=zobrist_hash(side::black,board[idx(side::black)]);
+      return r;
    }
 
    // inline uint64_t
    // incremental_zorbist_hash(const move_info& mi)
    // {
    // }
+
+   inline uint64_t
+   zobrist_hash_ep(uint64_t ep_info)
+   {
+   }
+
+   inline uint64_t
+   zorbrist_hash_castling(uint64_t castling_mask)
+   {
+   }
 
    // constexpr uint64_t
    // hash(const board_t& board)

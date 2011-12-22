@@ -11,10 +11,10 @@ namespace cheapshot
    namespace
    {
       typedef std::array<char,count<piece>()> piece_to_character_t;
-      
+
       constexpr piece_to_character_t repr_pieces_white={'P','N','B','R','Q','K'};
       constexpr piece_to_character_t repr_pieces_black={'p','n','b','r','q','k'};
-      
+
       std::tuple<side,piece>
       character_to_piece(char p)
       {
@@ -86,6 +86,13 @@ namespace cheapshot
       c.fill('.');
       fill_canvas(t,c,p);
       print_canvas(c,os);
+   }
+
+   inline void
+   print_algpos(uint64_t s, std::ostream& os)
+   {
+      uint8_t bp=get_board_pos(s);
+      os << (char)('a'+(bp&'\x7')) << ((bp>>3)+1);
    }
 
    constexpr uint64_t
@@ -267,31 +274,84 @@ namespace cheapshot
       }
 
       extern void
-      print_fen_position(const board_t& board, std::ostream& os)
+      print_position(const board_t& board, std::ostream& os)
       {
          canvas_t canvas;
          canvas.fill('.');
          fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
          fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
-         for(int i=7;i>=0;--i)
+         for(int i=7;;--i)
          {
             int offset=0;
             for(int j=i*8;j<(i+1)*8;++j)
             {
-               if(j=='.')
+               if(canvas[j]=='.')
                {
                   ++offset;
                   continue;
                }
                if(offset)
                {
-                  std::cout << offset;
+                  os << offset;
                   offset=0;
                }
                os << canvas[j];
             }
+            if(offset)
+               os << offset;
+            if(i<=0)
+               break;
             os << "/";
          }
+      }
+
+      inline void
+      print_color(side c,std::ostream& os)
+      {
+         os << ((c==side::white)?'w':'b');
+      }
+
+      inline void
+      print_castling_rights(uint64_t castling_rights,std::ostream& os)
+      {
+         bool f=false;
+         if(short_castling<side::white>().castling_allowed(castling_rights,0ULL))
+         {
+            f=true;
+            os << 'K';
+         }
+         if(long_castling<side::white>().castling_allowed(castling_rights,0ULL))
+         {
+            f=true;
+            os << 'Q';
+         }
+         if(short_castling<side::black>().castling_allowed(castling_rights,0ULL))
+         {
+            f=true;
+            os << 'k';
+         }
+         if(long_castling<side::black>().castling_allowed(castling_rights,0ULL))
+         {
+            f=true;
+            os << 'q';
+         }
+         if(!f)
+            os << '-';
+      }
+
+      inline void
+      print_ep_info(uint64_t ep_info, std::ostream& os)
+      {
+         if(ep_info==0ULL)
+            os << "-";
+         else
+            print_algpos(ep_info, os);
+      }
+
+      inline void
+      print_number(uint64_t n, std::ostream& os)
+      {
+         os << n;
       }
    }
 
@@ -315,5 +375,21 @@ namespace cheapshot
       fen::skip_whitespace(s);
       ctx.fullmove_number=fen::scan_number(s);
       return std::make_tuple(b,c,ctx);
+   }
+
+   extern void
+   print_fen(const board_t& board, side c, const context& ctx, std::ostream& os)
+   {
+      fen::print_position(board,os);
+      os << " ";
+      fen::print_color(c,os);
+      os << " ";
+      fen::print_castling_rights(ctx.castling_rights,os);
+      os << " ";
+      fen::print_ep_info(ctx.ep_info,os);
+      os << " ";
+      fen::print_number(ctx.halfmove_clock,os);
+      os << " ";
+      fen::print_number(ctx.fullmove_number,os);
    }
 }
