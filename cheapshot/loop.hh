@@ -245,7 +245,7 @@ namespace cheapshot
          }
       }
 
-      if(!engine_controller.try_position(board,bm))
+      if(!engine_controller.try_position(board,S,ctx,bm))
          return {0}; // TODO: better eval-function than returning 0
 
       uint64_t own_under_attack=0ULL;

@@ -16,7 +16,7 @@ namespace cheapshot
       {}
 
       bool
-      try_position(const board_t& board, const board_metrics& bm)
+      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
          bool r=(i++)<max_depth;

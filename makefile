@@ -44,25 +44,3 @@ files:
 	@echo $(EXEC)
 
 makefile: makefile.inc
-
-.PHONY: test unittest ct_test
-
-test: unittest ct_test
-
-unittest: test/unittest
-	$^ --catch_system_errors=0
-
-ct_test: $(call depend, test/ct_test.cc) test/ct_test.o
-
-test_report: test/unittest
-	@echo -n "Date: "
-	@date
-	@echo "Compiler info:"
-	@$(CXX) -v 2>&1
-	@echo "CFlags: $(CFLAGS)"
-	@echo "Cpus: "
-	@grep "model name" /proc/cpuinfo
-	@echo "Last git commit: "
-	@git --no-pager log --max-count=1
-	@echo "Tests"
-	@ $^

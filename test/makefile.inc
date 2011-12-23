@@ -4,9 +4,11 @@ EXEC += $~unittest $~print_position $~print_fen $~forced_mate
 
 $(EXEC): $(LIBCHEAPSHOT)
 
-$~unittest: LDFLAGS += -lboost_unit_test_framework
+test: unittest ct_test tool_test
 
 $~unittest.o: $(call depend, $~unittest.cc)
+
+$~unittest: LDFLAGS += -lboost_unit_test_framework
 
 $~unittest: $~unittest.o
 	$(CXX) $& $(LDFLAGS) -o $@ $(LIBS)
@@ -19,3 +21,26 @@ $~forced_mate: $(call depend, $~forced_mate.cc)
 
 $~print_fen: $(call depend, $~print_fen.cc)
 	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
+
+.PHONY: test unittest ct_test test_report
+
+unittest: $~unittest
+	$^ --catch_system_errors=0
+
+ct_test: $(call depend, $~ct_test.cc) $~ct_test.o
+
+tool_test: $~forced_mate
+	test/tool_test.sh
+
+test_report: $~unittest
+	@echo -n "Date: "
+	@date
+	@echo "Compiler info:"
+	@$(CXX) -v 2>&1
+	@echo "CFlags: $(CFLAGS)"
+	@echo "Cpus: "
+	@grep "model name" /proc/cpuinfo
+	@echo "Last git commit: "
+	@git --no-pager log --max-count=1
+	@echo "Tests"
+	@ $^

@@ -1,4 +1,5 @@
 #include <ctime>
+#include <map>
 #include <sys/times.h>
 
 #define BOOST_TEST_DYN_LINK
@@ -123,7 +124,7 @@ namespace
       {}
 
       bool
-      try_position(const board_t& board, const board_metrics& bm)
+      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          int idx=i++;
          // std::cout << "trying i " << i << std::endl;
@@ -148,6 +149,28 @@ namespace
       std::shared_ptr<std::vector<board_t> >  positions;
       int i;
    };
+
+   class do_until_plie_cutoff
+   {
+   public:
+      do_until_plie_cutoff(int max_depth, std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) > fun_):
+         mpc(max_depth),
+         fun(fun_)
+      {}
+
+      bool
+      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      {
+         if(!mpc.try_position(board,c,ctx,bm))
+            return false;
+         fun(board,c,ctx,bm);
+         return true;
+      }
+   private:
+      max_plie_cutoff mpc;
+      std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) > fun;
+   };
+
 }
 
 namespace cheapshot
@@ -1802,6 +1825,33 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
                         score_t({-score_t::checkmate}));
    }
    time_op.time_report("endgame mate in 7 plies",ops);
+}
+
+BOOST_AUTO_TEST_CASE( hash_test )
+{
+   board_t b=initial_board();
+   std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
+   int ops=0;
+
+   auto f=[&r,&ops](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+      {
+         ++ops;
+         uint64_t hash=zobrist_hash(board,t,ctx);
+         auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
+
+         auto lb = r.lower_bound(hash);
+         if(lb!=r.end())
+            if(!(r.key_comp()(hash,lb->first)))
+            {
+               BOOST_CHECK(state==lb->second);
+               return;
+            }
+         r.insert(lb,std::make_pair(hash,state));
+      };
+
+   TimeOperation time_op;
+   analyze_position<side::white>(b,null_context,do_until_plie_cutoff(5,f));
+   time_op.time_report("all-at-once hashes from start position",ops);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
