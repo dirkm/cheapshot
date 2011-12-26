@@ -19,6 +19,12 @@
 
 using namespace cheapshot;
 
+BOOST_TEST_DONT_PRINT_LOG_VALUE(score_t)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(bit_iterator)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(board_iterator)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(board_t)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(side)
+
 namespace
 {
    constexpr uint64_t full_board=~0UL;
@@ -208,13 +214,13 @@ BOOST_AUTO_TEST_CASE( bit_iterator_test )
       // real life test-case
       bit_iterator it(34);
       BOOST_CHECK_EQUAL(*it,2);
-      BOOST_CHECK(it!=bit_iterator());
+      BOOST_CHECK_NE(it,bit_iterator());
       ++it;
-      BOOST_CHECK(it!=bit_iterator());
+      BOOST_CHECK_NE(it,bit_iterator());
       BOOST_CHECK_EQUAL(*it,32);
       BOOST_CHECK_EQUAL(*it,32); // idempotent?
       ++it;
-      BOOST_CHECK(it==bit_iterator());
+      BOOST_CHECK_EQUAL(it,bit_iterator());
    }
 }
 
@@ -232,15 +238,15 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
    BOOST_CHECK_EQUAL(*make_board_iterator(32),5);
    {
       board_iterator it=make_board_iterator(34);
-      BOOST_CHECK(*it==1);
-      BOOST_CHECK(it!=board_iterator());
+      BOOST_CHECK_EQUAL(*it,1);
+      BOOST_CHECK_NE(it,board_iterator());
       ++it;
-      BOOST_CHECK(it!=board_iterator());
-      BOOST_CHECK(*it==5);
-      BOOST_CHECK(*it==5);
+      BOOST_CHECK_NE(it,board_iterator());
+      BOOST_CHECK_EQUAL(*it,5);
+      BOOST_CHECK_EQUAL(*it,5);
       ++it;
-      BOOST_CHECK(it==board_iterator());
-      BOOST_CHECK(make_board_iterator(0)==board_iterator());
+      BOOST_CHECK_EQUAL(it,board_iterator());
+      BOOST_CHECK_EQUAL(make_board_iterator(0),board_iterator());
    }
 }
 
@@ -890,14 +896,14 @@ BOOST_AUTO_TEST_CASE( diagonals_test )
 
 BOOST_AUTO_TEST_CASE( scan_board_test )
 {
-   BOOST_CHECK(initial_board()==scan_board(initial_canvas));
+   BOOST_CHECK_EQUAL(initial_board(),scan_board(initial_canvas));
 }
 
 BOOST_AUTO_TEST_CASE( scan_fen_test )
 {
    {
       const char* fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-      BOOST_CHECK(initial_board()==fen::scan_position(fen));
+      BOOST_CHECK_EQUAL(initial_board(),fen::scan_position(fen));
    }
    {
       static const char initial_pos[]=
@@ -906,8 +912,8 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       side turn;
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
-      BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==side::white);
+      BOOST_CHECK_EQUAL(b,initial_board());
+      BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
       BOOST_CHECK_EQUAL(ctx.castling_rights,0ULL);
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
@@ -925,7 +931,7 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       // BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==side::white);
+      BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
       BOOST_CHECK_EQUAL(ctx.castling_rights,
                         scan_canvas(
@@ -952,7 +958,7 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       context ctx;
       std::tie(b,turn,ctx)=scan_fen(ep_pos);
       // BOOST_CHECK(b==initial_board());
-      BOOST_CHECK(turn==side::white);
+      BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,scan_canvas(
                            "........\n"
                            "........\n"
@@ -1123,17 +1129,17 @@ BOOST_AUTO_TEST_CASE( scoped_move_test )
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
       scoped_move2 scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
-      BOOST_CHECK(b==scan_board(
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "........\n"
-                     "......k.\n"
-                     "........\n"
-                     "......K.\n"
-                     "........\n"));
+      BOOST_CHECK_EQUAL(b,scan_board(
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "......k.\n"
+                           "........\n"
+                           "......K.\n"
+                           "........\n"));
    }
-   BOOST_CHECK(b==scan_board(c));
+   BOOST_CHECK_EQUAL(b,scan_board(c));
 }
 
 template<side S>
@@ -1827,13 +1833,16 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    time_op.time_report("endgame mate in 7 plies",ops);
 }
 
-BOOST_AUTO_TEST_CASE( hash_test )
+// BOOST_TEST_DONT_PRINT_LOG_VALUE(std::tuple<board_t,side, uint64_t, uint64_t>)
+
+BOOST_AUTO_TEST_CASE( complete_hash_test )
 {
    board_t b=initial_board();
    std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
    int ops=0;
+   int matches=0;
 
-   auto f=[&r,&ops](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+   auto f=[&r,&ops,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
       {
          ++ops;
          uint64_t hash=zobrist_hash(board,t,ctx);
@@ -1843,6 +1852,7 @@ BOOST_AUTO_TEST_CASE( hash_test )
          if(lb!=r.end())
             if(!(r.key_comp()(hash,lb->first)))
             {
+               ++matches;
                BOOST_CHECK(state==lb->second);
                return;
             }
@@ -1851,6 +1861,11 @@ BOOST_AUTO_TEST_CASE( hash_test )
 
    TimeOperation time_op;
    analyze_position<side::white>(b,null_context,do_until_plie_cutoff(5,f));
+   //  6
+   // matches: 3661173 with ops: 5072213
+   // real time: 80.31 user time: 79.44 system time: 0.47 ops/sec: 63157.9
+
+   std::cout << "matches: " << matches << " with ops: " << ops << std::endl;
    time_op.time_report("all-at-once hashes from start position",ops);
 }
 

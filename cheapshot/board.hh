@@ -141,15 +141,23 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   premix(uint8_t pm) // pm between 0 and 16
+   premix(uint8_t pm) // pm between 0 and 7
    {
-      return 0001000100010001ULL<<pm;
+      return (column_with_number(0)|column_with_number(4))<<pm;
+   }
+
+   constexpr uint64_t
+   premix(side c)
+   {
+      return (row_with_number(0)|row_with_number(2)|
+              row_with_number(4)|row_with_number(6))
+         <<(idx(c)*8);
    }
 
    inline uint64_t
    zobrist_hash(side c, piece p, uint64_t pos)
    {
-      return bit_mixer(premix(idx(p)<<idx(c)) /* [ 0...12 ] */ ^ pos);
+      return bit_mixer(premix(c)^premix(idx(p))^pos);
    }
 
    inline uint64_t
@@ -164,7 +172,7 @@ namespace cheapshot
    inline uint64_t
    zobrist_hash(const board_t& board)
    {
-      return 
+      return
          zobrist_hash(side::white,board[idx(side::white)])^
          zobrist_hash(side::black,board[idx(side::black)]);
    }
@@ -172,7 +180,7 @@ namespace cheapshot
    inline uint64_t
    zobrist_hash_castling(uint64_t castling_mask)
    {
-      return bit_mixer(premix(13)^castling_mask); // magic number
+      return bit_mixer(premix(6)^castling_mask); // magic number
    }
 
    // inline uint64_t
@@ -183,31 +191,27 @@ namespace cheapshot
    inline uint64_t
    zobrist_hash_ep(uint64_t ep_info)
    {
-      return bit_mixer(premix(14)^ep_info); // magic number
+      return bit_mixer(premix(7)^ep_info); // magic number
    }
 
    inline uint64_t
    zobrist_hash_turn(side t)
    {
-      return bit_mixer(premix(15)^idx(t)); // magic number
+      return bit_mixer(premix(t));
    }
 
    inline uint64_t
    zobrist_hash_context(const context& ctx)
    {
-      return 
-         zobrist_hash_ep(ctx.ep_info)^
-         zobrist_hash_castling(ctx.castling_rights);
+      return
+         zobrist_hash_ep(ctx.ep_info)^zobrist_hash_castling(ctx.castling_rights);
    }
-
 
    inline uint64_t
    zobrist_hash(const board_t& board, side t, const context& ctx)
    {
-      return 
-         zobrist_hash(board)^
-         zobrist_hash_turn(t)^
-         zobrist_hash_context(ctx);
+      return
+         zobrist_hash(board)^zobrist_hash_turn(t)^zobrist_hash_context(ctx);
    }
 } // cheapshot
 
