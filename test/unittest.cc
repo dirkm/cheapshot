@@ -1332,7 +1332,55 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "R...Kn..\n");
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
    }
+   {
+      BOOST_CHECK(lci.castling_allowed(0ULL,0ULL));
 
+      const char cvs[]=
+         "...xk..r\n"
+         "r.......\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".R.XK..R\n";
+      uint64_t m=castling_block_mask<side::white>(scan_canvas(cvs,'R'),scan_canvas(cvs,'K'));
+      BOOST_CHECK_EQUAL(m,scan_canvas(cvs,'X'));
+      BOOST_CHECK(!lci.castling_allowed(m,0ULL));
+      BOOST_CHECK_EQUAL(castling_block_mask<side::black>(scan_canvas(cvs,'r'),scan_canvas(cvs,'k')),
+                        scan_canvas(cvs,'x'));
+   }
+   {
+      const char cvs[]=
+         "r...kxr.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "R...KX..\n";
+      uint64_t m=castling_block_mask<side::white>(scan_canvas(cvs,'R'),scan_canvas(cvs,'K'));
+      BOOST_CHECK_EQUAL(m,scan_canvas(cvs,'X'));
+      BOOST_CHECK(!sci.castling_allowed(m,0ULL));
+      BOOST_CHECK_EQUAL(castling_block_mask<side::black>(scan_canvas(cvs,'r'),scan_canvas(cvs,'k')),
+                        scan_canvas(cvs,'x'));
+   }
+   {
+      const char cvs[]=
+         "r..x.x.r\n"
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "....K...\n"
+         "R..X.X.R\n";
+      BOOST_CHECK_EQUAL(castling_block_mask<side::white>(scan_canvas(cvs,'R'),scan_canvas(cvs,'K')),
+                        scan_canvas(cvs,'X'));
+      BOOST_CHECK_EQUAL(castling_block_mask<side::black>(scan_canvas(cvs,'r'),scan_canvas(cvs,'k')),
+                        scan_canvas(cvs,'x'));
+   }
 }
 
 // timings_suite/game_finish_test
@@ -1362,7 +1410,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..B...K.\n");
       BOOST_CHECK_EQUAL(analyze_position<side::black>(mate_board,null_context,max_plie_cutoff(1)),
                         score_t({-score_t::checkmate}));
-   }         
+   }
    {
       // wikipedia stalemate article
       board_t stalemate_board=scan_board(

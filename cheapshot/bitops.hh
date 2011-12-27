@@ -560,6 +560,7 @@ namespace cheapshot
       };
    }
 
+   // masks must have unique patterns; they are used for hashing
    template<side S>
    constexpr uint64_t
    castling_block_mask(uint64_t rooks, uint64_t king,
@@ -567,7 +568,11 @@ namespace cheapshot
                                                 position(7,bottom_index<S>())),
                        uint64_t king_init_pos=position(4,bottom_index<S>()))
    {
-      return detail::aliased_split((~rooks&rooks_init_pos)|(~king&king_init_pos),1);
+      return
+         detail::aliased_split(
+             detail::aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
+             2)&
+         (position(3,bottom_index<S>())|position(5,bottom_index<S>()));
    }
 
 } // cheapshot
