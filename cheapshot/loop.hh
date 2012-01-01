@@ -189,6 +189,15 @@ namespace cheapshot
       scoped_move scoped_move1;
    };
 
+   inline uint64_t
+   zobrist_hash2(side c, piece p, uint64_t s2)
+   {
+      bit_iterator it(s2);
+      uint64_t r=zobrist_hash(c,p,*it++);
+      r^=zobrist_hash(c,p,*it);
+      return r;
+   }
+
    struct score_t
    {
       // high scores mean a better position for the color with the move

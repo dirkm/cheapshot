@@ -159,7 +159,7 @@ namespace
    class do_until_plie_cutoff
    {
    public:
-      do_until_plie_cutoff(int max_depth, std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) > fun_):
+      do_until_plie_cutoff(int max_depth, const std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) >& fun_):
          mpc(max_depth),
          fun(fun_)
       {}

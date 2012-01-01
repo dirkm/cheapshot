@@ -4,6 +4,7 @@
 #include <array>
 
 #include "cheapshot/bitops.hh"
+#include "cheapshot/iterator.hh"
 
 namespace cheapshot
 {
@@ -155,17 +156,21 @@ namespace cheapshot
    }
 
    inline uint64_t
-   zobrist_hash(side c, piece p, uint64_t pos)
+   zobrist_hash(side c, piece p, uint64_t s)
    {
-      return bit_mixer(premix(c)^premix(idx(p))^pos);
+      return bit_mixer(premix(c)^premix(idx(p))^s);
    }
 
    inline uint64_t
    zobrist_hash(side c,const board_side& bs)
    {
       uint64_t r=0ULL;
-      for(piece p=piece::pawn;p<piece::count;++p)
-         r^=zobrist_hash(c, p, bs[idx(p)]);
+      for(piece pc=piece::pawn;pc<piece::count;++pc)
+      {
+         uint64_t p=bs[idx(pc)];
+         for(bit_iterator it=bit_iterator(p);it!=bit_iterator();++it)
+            r^=zobrist_hash(c, pc, *it);
+      }
       return r;
    }
 
@@ -182,11 +187,6 @@ namespace cheapshot
    {
       return bit_mixer(premix(6)^castling_mask); // magic number
    }
-
-   // inline uint64_t
-   // incremental_zorbist_hash(const move_info& mi)
-   // {
-   // }
 
    inline uint64_t
    zobrist_hash_ep(uint64_t ep_info)

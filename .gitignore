@@ -1,6 +1,6 @@
 test/forced_mate
 test/print_fen
-test/test
+test/unittest
 test/print_position
 
 *.su
