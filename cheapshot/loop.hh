@@ -41,7 +41,7 @@ namespace cheapshot
 
    template<>
    uint64_t
-   board_metrics::own<side::black>()const {return black_pieces;}
+   board_metrics::own<side::black>() const {return black_pieces;}
 
    template<>
    uint64_t
@@ -49,7 +49,7 @@ namespace cheapshot
 
    template<>
    uint64_t
-   board_metrics::opposing<side::black>()const {return white_pieces;}
+   board_metrics::opposing<side::black>() const {return white_pieces;}
 
    template<side S, typename Op>
    void
@@ -172,6 +172,7 @@ namespace cheapshot
 
       scoped_move(const scoped_move&) = delete;
       scoped_move& operator=(const scoped_move&) = delete;
+      scoped_move& operator=(scoped_move&&) = delete;
    private:
       const move_info& mi;
    };
@@ -188,15 +189,6 @@ namespace cheapshot
       scoped_move scoped_move0;
       scoped_move scoped_move1;
    };
-
-   inline uint64_t
-   zobrist_hash2(side c, piece p, uint64_t s2)
-   {
-      bit_iterator it(s2);
-      uint64_t r=zobrist_hash(c,p,*it++);
-      r^=zobrist_hash(c,p,*it);
-      return r;
-   }
 
    struct score_t
    {
@@ -220,9 +212,30 @@ namespace cheapshot
       uint64_t destinations;
    };
 
+   template<typename EngineController>
+   class scoped_depth_increment
+   {
+   public:
+      explicit scoped_depth_increment(EngineController& ec_):
+         ec(ec_)
+      {
+         ec.increment_depth();
+      }
+
+      ~scoped_depth_increment()
+      {
+         ec.decrement_depth();
+      }
+
+      scoped_depth_increment(const scoped_depth_increment&) = delete;
+      scoped_depth_increment& operator=(const scoped_depth_increment&) = delete;
+   private:
+      EngineController& ec;
+   };
+
    template<side S, typename EngineController>
    score_t
-   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& engine_controller);
+   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& ec);
 
    // main program loop
 
@@ -230,7 +243,7 @@ namespace cheapshot
    //  hence, it is passed as non-const ref.
    template<side S, typename EngineController>
    score_t
-   analyze_position(board_t& board, context ctx, EngineController engine_controller)
+   analyze_position(board_t& board, const context& oldctx, EngineController& engine_controller)
    {
       board_metrics bm(board);
 
@@ -254,7 +267,7 @@ namespace cheapshot
          }
       }
 
-      if(!engine_controller.try_position(board,S,ctx,bm))
+      if(!engine_controller.try_position(board,S,oldctx,bm))
          return {0}; // TODO: better eval-function than returning 0
 
       uint64_t own_under_attack=0ULL;
@@ -264,11 +277,14 @@ namespace cheapshot
             own_under_attack|=dests;
          });
 
+      context ctx=oldctx;
+
       ctx.castling_rights|=castling_block_mask<S>(
          get_side<S>(board)[idx(piece::rook)],
          get_side<S>(board)[idx(piece::king)]);
 
       score_t score{score_t::no_valid_move};
+      scoped_depth_increment<EngineController> scoped_depth(engine_controller);
 
       // en passant captures
       for(auto origin_iter=bit_iterator(
@@ -362,16 +378,16 @@ namespace cheapshot
 
    template<side S, typename EngineController>
    score_t
-   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& engine_controller)
+   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, EngineController& ec)
    {
-      score_t score=analyze_position<S>(board,ctx,engine_controller);
+      score_t score=analyze_position<S>(board,ctx,ec);
       last_score.value=std::max(last_score.value,-score.value);
       return last_score;
    }
 
    template<typename EngineController>
    inline score_t
-   analyze_position(board_t& board, side turn, context ctx, EngineController engine_controller)
+   analyze_position(board_t& board, side turn, const context& ctx, EngineController& engine_controller)
    {
       switch(turn)
       {

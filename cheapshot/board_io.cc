@@ -210,6 +210,7 @@ namespace cheapshot
 
          if (ch=='-')
             return r;
+         const char * const rsstart=rs;
          if(ch=='K')
          {
             r^=short_castling<side::white>().mask();
@@ -230,6 +231,8 @@ namespace cheapshot
             r^=long_castling<side::black>().mask();
             ch=*rs++;
          }
+         if(rs==rsstart)
+            throw io_error("en-passant info is empty");
          return r;
       }
 

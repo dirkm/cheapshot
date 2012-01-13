@@ -243,8 +243,8 @@ namespace cheapshot
    column(uint64_t s) noexcept
    {
       return
-         aliased_move<bottom>(s)|
-         aliased_move<top>(s);
+         aliased_move<bottom>(aliased_move<top>(s));
+
    }
 
    constexpr uint64_t
@@ -299,7 +299,6 @@ namespace cheapshot
 
    namespace detail
    {
-
       constexpr uint64_t
       diag_delta(uint64_t s, uint64_t left) noexcept
       {

@@ -11,10 +11,10 @@ main(int argc, const char* argv[])
 {
    if(argc<3||!std::strcmp("-h",argv[1])||!std::strcmp("--help",argv[1]))
    {
-      std::cerr << "usage: forced_mate moves fen\n"
+      std::cerr << "usage: forced_mate plies fen\n"
          "prints true if a forced mate from the specified position is found within the\n"
-         "  number of moves\n"
-         "moves: max move-depth to be searched\n"
+         "  number of plies\n"
+         "plies: max ply-depth to be searched\n"
          "fen: fen-string as a single parameter (e.g. escaped with \"'s)."
                 << std::endl;
       return 1;

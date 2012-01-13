@@ -10,16 +10,15 @@ namespace cheapshot
    class max_plie_cutoff
    {
    public:
-      explicit constexpr max_plie_cutoff(int max_depth_):
-         i(0),
-         max_depth(max_depth_)
+      explicit constexpr max_plie_cutoff(int max_depth):
+         remaining_depth(max_depth)
       {}
 
       bool
       try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
-         bool r=(i++)<max_depth;
+         bool r=(remaining_depth!=0);
          // if (!r)
          // {
          //    print_board(board,std::cout);
@@ -28,9 +27,53 @@ namespace cheapshot
          return r;
       }
 
+      void increment_depth()
+      {
+         --remaining_depth;
+      }
+
+      void decrement_depth()
+      {
+         ++remaining_depth;
+      }
+
+      max_plie_cutoff(const max_plie_cutoff&) = delete;
+      max_plie_cutoff& operator=(const max_plie_cutoff&) = delete;
    private:
-      int i;
-      const int max_depth;
+      int remaining_depth;
+   };
+
+   // TODO: implement
+   class negamax
+   {
+   public:
+      negamax(int max_depth):
+         mpc(max_depth),
+         alpha(0),
+         beta(0)
+      {}
+
+      bool
+      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      {
+         return mpc.try_position(board,c,ctx,bm);
+      }
+
+      void
+      increment_depth()
+      {
+         mpc.increment_depth();
+      }
+
+      void
+      decrement_depth()
+      {
+         mpc.decrement_depth();
+      }
+   private:
+      max_plie_cutoff mpc;
+      int alpha;
+      int beta;
    };
 
    namespace detail

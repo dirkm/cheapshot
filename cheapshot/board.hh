@@ -169,7 +169,7 @@ namespace cheapshot
       {
          uint64_t p=bs[idx(pc)];
          for(bit_iterator it=bit_iterator(p);it!=bit_iterator();++it)
-            r^=zobrist_hash(c, pc, *it);
+            r^=zobrist_hash(c,pc,*it);
       }
       return r;
    }
@@ -204,15 +204,29 @@ namespace cheapshot
    zobrist_hash_context(const context& ctx)
    {
       return
-         zobrist_hash_ep(ctx.ep_info)^zobrist_hash_castling(ctx.castling_rights);
+         zobrist_hash_ep(ctx.ep_info)^
+         zobrist_hash_castling(ctx.castling_rights);
    }
 
    inline uint64_t
    zobrist_hash(const board_t& board, side t, const context& ctx)
    {
       return
-         zobrist_hash(board)^zobrist_hash_turn(t)^zobrist_hash_context(ctx);
+         zobrist_hash(board)^
+         zobrist_hash_turn(t)^
+         zobrist_hash_context(ctx);
    }
+
+   // s2: origin and destination of a piece (2 bits set)
+   inline uint64_t
+   zobrist_hash2(side c, piece p, uint64_t s2)
+   {
+      bit_iterator it(s2);
+      uint64_t r=zobrist_hash(c,p,*it++);
+      r^=zobrist_hash(c,p,*it);
+      return r;
+   }
+
 } // cheapshot
 
 #endif
