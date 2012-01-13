@@ -323,12 +323,12 @@ bool rook_test(const char* canvas)
 
 BOOST_AUTO_TEST_CASE( rook_moves_test )
 {
-   BOOST_CHECK_EQUAL(slide_rook(algpos('a',1),row_with_algebraic_number(2)),
+   BOOST_CHECK_EQUAL(slide_rook(algpos('a',1),algpos('a',1)|row_with_algebraic_number(2)),
                      ((row_with_algebraic_number(1)|algpos('a',1))|algpos('a',2)));
-   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),row_with_algebraic_number(2)),
+   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),algpos('d',3)|row_with_algebraic_number(2)),
                      (column_with_algebraic_number('d')|row_with_algebraic_number(3))&
                      ~row_with_algebraic_number(1));
-   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),algpos('d',2)|algpos('d',4)),
+   BOOST_CHECK_EQUAL(slide_rook(algpos('d',3),algpos('d',2)|algpos('d',3)|algpos('d',4)),
                      (algpos('d',2)|algpos('d',4)|row_with_algebraic_number(3)));
    {
       static constexpr char canvas[]=
