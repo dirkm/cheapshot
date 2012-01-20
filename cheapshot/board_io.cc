@@ -1,10 +1,12 @@
 #include "cheapshot/board_io.hh"
 
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
-#include "cheapshot/iterator.hh"
 #include "cheapshot/board.hh"
+#include "cheapshot/iterator.hh"
+#include "cheapshot/loop.hh"
 
 namespace cheapshot
 {
@@ -35,6 +37,65 @@ namespace cheapshot
             default : return std::make_tuple(side::white,piece::count); // error case
          }
       }
+
+      piece
+      character_to_moved_piece(char p)
+      {
+         switch(p)
+         {
+            case 'B': return piece::bishop;
+            case 'K': return piece::king;
+            case 'N': return piece::knight;
+            case 'Q': return piece::queen;
+            case 'R': return piece::rook;
+            default : return piece::pawn;
+         }
+      }
+
+      void
+      print_algpos(uint64_t s, std::ostream& os)
+      {
+         uint8_t bp=get_board_pos(s);
+         os << (char)('a'+(bp&'\x7')) << ((bp>>3)+1);
+      }
+
+      void
+      check_column_char(char ch)
+      {
+         if((ch<'a') || (ch>'h'))
+         {
+            std::stringstream oss;
+            oss << "invalid character for column: '" << ch << "'";
+            throw io_error(oss.str());
+         }
+      }
+
+      void
+      check_row_char(char ch)
+      {
+         if((ch<'1') || (ch>'8'))
+         {
+            std::stringstream oss;
+            oss << "invalid character for row: '" << ch << "'";
+            throw io_error(oss.str());
+         }
+      }
+
+      uint64_t
+      scan_algpos(const char*& rs)
+      {
+         char ch1=*rs++;
+         check_column_char(ch1);
+         char ch2=*rs++;
+         check_row_char(ch2);
+         return algpos(ch1, ch2);
+      }
+   }
+
+   extern char
+   to_char(side c)
+   {
+      return (c==side::white)?'w':'b';
    }
 
    extern void
@@ -88,17 +149,13 @@ namespace cheapshot
       print_canvas(c,os);
    }
 
-   inline void
-   print_algpos(uint64_t s, std::ostream& os)
+   namespace
    {
-      uint8_t bp=get_board_pos(s);
-      os << (char)('a'+(bp&'\x7')) << ((bp>>3)+1);
-   }
-
-   constexpr uint64_t
-   charpos_to_bitmask(uint8_t row, uint8_t column) noexcept
-   {
-      return 1UL<<(((row^'\x7')*8)|column); // rows reverse order
+      constexpr uint64_t
+      charpos_to_bitmask(uint8_t row, uint8_t column) noexcept
+      {
+         return 1UL<<(((row^'\x7')*8)|column); // rows reverse order
+      }
    }
 
    extern uint64_t
@@ -181,98 +238,96 @@ namespace cheapshot
          return b;
       }
 
-      inline side
-      scan_color(const char*& rs)
+      namespace
       {
-         char ch=*rs++;
-         switch (ch)
+         side
+         scan_color(const char*& rs)
          {
-            case 'w': return side::white;
-            case 'b': return side::black;
-            default:
+            char ch=*rs++;
+            switch (ch)
             {
-               std::stringstream oss;
-               oss << "unexpected character as color: '" << ch << "'";
-               throw io_error(oss.str());
+               case 'w': return side::white;
+               case 'b': return side::black;
+               default:
+               {
+                  std::stringstream oss;
+                  oss << "unexpected character as color: '" << ch << "'";
+                  throw io_error(oss.str());
+               }
             }
          }
-      }
 
-      inline uint64_t
-      scan_castling_rights(const char*& rs)
-      {
-         char ch=*rs++;
-         uint64_t r=
-            short_castling<side::white>().mask()|
-            short_castling<side::black>().mask()|
-            long_castling<side::white>().mask()|
-            long_castling<side::black>().mask();
+         uint64_t
+         scan_castling_rights(const char*& rs)
+         {
+            char ch=*rs++;
+            uint64_t r=
+               short_castling<side::white>().mask()|
+               short_castling<side::black>().mask()|
+               long_castling<side::white>().mask()|
+               long_castling<side::black>().mask();
 
-         if (ch=='-')
+            if (ch=='-')
+               return r;
+            const char * const rsstart=rs;
+            if(ch=='K')
+            {
+               r^=short_castling<side::white>().mask();
+               ch=*rs++;
+            }
+            if(ch=='Q')
+            {
+               r^=long_castling<side::white>().mask();
+               ch=*rs++;
+            }
+            if(ch=='k')
+            {
+               r^=short_castling<side::black>().mask();
+               ch=*rs++;
+            }
+            if(ch=='q')
+            {
+               r^=long_castling<side::black>().mask();
+               ch=*rs++;
+            }
+            if(rs==rsstart)
+               throw io_error("en-passant info is empty");
             return r;
-         const char * const rsstart=rs;
-         if(ch=='K')
-         {
-            r^=short_castling<side::white>().mask();
-            ch=*rs++;
          }
-         if(ch=='Q')
-         {
-            r^=long_castling<side::white>().mask();
-            ch=*rs++;
-         }
-         if(ch=='k')
-         {
-            r^=short_castling<side::black>().mask();
-            ch=*rs++;
-         }
-         if(ch=='q')
-         {
-            r^=long_castling<side::black>().mask();
-            ch=*rs++;
-         }
-         if(rs==rsstart)
-            throw io_error("en-passant info is empty");
-         return r;
-      }
 
-      inline uint64_t
-      scan_ep_info(const char*& rs)
-      {
-         char ch1=*rs++;
-         if(ch1=='-')
-            return 0ULL;
-         if(ch1<'a' || ch1>'h')
+         uint64_t
+         scan_ep_info(const char*& rs)
          {
-            std::stringstream oss;
-            oss << "invalid character in en passant info: '" << ch1 << "'";
-            throw io_error(oss.str());
+            char ch1=*rs++;
+            if(ch1=='-')
+               return 0ULL;
+            check_column_char(ch1);
+            char ch2=*rs++;
+            if((ch2!='3') && (ch2!='6'))
+            {
+               std::stringstream oss;
+               oss << "invalid character in en passant info: " << ch2 << "'";
+               throw io_error(oss.str());
+            }
+            return algpos(ch1,ch2);
          }
-         char ch2=*rs++;
-         if((ch2!='3') && (ch2!='6'))
+
+         int
+         scan_number(const char*& rs)
          {
-            std::stringstream oss;
-            oss << "invalid character in en passant info: " << ch2 << "'";
-            throw io_error(oss.str());
+            std::size_t idx;
+            int n=std::stol(rs,&idx);
+            rs+=idx;
+            return n;
          }
-         return algpos(ch1,ch2);
-      }
 
-      inline int
-      scan_number(const char*& rs)
-      {
-         std::size_t idx;
-         int n=std::stol(rs,&idx);
-         rs+=idx;
-         return n;
-      }
-
-      inline void
-      skip_whitespace(const char*& rs)
-      {
-         while((std::isspace(*rs))&&(*rs!='\x0'))
+         void
+         skip_whitespace(const char*& rs)
          {
-            ++rs;
+            while((std::isspace(*rs))&&(*rs!='\x0'))
+            {
+               ++rs;
+            }
          }
       }
 
@@ -308,53 +363,57 @@ namespace cheapshot
          }
       }
 
-      inline void
-      print_color(side c,std::ostream& os)
+      namespace
       {
-         os << ((c==side::white)?'w':'b');
-      }
 
-      inline void
-      print_castling_rights(uint64_t castling_rights,std::ostream& os)
-      {
-         bool f=false;
-         if(short_castling<side::white>().castling_allowed(castling_rights,0ULL))
+         void
+         print_color(side c,std::ostream& os)
          {
-            f=true;
-            os << 'K';
+            os << to_char(c);
          }
-         if(long_castling<side::white>().castling_allowed(castling_rights,0ULL))
-         {
-            f=true;
-            os << 'Q';
-         }
-         if(short_castling<side::black>().castling_allowed(castling_rights,0ULL))
-         {
-            f=true;
-            os << 'k';
-         }
-         if(long_castling<side::black>().castling_allowed(castling_rights,0ULL))
-         {
-            f=true;
-            os << 'q';
-         }
-         if(!f)
-            os << '-';
-      }
 
-      inline void
-      print_ep_info(uint64_t ep_info, std::ostream& os)
-      {
-         if(ep_info==0ULL)
-            os << "-";
-         else
-            print_algpos(ep_info, os);
-      }
+         void
+         print_castling_rights(uint64_t castling_rights,std::ostream& os)
+         {
+            bool f=false;
+            if(short_castling<side::white>().castling_allowed(castling_rights,0ULL))
+            {
+               f=true;
+               os << 'K';
+            }
+            if(long_castling<side::white>().castling_allowed(castling_rights,0ULL))
+            {
+               f=true;
+               os << 'Q';
+            }
+            if(short_castling<side::black>().castling_allowed(castling_rights,0ULL))
+            {
+               f=true;
+               os << 'k';
+            }
+            if(long_castling<side::black>().castling_allowed(castling_rights,0ULL))
+            {
+               f=true;
+               os << 'q';
+            }
+            if(!f)
+               os << '-';
+         }
 
-      inline void
-      print_number(uint64_t n, std::ostream& os)
-      {
-         os << n;
+         void
+         print_ep_info(uint64_t ep_info, std::ostream& os)
+         {
+            if(ep_info==0ULL)
+               os << "-";
+            else
+               print_algpos(ep_info, os);
+         }
+
+         void
+         print_number(uint64_t n, std::ostream& os)
+         {
+            os << n;
+         }
       }
    }
 
@@ -394,5 +453,100 @@ namespace cheapshot
       fen::print_number(ctx.halfmove_clock,os);
       os << " ";
       fen::print_number(ctx.fullmove_number,os);
+   }
+
+   board_side&
+   get_side(side s, board_t& b) { return b[idx(s)]; }
+
+   const uint64_t&
+   find_captured_piece(const board_side& side, uint64_t s)
+   {
+      for(const uint64_t& p: side)
+         if(p&s)
+            return p;
+      // unreachable
+   }
+
+   // TODO: special
+   enum class special_move { normal, long_castling, short_castling, promotion, ep_capture };
+
+   struct move_input
+   {
+      special_move type;
+      // params below may not be initialized, depending on move type
+      bool is_capture;
+      cheapshot::piece moving_piece;
+      uint64_t move;
+      cheapshot::piece promoting_piece;
+   };
+
+   move_input
+   scan_long_algebraic_move(const char* s)
+   {
+      if(std::strcmp(s,"O-O-O")==0)
+         return {special_move::long_castling};
+      if (std::strcmp(s,"O-O")==0)
+         return {special_move::short_castling};
+      move_input r;
+      r.moving_piece=character_to_moved_piece(*s);
+      if(r.moving_piece!=piece::pawn)
+         ++s;
+      r.move=scan_algpos(s);
+      char sep=*s++;
+      switch(sep)
+      {
+         case 'x':
+            r.is_capture=true;
+            break;
+         case '-':
+            r.is_capture=false;
+            break;
+         default:
+         {
+            std::stringstream oss;
+            oss << "expected '-' or 'x' as separator, got: " << sep << "'";
+            throw io_error(oss.str());
+         }
+      }
+      r.move|=scan_algpos(s);
+      if(std::strcmp(s,"e.p.")==0)
+         r.type=special_move::ep_capture;
+      else
+      {
+         char prom_sep=*s++;
+         if(prom_sep=='=')
+         {
+            r.type=special_move::promotion;
+            r.promoting_piece=character_to_moved_piece(*s);;
+         }
+         else
+            r.type=special_move::normal;
+      }
+      return r;
+   }
+
+   template<side S>
+   void
+   make_long_algebraic_move(board_t& board, context& ctx, const move_input& mi)
+   {
+      board_metrics bm(board);
+      switch(mi.type)
+      {
+         case special_move::long_castling:
+            long_castling<S>();
+      }
+   }
+
+   extern void // return piece as well
+   make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s)
+   {
+      move_input mi=scan_long_algebraic_move(s);
+      switch(c)
+      {
+         case side::white:
+            return make_long_algebraic_move<side::white>(board, ctx, mi);
+         case side::black:
+            return make_long_algebraic_move<side::black>(board, ctx, mi);
+      }
    }
 }

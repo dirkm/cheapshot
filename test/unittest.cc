@@ -19,7 +19,6 @@
 
 using namespace cheapshot;
 
-BOOST_TEST_DONT_PRINT_LOG_VALUE(score_t)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(bit_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(board_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(board_t)
@@ -160,10 +159,12 @@ namespace
       int idx;
    };
 
+   typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
+
    class do_until_plie_cutoff
    {
    public:
-      do_until_plie_cutoff(int max_depth, const std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) >& fun_):
+      do_until_plie_cutoff(int max_depth, const funpos& fun_):
          mpc(max_depth),
          fun(fun_)
       {}
@@ -191,7 +192,7 @@ namespace
 
    private:
       max_plie_cutoff mpc;
-      std::function<void (const board_t& board, side c, const context& ctx, const board_metrics& bm) > fun;
+      funpos fun;
    };
 }
 
@@ -1764,11 +1765,23 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          constexpr auto lci=short_castling<side::white>();
          BOOST_CHECK(is_castling_allowed<side::white>(btemp,lci));
          move_checker check({b,b1,b2,b3});
-         analyze_position<side::white>(btemp,null_context,check);
+         context ctx=null_context;
+         ctx.castling_rights|=short_castling<side::black>().mask()|long_castling<side::black>().mask();
+         analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.is_position_reached);
       }
       scan_mate<side::white>(4,b);
    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(hash_suite)
+
+BOOST_AUTO_TEST_CASE( hash_compare_test )
+{
+   // TODO
+   board_t b=initial_board();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

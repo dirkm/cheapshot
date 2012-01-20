@@ -33,9 +33,7 @@ main(int argc, const char* argv[])
       std::tie(b,c,ctx)=cheapshot::scan_fen(argv[1]);
       std::cout << "board:\n";
       cheapshot::print_board(b,std::cout);
-      std::cout << "side: " <<
-         (c==cheapshot::side::white?"white":"black") <<
-         "\n";
+      std::cout << "side: " << to_char(c) << "\n";
       print_context(ctx,std::cout);
       return 0;
    }

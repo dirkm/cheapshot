@@ -12,6 +12,9 @@ namespace cheapshot
 {
    typedef std::array<char,64> canvas_t;
 
+   extern char
+   to_char(side c);
+
    extern void
    fill_canvas(const uint64_t& p,canvas_t& c,char piece) noexcept;
 
@@ -60,6 +63,9 @@ namespace cheapshot
 
    extern void
    print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
+
+   extern void // return piece as well
+   make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s);
 }
 
 #endif

@@ -244,7 +244,6 @@ namespace cheapshot
    {
       return
          aliased_move<bottom>(aliased_move<top>(s));
-
    }
 
    constexpr uint64_t

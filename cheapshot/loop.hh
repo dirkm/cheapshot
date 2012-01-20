@@ -36,19 +36,19 @@ namespace cheapshot
    };
 
    template<>
-   uint64_t
+   inline uint64_t
    board_metrics::own<side::white>() const {return white_pieces;}
 
    template<>
-   uint64_t
+   inline uint64_t
    board_metrics::own<side::black>() const {return black_pieces;}
 
    template<>
-   uint64_t
+   inline uint64_t
    board_metrics::opposing<side::white>() const {return black_pieces;}
 
    template<>
-   uint64_t
+   inline uint64_t
    board_metrics::opposing<side::black>() const {return white_pieces;}
 
    template<side S, typename Op>
@@ -201,10 +201,6 @@ namespace cheapshot
       int value;
    };
 
-   const int score_t::checkmate;
-   const int score_t::stalemate;
-   const int score_t::no_valid_move;
-
    struct move_set
    {
       piece moved_piece;
@@ -236,6 +232,19 @@ namespace cheapshot
    template<side S, typename EngineController>
    score_t
    recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& ec);
+
+   template<side S>
+   uint64_t
+   generate_own_under_attack(const board_t& board, const board_metrics& bm)
+   {
+      uint64_t own_under_attack=0ULL;
+      generate_basic_moves<other_side(S)>(
+         board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
+         {
+            own_under_attack|=dests;
+         });
+      return own_under_attack;
+   }
 
    // main program loop
 
@@ -270,18 +279,9 @@ namespace cheapshot
       if(!engine_controller.try_position(board,S,oldctx,bm))
          return {0}; // TODO: better eval-function than returning 0
 
-      uint64_t own_under_attack=0ULL;
-      generate_basic_moves<other_side(S)>(
-         board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
-         {
-            own_under_attack|=dests;
-         });
+      uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
       context ctx=oldctx;
-
-      ctx.castling_rights|=castling_block_mask<S>(
-         get_side<S>(board)[idx(piece::rook)],
-         get_side<S>(board)[idx(piece::king)]);
 
       score_t score{score_t::no_valid_move};
       scoped_depth_increment<EngineController> scoped_depth(engine_controller);
@@ -301,6 +301,10 @@ namespace cheapshot
          }
       }
       ctx.ep_info=0ULL;
+
+      ctx.castling_rights|=castling_block_mask<S>(
+         get_side<S>(board)[idx(piece::rook)],
+         get_side<S>(board)[idx(piece::king)]);
 
       static constexpr castling_t castling[]=
          {
