@@ -14,8 +14,8 @@ namespace cheapshot
    {
       typedef std::array<char,count<piece>()> piece_to_character_t;
 
-      constexpr piece_to_character_t repr_pieces_white={'P','N','B','R','Q','K'};
-      constexpr piece_to_character_t repr_pieces_black={'p','n','b','r','q','k'};
+      constexpr piece_to_character_t repr_pieces_white{{'P','N','B','R','Q','K'}};
+      constexpr piece_to_character_t repr_pieces_black{{'p','n','b','r','q','k'}};
 
       std::tuple<side,piece>
       character_to_piece(char p)
@@ -176,7 +176,7 @@ namespace cheapshot
    extern board_t
    scan_board(const char* canvas) noexcept
    {
-      board_t b={0};
+      board_t b{{{{0ULL}}}};
       for(uint8_t i=0;i<8;++i)
       {
          for(uint8_t j=0;j<8;++j,++canvas)
@@ -201,7 +201,7 @@ namespace cheapshot
       extern board_t
       scan_position(char const *& rs)
       {
-         board_t b={0};
+         board_t b{{{{0ULL}}}};
          for(uint8_t i=0;;++i)
          {
             int num_inc;
@@ -455,51 +455,42 @@ namespace cheapshot
       fen::print_number(ctx.fullmove_number,os);
    }
 
-   board_side&
-   get_side(side s, board_t& b) { return b[idx(s)]; }
-
-   const uint64_t&
-   find_captured_piece(const board_side& side, uint64_t s)
+   namespace
    {
-      for(const uint64_t& p: side)
-         if(p&s)
-            return p;
-      // unreachable
+      enum class special_move { normal, long_castling, short_castling, promotion, ep_capture };
+
+      struct input_move
+      {
+         special_move type;
+         // params below may not be initialized, depending on move type
+         bool is_capture;
+         cheapshot::piece moving_piece;
+         uint64_t origin;
+         uint64_t destination;
+         cheapshot::piece promoting_piece;
+      };
    }
 
-   // TODO: special
-   enum class special_move { normal, long_castling, short_castling, promotion, ep_capture };
-
-   struct move_input
-   {
-      special_move type;
-      // params below may not be initialized, depending on move type
-      bool is_capture;
-      cheapshot::piece moving_piece;
-      uint64_t move;
-      cheapshot::piece promoting_piece;
-   };
-
-   move_input
+   input_move
    scan_long_algebraic_move(const char* s)
    {
       if(std::strcmp(s,"O-O-O")==0)
          return {special_move::long_castling};
       if (std::strcmp(s,"O-O")==0)
          return {special_move::short_castling};
-      move_input r;
-      r.moving_piece=character_to_moved_piece(*s);
-      if(r.moving_piece!=piece::pawn)
+      input_move im;
+      im.moving_piece=character_to_moved_piece(*s);
+      if(im.moving_piece!=piece::pawn)
          ++s;
-      r.move=scan_algpos(s);
+      im.origin=scan_algpos(s);
       char sep=*s++;
       switch(sep)
       {
          case 'x':
-            r.is_capture=true;
+            im.is_capture=true;
             break;
          case '-':
-            r.is_capture=false;
+            im.is_capture=false;
             break;
          default:
          {
@@ -508,45 +499,103 @@ namespace cheapshot
             throw io_error(oss.str());
          }
       }
-      r.move|=scan_algpos(s);
+      im.destination=scan_algpos(s);
       if(std::strcmp(s,"e.p.")==0)
-         r.type=special_move::ep_capture;
+         im.type=special_move::ep_capture;
       else
       {
          char prom_sep=*s++;
          if(prom_sep=='=')
          {
-            r.type=special_move::promotion;
-            r.promoting_piece=character_to_moved_piece(*s);;
+            im.type=special_move::promotion;
+            im.promoting_piece=character_to_moved_piece(*s);;
          }
          else
-            r.type=special_move::normal;
+            im.type=special_move::normal;
       }
-      return r;
+      return im;
    }
 
    template<side S>
    void
-   make_long_algebraic_move(board_t& board, context& ctx, const move_input& mi)
+   make_move(board_t& board, context& ctx, const input_move& im)
    {
       board_metrics bm(board);
-      switch(mi.type)
+      uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+      switch(im.type)
       {
          case special_move::long_castling:
-            long_castling<S>();
+         {
+            uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
+            if(!long_castling<S>().castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
+               throw io_error("long castling not allowed");
+            move_info2 mi2=castle_info<S>(board,long_castling<S>());
+            for(auto m: mi2)
+               make_move(m);
+            break;
+         }
+         case special_move::short_castling:
+         {
+            uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
+            if(!short_castling<S>().castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
+               throw io_error("short castling not allowed");
+            move_info2 mi2=castle_info<S>(board,short_castling<S>());
+            for(auto m: mi2)
+               make_move(m);
+            break;
+         }
+         case special_move::ep_capture:
+         {
+            if(im.destination!=ctx.ep_info)
+               throw io_error("en passant capture where not allowed");
+            move_info2 mi2=en_passant_info<S>(board,im.origin,im.destination);
+            for(auto m: mi2)
+               make_move(m);
+            break;
+         }
+         case special_move::normal:
+         case special_move::promotion:
+            if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
+               throw  io_error("trying to move a missing piece");
+            if(im.is_capture)
+            {
+               if(!(im.destination&bm.opposing<S>()))
+                  throw io_error("trying to capture a missing piece");
+               move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
+               for(auto m: mi2)
+                  make_move(m);
+            }
+            else
+            {
+               move_info mi=basic_move_info<S>(board,im.moving_piece,im.origin,im.destination);
+               make_move(mi);
+            }
+            if(im.type==special_move::promotion)
+            {
+               if(!promoting_pawns<S>(im.destination))
+                  throw io_error("promotion only allowed on last row");
+               move_info2 mi2=promotion_info<S>(board,im.promoting_piece,im.destination);
+               for(auto m: mi2)
+                  make_move(m);
+            }
+            break;
       }
+      ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+      ctx.castling_rights|=castling_block_mask<S>(
+         get_side<S>(board)[idx(piece::rook)],
+         get_side<S>(board)[idx(piece::king)]);
    }
 
    extern void // return piece as well
    make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s)
    {
-      move_input mi=scan_long_algebraic_move(s);
+      input_move im=scan_long_algebraic_move(s);
       switch(c)
       {
          case side::white:
-            return make_long_algebraic_move<side::white>(board, ctx, mi);
+            return make_move<side::white>(board, ctx, im);
          case side::black:
-            return make_long_algebraic_move<side::black>(board, ctx, mi);
+            return make_move<side::black>(board, ctx, im);
       }
    }
 }

@@ -7,10 +7,10 @@
 
 namespace cheapshot
 {
-   class max_plie_cutoff
+   class max_ply_cutoff
    {
    public:
-      explicit constexpr max_plie_cutoff(int max_depth):
+      explicit constexpr max_ply_cutoff(int max_depth):
          remaining_depth(max_depth)
       {}
 
@@ -37,8 +37,8 @@ namespace cheapshot
          ++remaining_depth;
       }
 
-      max_plie_cutoff(const max_plie_cutoff&) = delete;
-      max_plie_cutoff& operator=(const max_plie_cutoff&) = delete;
+      max_ply_cutoff(const max_ply_cutoff&) = delete;
+      max_ply_cutoff& operator=(const max_ply_cutoff&) = delete;
    private:
       int remaining_depth;
    };
@@ -71,7 +71,7 @@ namespace cheapshot
          mpc.decrement_depth();
       }
    private:
-      max_plie_cutoff mpc;
+      max_ply_cutoff mpc;
       int alpha;
       int beta;
    };

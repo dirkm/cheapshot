@@ -55,15 +55,14 @@ namespace cheapshot
       // score_t last_score;
    };
 
-   constexpr board_side init_white_side=
-   {
-      row_with_algebraic_number(2), // p
-      algpos('b',1)|algpos('g',1), // n
-      algpos('c',1)|algpos('f',1), // b
-      algpos('a',1)|algpos('h',1), // r
-      algpos('d',1), // q
-      algpos('e',1) // k
-   };
+   constexpr board_side init_white_side={{
+         row_with_algebraic_number(2), // p
+         algpos('b',1)|algpos('g',1), // n
+         algpos('c',1)|algpos('f',1), // b
+         algpos('a',1)|algpos('h',1), // r
+         algpos('d',1), // q
+         algpos('e',1) // k
+      }};
 
    inline void
    mirror_inplace(uint64_t& v) noexcept
@@ -102,7 +101,7 @@ namespace cheapshot
    inline board_t
    initial_board()
    {
-      board_t b={init_white_side,init_white_side};
+      board_t b{{init_white_side,init_white_side}};
       mirror_inplace(b[idx(side::black)]);
       return b;
    }

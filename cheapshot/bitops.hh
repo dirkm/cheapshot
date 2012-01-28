@@ -516,16 +516,18 @@ namespace cheapshot
       uint64_t king1; // smallest value -- origin or destination is irrelevant
       uint64_t king2;
 
+   private:
       constexpr uint64_t
-      region() const
+      slided_region() const
       {
          return in_between((rook1<king1?rook1:king1)<<1,rook2>king2?rook2:king2);
       }
 
+   public:
       constexpr bool
       castling_allowed(uint64_t all_pieces, uint64_t own_under_attack) const
       {
-         return !((all_pieces&region())|
+         return !((all_pieces&slided_region())|
                   (own_under_attack&(in_between(king1,king2)|king2)));
       }
 

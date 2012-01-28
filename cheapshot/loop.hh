@@ -109,10 +109,10 @@ namespace cheapshot
             break;
       }
 
-      move_info2 mi2={
-         basic_move_info<S>(board,p,origin,destination),
-         move_info{*it,dest_xor_mask}
-      };
+      move_info2 mi2={{
+            basic_move_info<S>(board,p,origin,destination),
+            move_info{*it,dest_xor_mask}
+         }};
       return mi2;
    }
 
@@ -120,10 +120,10 @@ namespace cheapshot
    move_info2
    castle_info(board_t& board, const castling_t& ci)
    {
-      move_info2 mi2={
+      move_info2 mi2{{
          move_info{get_side<S>(board)[idx(piece::king)],ci.king1|ci.king2},
          move_info{get_side<S>(board)[idx(piece::rook)],ci.rook1|ci.rook2}
-      };
+         }};
       return mi2;
    }
 
@@ -131,10 +131,10 @@ namespace cheapshot
    move_info2
    promotion_info(board_t& board, piece prom, uint64_t promoted_loc)
    {
-      move_info2 mi2={
+      move_info2 mi2{{
          move_info{get_side<S>(board)[idx(piece::pawn)],promoted_loc},
          move_info{get_side<S>(board)[idx(prom)],promoted_loc}
-      };
+         }};
       return mi2;
    }
 
@@ -143,10 +143,10 @@ namespace cheapshot
    en_passant_info(board_t& board,uint64_t origin, uint64_t destination)
    {
       // TODO: row & column can be sped up
-      move_info2 mi2={
+      move_info2 mi2{{
          move_info{get_side<S>(board)[idx(piece::pawn)],origin|destination},
          move_info{get_side<other_side(S)>(board)[idx(piece::pawn)],row(origin)&column(destination)}
-      };
+         }};
       return mi2;
    }
 
@@ -400,6 +400,7 @@ namespace cheapshot
          case side::black:
             return analyze_position<side::black>(board,ctx,engine_controller);
       }
+      __builtin_unreachable (); // compiler-bug?
    }
 }
 
