@@ -52,7 +52,6 @@ namespace cheapshot
       uint64_t castling_rights; // white and black together
       int halfmove_clock;
       int fullmove_number;
-      // score_t last_score;
    };
 
    constexpr board_side init_white_side={{

@@ -6,11 +6,13 @@ $(EXEC): $(LIBCHEAPSHOT)
 
 test: unittest ct_test tool_test
 
-$~unittest.o: $(call depend, $~unittest.cc)
+# object-files explicitely generated, to view the assembly
+$~unittest_bitops.o: $(call depend, $~unittest_bitops.cc)
+$~unittest_other.o: $(call depend, $~unittest_other.cc)
 
 $~unittest: LDFLAGS += -lboost_unit_test_framework
 
-$~unittest: $~unittest.o
+$~unittest: $~unittest_bitops.o $~unittest_other.o
 	$(CXX) $& $(LDFLAGS) -o $@ $(LIBS)
 
 $~print_position: $(call depend, $~print_position.cc)
