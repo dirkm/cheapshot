@@ -1066,27 +1066,35 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
+void
+make_long_algebraic_moves(board_t& board, context& ctx, side c, const std::initializer_list<const char*>& input_move_list)
+{
+   for(const char* input_move: input_move_list)
+   {
+      make_long_algebraic_move(board,ctx,c,input_move);
+      c=other_side(c);
+   }
+}
+
 BOOST_AUTO_TEST_CASE( input_move_test )
 {
-   board_t b=initial_board();
-   context ctx=null_context;
-   make_long_algebraic_move(b,ctx,side::white,"e2-e4");
-   make_long_algebraic_move(b,ctx,side::black,"e7-e5");
-   make_long_algebraic_move(b,ctx,side::white,"Ng1-f3");
-   make_long_algebraic_move(b,ctx,side::black,"Nb8-c6");
-   make_long_algebraic_move(b,ctx,side::white,"Bf1-c4");
-   make_long_algebraic_move(b,ctx,side::black,"Ng8-f6");
-   make_long_algebraic_move(b,ctx,side::white,"O-O");
-   boost::test_tools::output_test_stream ots;
-   print_board(b,ots);
-   BOOST_CHECK( ots.is_equal("r.bqkb.r\n"
-                             "pppp.ppp\n"
-                             "..n..n..\n"
-                             "....p...\n"
-                             "..B.P...\n"
-                             ".....N..\n"
-                             "PPPP.PPP\n"
-                             "RNBQ.RK.\n"));
+   {
+      board_t b=initial_board();
+      context ctx=null_context;
+      make_long_algebraic_moves
+         (b,ctx,side::white,
+          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+      boost::test_tools::output_test_stream ots;
+      print_board(b,ots);
+      BOOST_CHECK( ots.is_equal("r.bqkb.r\n"
+                                "pppp.ppp\n"
+                                "..n..n..\n"
+                                "....p...\n"
+                                "..B.P...\n"
+                                ".....N..\n"
+                                "PPPP.PPP\n"
+                                "RNBQ.RK.\n"));
+   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
