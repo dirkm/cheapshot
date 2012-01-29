@@ -606,10 +606,9 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
                         score_t({-score_t::stalemate}));
    }
 }
-
-BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
+namespace
 {
-   board_t en_passant_initial=scan_board(
+   const board_t en_passant_initial_board=scan_board(
       "....k...\n"
       "...p....\n"
       "........\n"
@@ -618,6 +617,22 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       "........\n"
       "........\n"
       "....K...\n");
+
+   const board_t en_passant_after_capture_board=scan_board(
+      "....k...\n"
+      "........\n"
+      "...P....\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "....K...\n");
+
+}
+
+BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
+{
+   board_t en_passant_initial=en_passant_initial_board;
 
    board_t en_passant_double_move=scan_board(
       "....k...\n"
@@ -629,15 +644,7 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
       "........\n"
       "....K...\n");
 
-   board_t en_passant_after_capture=scan_board(
-      "....k...\n"
-      "........\n"
-      "...P....\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "....K...\n");
+   board_t en_passant_after_capture=en_passant_after_capture_board;
    {
       move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
       analyze_position<side::black>(en_passant_initial,null_context,check);
@@ -1067,7 +1074,8 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
 }
 
 void
-make_long_algebraic_moves(board_t& board, context& ctx, side c, const std::initializer_list<const char*>& input_move_list)
+make_long_algebraic_moves(board_t& board, context& ctx, side c,
+                          const std::initializer_list<const char*>& input_move_list)
 {
    for(const char* input_move: input_move_list)
    {
@@ -1094,6 +1102,13 @@ BOOST_AUTO_TEST_CASE( input_move_test )
                                 ".....N..\n"
                                 "PPPP.PPP\n"
                                 "RNBQ.RK.\n"));
+   }
+   {
+      board_t b=en_passant_initial_board;
+      context ctx=null_context;
+      make_long_algebraic_moves
+         (b,ctx,side::black,{"d7-d5","e5xd6e.p."});
+      BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
    }
 }
 
