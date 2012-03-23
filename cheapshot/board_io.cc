@@ -508,7 +508,6 @@ namespace cheapshot
             make_move(m);
       }
 
-      // TODO: moves not tested for validity yet
       template<side S>
       void
       make_move(board_t& board, context& ctx, const input_move& im)
@@ -529,6 +528,8 @@ namespace cheapshot
             }
             case special_move::ep_capture:
             {
+               if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
+                  throw  io_error("trying to move a missing piece");
                if(im.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(board,im.origin,im.destination);
@@ -539,7 +540,11 @@ namespace cheapshot
             case special_move::normal:
             case special_move::promotion:
                if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
-                  throw  io_error("trying to move a missing piece");
+                  throw io_error("trying to move a missing piece");
+               auto movegen=basic_move_generators<S>()[idx(im.moving_piece)];
+               uint64_t dests=movegen(im.origin,bm.all_pieces());
+               if(!(dests&im.destination))
+                  throw io_error("trying to move to an invalid destination");
                if(im.is_capture)
                {
                   if(!(im.destination&bm.opposing<S>()))
@@ -580,6 +585,17 @@ namespace cheapshot
             return make_move<side::white>(board, ctx, im);
          case side::black:
             return make_move<side::black>(board, ctx, im);
+      }
+   }
+
+   extern void
+   make_long_algebraic_moves(board_t& board, context& ctx, side c,
+                             const std::initializer_list<const char*>& input_moves)
+   {
+      for(const char* input_move: input_moves)
+      {
+         make_long_algebraic_move(board,ctx,c,input_move);
+         c=other_side(c);
       }
    }
 }

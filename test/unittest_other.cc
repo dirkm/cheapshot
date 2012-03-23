@@ -1073,16 +1073,20 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
-void
-make_long_algebraic_moves(board_t& board, context& ctx, side c,
-                          const std::initializer_list<const char*>& input_move_list)
+struct check_io_message
 {
-   for(const char* input_move: input_move_list)
+   check_io_message(const char* fragment_):
+      fragment(fragment_)
+   {}
+   
+   bool operator()(const cheapshot::io_error& ex)
    {
-      make_long_algebraic_move(board,ctx,c,input_move);
-      c=other_side(c);
+      return strstr(ex.what(),fragment)!=NULL;
    }
-}
+   
+private:
+   const char* fragment;
+};
 
 BOOST_AUTO_TEST_CASE( input_move_test )
 {
@@ -1109,6 +1113,34 @@ BOOST_AUTO_TEST_CASE( input_move_test )
       make_long_algebraic_moves
          (b,ctx,side::black,{"d7-d5","e5xd6e.p."});
       BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
+   }
+   {
+      board_t b=initial_board();
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {""}),
+         cheapshot::io_error,
+         check_io_message("invalid character"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e2-e5"}),
+         cheapshot::io_error,
+         check_io_message("invalid destination"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e3-e4"}),
+         cheapshot::io_error,
+         check_io_message("missing piece"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e2xd3"}),
+         cheapshot::io_error,
+         check_io_message("invalid destination"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e2xd3e.p."}),
+         cheapshot::io_error,
+         check_io_message("en passant"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e2xe4"}),
+         cheapshot::io_error,
+         check_io_message("capture"));
    }
 }
 

@@ -25,6 +25,8 @@ namespace cheapshot
          black_pieces(obstacles(get_side<side::black>(board)))
       {}
 
+      uint64_t all_pieces() const { return white_pieces|black_pieces; }
+
       template<side S>
       uint64_t own() const;
 
@@ -46,27 +48,31 @@ namespace cheapshot
    inline uint64_t
    board_metrics::own<side::black>() const {return black_pieces;}
 
+   typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
+
+   template<side S>
+   constexpr std::array<move_generator_t,count<piece>()>
+   basic_move_generators()
+   {
+      return {{slide_and_capture_with_pawn<S>,
+               jump_knight,
+               slide_bishop,
+               slide_rook,
+               slide_queen,
+               move_king
+               }};
+   }
+
    // call "op" on all valid basic moves 
    // op needs signature (*)(piece p, uint64_t orig, uint64_t dests)
    template<side S, typename Op>
    void
    on_basic_moves(const board_t& board, const board_metrics& bm, Op op)
    {
-      typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
-      static constexpr move_generator_t moves[count<piece>()]=
-         {
-            slide_and_capture_with_pawn<S>,
-            jump_knight,
-            slide_bishop,
-            slide_rook,
-            slide_queen,
-            move_king
-         };
-
-      const uint64_t all_pieces=bm.white_pieces|bm.black_pieces;
+      const uint64_t all_pieces=bm.all_pieces();
       auto p=std::begin(get_side<S>(board));
       auto t=piece::pawn;
-      for(auto movegen: moves)
+      for(auto movegen: basic_move_generators<S>())
       {
          for(auto it=bit_iterator(*p);it!=bit_iterator();++it)
             op(t,*it,movegen(*it,all_pieces)&~bm.own<S>());
@@ -150,7 +156,7 @@ namespace cheapshot
    inline void
    make_move(const move_info& mi)
    {
-         mi.piece^=mi.mask;
+      mi.piece^=mi.mask;
    }
 
    class scoped_move

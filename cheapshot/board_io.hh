@@ -66,6 +66,10 @@ namespace cheapshot
 
    extern void // return piece as well
    make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s);
+
+   extern void
+   make_long_algebraic_moves(board_t& board, context& ctx, side c,
+                             const std::initializer_list<const char*>& input_moves);
 }
 
 #endif
