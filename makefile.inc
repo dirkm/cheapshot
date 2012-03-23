@@ -1,5 +1,5 @@
 #; -*-makefile-*-
-#CXX := g++
+CXX := g++-4.6
 
 CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall
 LIBS :=

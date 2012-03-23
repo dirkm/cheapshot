@@ -126,7 +126,7 @@ basic_moves_generator_test(const char* board_layout, const char* captures)
    board_t b=scan_board(board_layout);
    board_metrics bm(b);
    uint64_t r=0;
-   generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+   on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
          r|=dests;
       });
    boost::test_tools::output_test_stream ots;
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE( moves_generator_test )
       board_t b=test_board1;
       board_metrics bm(b);
       uint64_t r[count<piece>()]={0,0,0,0,0};
-      generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
             r[idx(p)]|=dests;
          });
 
@@ -304,7 +304,7 @@ is_castling_allowed(const board_t& board, const castling_t& ci)
 {
    board_metrics bm(board);
    uint64_t own_under_attack=0ULL;
-   generate_basic_moves<other_side(S)>(
+   on_basic_moves<other_side(S)>(
       board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
       {
          own_under_attack|=dests;
@@ -961,7 +961,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      generate_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
             r|=dests;
          });
    }

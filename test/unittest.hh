@@ -2,6 +2,7 @@
 #define CHEAPSHOT_TEST_UNITTEST__HH
 
 #include <ctime>
+#include <iostream>
 #include <sys/times.h>
 
 #include "cheapshot/bitops.hh"

@@ -530,7 +530,7 @@ namespace cheapshot
             case special_move::ep_capture:
             {
                if(im.destination!=ctx.ep_info)
-                  throw io_error("en passant capture where not allowed");
+                  throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(board,im.origin,im.destination);
                for(auto m: mi2)
                   make_move(m);

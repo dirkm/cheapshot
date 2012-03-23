@@ -29,7 +29,10 @@ namespace cheapshot
       uint64_t own() const;
 
       template<side S>
-      uint64_t opposing() const;
+      uint64_t opposing() const
+      {
+         return own<other_side(S)>();
+      }
 
       uint64_t white_pieces;
       uint64_t black_pieces;
@@ -43,17 +46,11 @@ namespace cheapshot
    inline uint64_t
    board_metrics::own<side::black>() const {return black_pieces;}
 
-   template<>
-   inline uint64_t
-   board_metrics::opposing<side::white>() const {return black_pieces;}
-
-   template<>
-   inline uint64_t
-   board_metrics::opposing<side::black>() const {return white_pieces;}
-
+   // call "op" on all valid basic moves 
+   // op needs signature (*)(piece p, uint64_t orig, uint64_t dests)
    template<side S, typename Op>
    void
-   generate_basic_moves(const board_t& board, const board_metrics& bm, Op op)
+   on_basic_moves(const board_t& board, const board_metrics& bm, Op op)
    {
       typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
       static constexpr move_generator_t moves[count<piece>()]=
@@ -174,7 +171,7 @@ namespace cheapshot
       scoped_move& operator=(const scoped_move&) = delete;
       scoped_move& operator=(scoped_move&&) = delete;
    private:
-      const move_info& mi;
+      move_info mi;
    };
 
    // TODO: unhappy with this
@@ -238,7 +235,7 @@ namespace cheapshot
    generate_own_under_attack(const board_t& board, const board_metrics& bm)
    {
       uint64_t own_under_attack=0ULL;
-      generate_basic_moves<other_side(S)>(
+      on_basic_moves<other_side(S)>(
          board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
             own_under_attack|=dests;
@@ -260,7 +257,7 @@ namespace cheapshot
       auto basic_moves_end=basic_moves.begin();
       uint64_t opponent_under_attack=0ULL;
 
-      generate_basic_moves<S>(
+      on_basic_moves<S>(
          board,bm,[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
             *basic_moves_end++=move_set{p,orig,dests};
@@ -282,25 +279,24 @@ namespace cheapshot
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
       context ctx=oldctx;
+      ctx.ep_info=0ULL;
 
       score_t score{score_t::no_valid_move};
       scoped_depth_increment<EngineController> scoped_depth(engine_controller);
 
       // en passant captures
       for(auto origin_iter=bit_iterator(
-             en_passant_candidates<S>(get_side<S>(board)[idx(piece::pawn)],ctx.ep_info));
+             en_passant_candidates<S>(get_side<S>(board)[idx(piece::pawn)],oldctx.ep_info));
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t ep_capture=en_passant_capture<S>(*origin_iter,ctx.ep_info);
+         uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
          if(ep_capture)
          {
-            ctx.ep_info=0ULL;
             scoped_move2 scope(en_passant_info<S>(board,*origin_iter,ep_capture));
             score=recurse_and_evaluate<other_side(S)>(score,board,ctx,engine_controller);
          }
       }
-      ctx.ep_info=0ULL;
 
       ctx.castling_rights|=castling_block_mask<S>(
          get_side<S>(board)[idx(piece::rook)],
@@ -348,6 +344,7 @@ namespace cheapshot
                   scoped_move2 scope(basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                   ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                   score=recurse_and_evaluate<other_side(S)>(score,board,ctx,engine_controller);
+                  ctx.ep_info=0ULL;
                }
          }
          else
