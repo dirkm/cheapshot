@@ -63,7 +63,7 @@ namespace cheapshot
                }};
    }
 
-   // call "op" on all valid basic moves 
+   // calls "op" on all valid basic moves
    // op needs signature (*)(piece p, uint64_t orig, uint64_t dests)
    template<side S, typename Op>
    void
@@ -80,20 +80,38 @@ namespace cheapshot
       }
    }
 
+   // complete info about a move, meant to be shortlived
    struct move_info
    {
-      uint64_t& piece;
+      board_t& board;
+      side moved_side;
+      piece moved_piece;
       uint64_t mask;
    };
 
+   inline
+   uint64_t
+   zobrist_hash(const move_info& mi)
+   {
+      return zobrist_hash2(mi.moved_side,mi.moved_piece,mi.mask);
+   }
+
    typedef std::array<move_info,2> move_info2;
 
+   inline
+   uint64_t
+   zobrist_hash(const move_info2& mi2)
+   {
+      return
+         zobrist_hash(mi2[0])^zobrist_hash(mi2[1]);
+   }
+
    template<side S>
-   inline move_info
+   move_info
    basic_move_info(board_t& board, piece p, uint64_t origin, uint64_t destination)
    {
       return
-         move_info{get_side<S>(board)[idx(p)],origin|destination};
+         move_info{board,S,p,origin|destination};
    }
 
    template<side S>
@@ -103,18 +121,18 @@ namespace cheapshot
       board_side& other_bs=get_side<other_side(S)>(board);
 
       uint64_t dest_xor_mask=0ULL;
-      auto it=std::begin(other_bs);
+      piece capt_piece=piece::pawn;
 
-      for(;it!=std::end(other_bs)-1;++it)
+      for(;capt_piece!=piece::king;++capt_piece)
       {
-         dest_xor_mask=(*it)&destination;
+         dest_xor_mask=other_bs[idx(capt_piece)]&destination;
          if(dest_xor_mask)
             break;
       }
 
       move_info2 mi2={{
             basic_move_info<S>(board,p,origin,destination),
-            move_info{*it,dest_xor_mask}
+            move_info{board,other_side(S),capt_piece,dest_xor_mask}
          }};
       return mi2;
    }
@@ -124,8 +142,8 @@ namespace cheapshot
    castle_info(board_t& board, const castling_t& ci)
    {
       move_info2 mi2{{
-         move_info{get_side<S>(board)[idx(piece::king)],ci.king1|ci.king2},
-         move_info{get_side<S>(board)[idx(piece::rook)],ci.rook1|ci.rook2}
+            move_info{board,S,piece::king,ci.king1|ci.king2},
+            move_info{board,S,piece::rook,ci.rook1|ci.rook2}
          }};
       return mi2;
    }
@@ -135,8 +153,8 @@ namespace cheapshot
    promotion_info(board_t& board, piece prom, uint64_t promoted_loc)
    {
       move_info2 mi2{{
-         move_info{get_side<S>(board)[idx(piece::pawn)],promoted_loc},
-         move_info{get_side<S>(board)[idx(prom)],promoted_loc}
+            move_info{board,S,piece::pawn,promoted_loc},
+            move_info{board,S,prom,promoted_loc},
          }};
       return mi2;
    }
@@ -147,37 +165,45 @@ namespace cheapshot
    {
       // TODO: row & column can be sped up
       move_info2 mi2{{
-         move_info{get_side<S>(board)[idx(piece::pawn)],origin|destination},
-         move_info{get_side<other_side(S)>(board)[idx(piece::pawn)],row(origin)&column(destination)}
+            move_info{board,S,piece::pawn,origin|destination},
+            move_info{board,other_side(S),piece::pawn,row(origin)&column(destination)}
          }};
       return mi2;
    }
 
    inline void
+   make_move(uint64_t& piece,uint64_t mask)
+   {
+      piece^=mask;
+   }
+
+   inline void
    make_move(const move_info& mi)
    {
-      mi.piece^=mi.mask;
+      make_move(mi.board[idx(mi.moved_side)][idx(mi.moved_piece)],mi.mask);
    }
 
    class scoped_move
    {
    public:
-      explicit scoped_move(const move_info& mi_):
-         mi(mi_)
+      explicit scoped_move(const move_info& mi):
+         piece(mi.board[idx(mi.moved_side)][idx(mi.moved_piece)]),
+         mask(mi.mask)
       {
-         make_move(mi);
+         make_move(piece,mask);
       }
 
       ~scoped_move()
       {
-         make_move(mi);
+         make_move(piece,mask);
       }
 
       scoped_move(const scoped_move&) = delete;
       scoped_move& operator=(const scoped_move&) = delete;
       scoped_move& operator=(scoped_move&&) = delete;
    private:
-      move_info mi;
+      uint64_t& piece;
+      uint64_t mask;
    };
 
    // TODO: unhappy with this

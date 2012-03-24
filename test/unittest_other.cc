@@ -1078,12 +1078,12 @@ struct check_io_message
    check_io_message(const char* fragment_):
       fragment(fragment_)
    {}
-   
+
    bool operator()(const cheapshot::io_error& ex)
    {
       return strstr(ex.what(),fragment)!=NULL;
    }
-   
+
 private:
    const char* fragment;
 };
@@ -1098,14 +1098,14 @@ BOOST_AUTO_TEST_CASE( input_move_test )
           {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
-      BOOST_CHECK( ots.is_equal("r.bqkb.r\n"
-                                "pppp.ppp\n"
-                                "..n..n..\n"
-                                "....p...\n"
-                                "..B.P...\n"
-                                ".....N..\n"
-                                "PPPP.PPP\n"
-                                "RNBQ.RK.\n"));
+      BOOST_CHECK(ots.is_equal("r.bqkb.r\n"
+                               "pppp.ppp\n"
+                               "..n..n..\n"
+                               "....p...\n"
+                               "..B.P...\n"
+                               ".....N..\n"
+                               "PPPP.PPP\n"
+                               "RNBQ.RK.\n"));
    }
    {
       board_t b=en_passant_initial_board;
@@ -1141,6 +1141,10 @@ BOOST_AUTO_TEST_CASE( input_move_test )
          make_long_algebraic_move(b,ctx,side::white, {"e2xe4"}),
          cheapshot::io_error,
          check_io_message("capture"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,ctx,side::white, {"e2@e4"}),
+         cheapshot::io_error,
+         check_io_message("separator"));
    }
 }
 
