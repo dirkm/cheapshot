@@ -227,6 +227,9 @@ namespace cheapshot
          scoped_move(mi),
          old_hash(engine_controller_.hash)
       {
+         // TODO: has to be done once per board only
+         engine_controller.hash^=
+            (zobrist_hash_turn(side::white)^zobrist_hash_turn(side::black));
          engine_controller.hash^=zobrist_hash(mi);
       }
 

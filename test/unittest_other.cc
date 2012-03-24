@@ -23,16 +23,15 @@ namespace
       1 // fullmove number
    };
 
-   class move_checker_base
+   struct move_checker_base
    {
-   public:
       move_checker_base(const std::initializer_list<board_t>& boards_):
          is_position_reached(false),
          idx(0),
          boards(boards_)
       {}
 
-      move_checker_base(board_t& b, side c, context& ctx, const std::initializer_list<const char*>& input_moves):
+      move_checker_base(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
          is_position_reached(false),
          idx(0)
       {
@@ -70,7 +69,7 @@ namespace
       {
          --idx;
       }
-   private:
+
       std::size_t idx;
       std::vector<board_t> boards;
    };
@@ -1185,11 +1184,33 @@ struct hash_checker: with_hash
       mc(boards)
    {}
 
-   hash_checker(board_t& b, context& ctx, side c, const std::initializer_list<const char*>& input_moves):
+   hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
       with_hash(zobrist_hash(b,c,ctx)),
       mc(b,c,ctx,input_moves)
    {}
-   
+
+   bool
+   try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+   {
+      bool r=mc.try_position(board,c,ctx,bm);
+      if(r)
+      {
+         uint64_t complete_hash=zobrist_hash(board,c,ctx);
+         BOOST_CHECK_EQUAL(hash,complete_hash);
+      }
+      return r;
+   }
+
+   void increment_depth()
+   {
+      mc.increment_depth();
+   }
+
+   void decrement_depth()
+   {
+      mc.decrement_depth();
+   }
+
    move_checker_base mc;
 };
 
@@ -1197,6 +1218,11 @@ struct hash_checker: with_hash
 BOOST_AUTO_TEST_CASE( basic_inc_hash_test )
 {
    board_t b=initial_board();
+   context ctx=null_context;
+   hash_checker hashcheck(b,ctx,side::white,
+      {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
+   // turn has to be taken in account in analyze_position
+   analyze_position<side::white>(b,null_context,hashcheck);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
