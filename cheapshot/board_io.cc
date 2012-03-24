@@ -576,7 +576,7 @@ namespace cheapshot
    }
 
    extern void // TODO: return piece as well
-   make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s)
+   make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s)
    {
       input_move im=scan_long_algebraic_move(s);
       switch(c)
@@ -589,13 +589,25 @@ namespace cheapshot
    }
 
    extern void
-   make_long_algebraic_moves(board_t& board, context& ctx, side c,
-                             const std::initializer_list<const char*>& input_moves)
+   make_long_algebraic_moves(board_t& board, side c, context& ctx,
+                             const std::initializer_list<const char*>& input_moves,
+                             const std::function<void (board_t& board, side c, context& ctx)>& fun)
    {
       for(const char* input_move: input_moves)
       {
-         make_long_algebraic_move(board,ctx,c,input_move);
+         fun(board,c,ctx);
+         make_long_algebraic_move(board,c,ctx,input_move);
          c=other_side(c);
       }
+      fun(board,c,ctx);
+   }
+
+   extern void
+   make_long_algebraic_moves(board_t& board, side c, context& ctx,
+                             const std::initializer_list<const char*>& input_moves)
+   {
+      make_long_algebraic_moves(board,c,ctx,
+                                input_moves,
+                                [](board_t& board, side c, context& ctx){});
    }
 }

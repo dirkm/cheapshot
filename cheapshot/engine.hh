@@ -7,10 +7,28 @@
 
 namespace cheapshot
 {
-   class max_ply_cutoff
+   struct no_hash
+   {
+      typedef scoped_move_no_hash<no_hash,move_info> scoped_move;
+      typedef scoped_move_no_hash<no_hash,move_info2> scoped_move2;
+   };
+
+   struct with_hash
+   {
+      with_hash(uint64_t initial_hash):
+         hash(initial_hash)
+      {};
+
+      typedef scoped_move_with_hash<with_hash,move_info> scoped_move;
+      typedef scoped_move_with_hash<with_hash,move_info2> scoped_move2;
+      
+      uint64_t hash;
+   };
+
+   class max_ply_cutoff_base
    {
    public:
-      explicit constexpr max_ply_cutoff(int max_depth):
+      explicit constexpr max_ply_cutoff_base(int max_depth):
          remaining_depth(max_depth)
       {}
 
@@ -37,10 +55,17 @@ namespace cheapshot
          ++remaining_depth;
       }
 
-      max_ply_cutoff(const max_ply_cutoff&) = delete;
-      max_ply_cutoff& operator=(const max_ply_cutoff&) = delete;
+      max_ply_cutoff_base(const max_ply_cutoff_base&) = delete;
+      max_ply_cutoff_base& operator=(const max_ply_cutoff_base&) = delete;
    private:
       int remaining_depth;
+   };
+
+   struct max_ply_cutoff: max_ply_cutoff_base, no_hash
+   {
+      explicit constexpr max_ply_cutoff(int max_depth):
+         max_ply_cutoff_base(max_depth)
+      {}   
    };
 
    // TODO: implement

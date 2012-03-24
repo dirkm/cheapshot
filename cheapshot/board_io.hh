@@ -2,6 +2,7 @@
 #define CHEAPSHOT_BOARD_IO_HH
 
 #include <array>
+#include <functional>
 #include <iosfwd>
 #include <stdexcept>
 #include <tuple>
@@ -65,10 +66,15 @@ namespace cheapshot
    print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
 
    extern void // return piece as well
-   make_long_algebraic_move(board_t& board, context& ctx, side c, const char* s);
+   make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s);
 
    extern void
-   make_long_algebraic_moves(board_t& board, context& ctx, side c,
+   make_long_algebraic_moves(board_t& board, side c, context& ctx,
+                             const std::initializer_list<const char*>& input_moves,
+                             const std::function<void (board_t& board, side c, context& ctx)>& fun);
+
+   extern void
+   make_long_algebraic_moves(board_t& board, side c, context& ctx,
                              const std::initializer_list<const char*>& input_moves);
 }
 

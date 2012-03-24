@@ -23,14 +23,26 @@ namespace
       1 // fullmove number
    };
 
-   class move_checker
+   class move_checker_base
    {
    public:
-      move_checker(std::initializer_list<board_t> boards_):
+      move_checker_base(const std::initializer_list<board_t>& boards_):
          is_position_reached(false),
          idx(0),
          boards(boards_)
       {}
+
+      move_checker_base(board_t& b, side c, context& ctx, const std::initializer_list<const char*>& input_moves):
+         is_position_reached(false),
+         idx(0)
+      {
+         make_long_algebraic_moves(b,c,ctx,
+                                   input_moves,
+                                   [&boards](board_t& b, side c, context& ctx)
+                                   {
+                                      boards.push_back(b);
+                                   });
+      }
 
       bool
       try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
@@ -63,12 +75,23 @@ namespace
       std::vector<board_t> boards;
    };
 
+   struct move_checker: move_checker_base, no_hash
+   {
+      move_checker(const std::initializer_list<board_t>& boards):
+         move_checker_base(boards)
+      {}
+
+      move_checker(board_t& b, side c, context& ctx, const std::initializer_list<const char*>& input_moves):
+         move_checker_base(b,c,ctx,input_moves)
+      {}
+   };
+
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   class do_until_ply_cutoff
+   class do_until_ply_cutoff_base
    {
    public:
-      do_until_ply_cutoff(int max_depth, const funpos& fun_):
+      do_until_ply_cutoff_base(int max_depth, const funpos& fun_):
          mpc(max_depth),
          fun(fun_)
       {}
@@ -95,8 +118,15 @@ namespace
       }
 
    private:
-      max_ply_cutoff mpc;
+      max_ply_cutoff_base mpc;
       funpos fun;
+   };
+
+   struct do_until_ply_cutoff: do_until_ply_cutoff_base, no_hash
+   {
+      do_until_ply_cutoff(int max_depth, const funpos& fun):
+         do_until_ply_cutoff_base(max_depth,fun)
+      {}
    };
 }
 
@@ -284,7 +314,7 @@ BOOST_AUTO_TEST_CASE( scoped_move_test )
    uint64_t dest=scan_canvas(c,'p');
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
-      scoped_move2 scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
+      scoped_move_t<move_info2> scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
       BOOST_CHECK_EQUAL(b,scan_board(
                            "........\n"
                            "........\n"
@@ -327,7 +357,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
 
-      scoped_move2 scope(castle_info<side::white>(b,sci));
+      scoped_move_t<move_info2> scope(castle_info<side::white>(b,sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -438,7 +468,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "R...K...\n");
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
 
-      scoped_move2 scope(castle_info<side::white>(b,lci));
+      scoped_move_t<move_info2> scope(castle_info<side::white>(b,lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1038,6 +1068,81 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    time_op.time_report("endgame mate in 7 plies",ops);
 }
 
+struct check_io_message
+{
+   check_io_message(const char* fragment_):
+      fragment(fragment_)
+   {}
+
+   bool operator()(const cheapshot::io_error& ex)
+   {
+      return strstr(ex.what(),fragment)!=NULL;
+   }
+
+private:
+   const char* fragment;
+};
+
+BOOST_AUTO_TEST_CASE( input_move_test )
+{
+   {
+      board_t b=initial_board();
+      context ctx=null_context;
+      make_long_algebraic_moves
+         (b,side::white,ctx,
+          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+      boost::test_tools::output_test_stream ots;
+      print_board(b,ots);
+      BOOST_CHECK(ots.is_equal("r.bqkb.r\n"
+                               "pppp.ppp\n"
+                               "..n..n..\n"
+                               "....p...\n"
+                               "..B.P...\n"
+                               ".....N..\n"
+                               "PPPP.PPP\n"
+                               "RNBQ.RK.\n"));
+   }
+   {
+      board_t b=en_passant_initial_board;
+      context ctx=null_context;
+      make_long_algebraic_moves
+         (b,side::black,ctx,{"d7-d5","e5xd6e.p."});
+      BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
+   }
+   {
+      board_t b=initial_board();
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{""}),
+         cheapshot::io_error,
+         check_io_message("invalid character"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e2-e5"}),
+         cheapshot::io_error,
+         check_io_message("invalid destination"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e3-e4"}),
+         cheapshot::io_error,
+         check_io_message("missing piece"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e2xd3"}),
+         cheapshot::io_error,
+         check_io_message("invalid destination"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e2xd3e.p."}),
+         cheapshot::io_error,
+         check_io_message("en passant"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e2xe4"}),
+         cheapshot::io_error,
+         check_io_message("capture"));
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,{"e2@e4"}),
+         cheapshot::io_error,
+         check_io_message("separator"));
+   }
+}
+
 BOOST_AUTO_TEST_CASE( complete_hash_test )
 {
    board_t b=initial_board();
@@ -1073,79 +1178,25 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
-struct check_io_message
+struct hash_checker: with_hash
 {
-   check_io_message(const char* fragment_):
-      fragment(fragment_)
+   hash_checker(uint64_t initial_hash, const std::initializer_list<board_t>& boards):
+      with_hash(initial_hash),
+      mc(boards)
    {}
 
-   bool operator()(const cheapshot::io_error& ex)
-   {
-      return strstr(ex.what(),fragment)!=NULL;
-   }
-
-private:
-   const char* fragment;
+   hash_checker(board_t& b, context& ctx, side c, const std::initializer_list<const char*>& input_moves):
+      with_hash(zobrist_hash(b,c,ctx)),
+      mc(b,c,ctx,input_moves)
+   {}
+   
+   move_checker_base mc;
 };
 
-BOOST_AUTO_TEST_CASE( input_move_test )
+
+BOOST_AUTO_TEST_CASE( basic_inc_hash_test )
 {
-   {
-      board_t b=initial_board();
-      context ctx=null_context;
-      make_long_algebraic_moves
-         (b,ctx,side::white,
-          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
-      boost::test_tools::output_test_stream ots;
-      print_board(b,ots);
-      BOOST_CHECK(ots.is_equal("r.bqkb.r\n"
-                               "pppp.ppp\n"
-                               "..n..n..\n"
-                               "....p...\n"
-                               "..B.P...\n"
-                               ".....N..\n"
-                               "PPPP.PPP\n"
-                               "RNBQ.RK.\n"));
-   }
-   {
-      board_t b=en_passant_initial_board;
-      context ctx=null_context;
-      make_long_algebraic_moves
-         (b,ctx,side::black,{"d7-d5","e5xd6e.p."});
-      BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
-   }
-   {
-      board_t b=initial_board();
-      context ctx=null_context;
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {""}),
-         cheapshot::io_error,
-         check_io_message("invalid character"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e2-e5"}),
-         cheapshot::io_error,
-         check_io_message("invalid destination"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e3-e4"}),
-         cheapshot::io_error,
-         check_io_message("missing piece"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e2xd3"}),
-         cheapshot::io_error,
-         check_io_message("invalid destination"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e2xd3e.p."}),
-         cheapshot::io_error,
-         check_io_message("en passant"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e2xe4"}),
-         cheapshot::io_error,
-         check_io_message("capture"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,ctx,side::white, {"e2@e4"}),
-         cheapshot::io_error,
-         check_io_message("separator"));
-   }
+   board_t b=initial_board();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
