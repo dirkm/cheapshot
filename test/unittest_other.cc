@@ -37,7 +37,7 @@ namespace
       {
          make_long_algebraic_moves(b,c,ctx,
                                    input_moves,
-                                   [&boards](board_t& b, side c, context& ctx)
+                                   [this](board_t& b, side c, context& ctx)
                                    {
                                       boards.push_back(b);
                                    });
@@ -1217,11 +1217,11 @@ struct hash_checker: with_hash
 
 BOOST_AUTO_TEST_CASE( basic_inc_hash_test )
 {
+   // no ctx changes (castling, en passant)
    board_t b=initial_board();
    context ctx=null_context;
    hash_checker hashcheck(b,ctx,side::white,
-      {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
-   // turn has to be taken in account in analyze_position
+      {"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
    analyze_position<side::white>(b,null_context,hashcheck);
 }
 
