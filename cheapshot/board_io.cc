@@ -99,25 +99,34 @@ namespace cheapshot
    }
 
    extern void
-   fill_canvas(const uint64_t& p,canvas_t& c,char piece) noexcept
+   fill_canvas(uint64_t p,canvas_t& canvas,char piece_repr) noexcept
    {
       for(auto it=make_board_iterator(p);it!=board_iterator();++it)
       {
-         assert(c[*it]=='.');
-         c[*it]=piece;
+         assert(canvas[*it]=='.');
+         canvas[*it]=piece_repr;
       }
    }
 
    namespace
    {
       void
-      fill_canvas_side(const board_side& side,canvas_t& c, const piece_to_character_t& p_to_c) noexcept
+      fill_canvas_side(const board_side& side,canvas_t& canvas, const piece_to_character_t& p_to_c) noexcept
       {
          auto pi=begin(p_to_c);
          for(auto bi=begin(side);bi!=end(side);++bi,++pi)
-            fill_canvas(*bi,c,*pi);
+            fill_canvas(*bi,canvas,*pi);
       }
    }
+
+   extern void
+   fill_canvas(const board_t& board,canvas_t& canvas) noexcept
+   {
+      canvas.fill('.');
+      fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
+      fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
+   }
+
 
    extern void
    print_canvas(canvas_t& c,std::ostream& os)
@@ -134,9 +143,7 @@ namespace cheapshot
    print_board(const board_t& board, std::ostream& os)
    {
       canvas_t canvas;
-      canvas.fill('.');
-      fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
-      fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
+      fill_canvas(board,canvas);
       print_canvas(canvas,os);
    }
 
@@ -152,7 +159,7 @@ namespace cheapshot
    namespace
    {
       constexpr uint64_t
-      charpos_to_bitmask(uint8_t row, uint8_t column) noexcept
+      canvaspos_to_bitmask(uint8_t row, uint8_t column) noexcept
       {
          return 1UL<<(((row^'\x7')*8)|column); // rows reverse order
       }
@@ -166,7 +173,7 @@ namespace cheapshot
       {
          for(uint8_t j=0;j<8;++j,++canvas)
             if(*canvas==piece)
-               r|=charpos_to_bitmask(i,j);
+               r|=canvaspos_to_bitmask(i,j);
          assert(*canvas=='\n');
          ++canvas;
       }
@@ -185,7 +192,7 @@ namespace cheapshot
             piece p;
             std::tie(c,p)=character_to_piece(*canvas);
             if(p!=piece::count)
-               b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
+               b[idx(c)][idx(p)]|=canvaspos_to_bitmask(i,j);
             else
                assert(*canvas=='.');
          }
@@ -215,7 +222,7 @@ namespace cheapshot
                   piece p;
                   std::tie(c,p)=character_to_piece(*rs);
                   if(p!=piece::count)
-                     b[idx(c)][idx(p)]|=charpos_to_bitmask(i,j);
+                     b[idx(c)][idx(p)]|=canvaspos_to_bitmask(i,j);
                   else
                   {
                      std::stringstream oss;
@@ -301,7 +308,7 @@ namespace cheapshot
             if((ch2!='3') && (ch2!='6'))
             {
                std::stringstream oss;
-               oss << "invalid character in en passant info: " << ch2 << "'";
+               oss << "invalid character in en passant info: '" << ch2 << "'";
                throw io_error(oss.str());
             }
             return algpos(ch1,ch2);
@@ -319,10 +326,8 @@ namespace cheapshot
          void
          skip_whitespace(const char*& rs)
          {
-            while((std::isspace(*rs))&&(*rs!='\x0'))
-            {
+            while(std::isspace(*rs))
                ++rs;
-            }
          }
       }
 
@@ -330,9 +335,7 @@ namespace cheapshot
       print_position(const board_t& board, std::ostream& os)
       {
          canvas_t canvas;
-         canvas.fill('.');
-         fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
-         fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
+         fill_canvas(board,canvas);
          for(int i=7;;--i)
          {
             int offset=0;
@@ -360,7 +363,6 @@ namespace cheapshot
 
       namespace
       {
-
          void
          print_color(side c,std::ostream& os)
          {
@@ -475,7 +477,7 @@ namespace cheapshot
             default:
             {
                std::stringstream oss;
-               oss << "expected '-' or 'x' as separator, got: " << sep << "'";
+               oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
                throw io_error(oss.str());
             }
          }
@@ -600,14 +602,5 @@ namespace cheapshot
          c=other_side(c);
       }
       fun(board,c,ctx);
-   }
-
-   extern void
-   make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::initializer_list<const char*>& input_moves)
-   {
-      make_long_algebraic_moves(board,c,ctx,
-                                input_moves,
-                                [](board_t& board, side c, context& ctx){});
    }
 }

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <cassert>
-// #include <iostream>
 
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
@@ -189,7 +188,7 @@ namespace cheapshot
    constexpr uint64_t
    in_between(uint64_t s1,uint64_t s2) noexcept
    {
-      // assert(is_max_single_bit(s1));
+      // assert(is_single_bit(s1));
       // assert(is_max_single_bit(s2));
       return s2-s1;
    }
@@ -560,7 +559,8 @@ namespace cheapshot
       };
    }
 
-   // masks must have unique patterns; they are used for hashing
+   // masks must have the same value, independent of the game-history
+   //  because they are used as input for hashing
    template<side S>
    constexpr uint64_t
    castling_block_mask(uint64_t rooks, uint64_t king,

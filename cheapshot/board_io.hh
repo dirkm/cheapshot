@@ -17,10 +17,13 @@ namespace cheapshot
    to_char(side c);
 
    extern void
-   fill_canvas(const uint64_t& p,canvas_t& c,char piece) noexcept;
+   fill_canvas(uint64_t p,canvas_t& canvas,char piece_repr) noexcept;
 
    extern void
-   print_canvas(canvas_t& c,std::ostream& os);
+   fill_canvas(const board_t& board,canvas_t& canvas) noexcept;
+
+   extern void
+   print_canvas(canvas_t& canvas,std::ostream& os);
 
    extern void
    print_board(const board_t& board, std::ostream& os);
@@ -71,11 +74,8 @@ namespace cheapshot
    extern void
    make_long_algebraic_moves(board_t& board, side c, context& ctx,
                              const std::initializer_list<const char*>& input_moves,
-                             const std::function<void (board_t& board, side c, context& ctx)>& fun);
-
-   extern void
-   make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::initializer_list<const char*>& input_moves);
+                             const std::function<void (board_t& board, side c, context& ctx)>& fun=
+                             [](board_t& board, side c, context& ctx){});
 }
 
 #endif

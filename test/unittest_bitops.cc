@@ -811,7 +811,7 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    __attribute__((unused)) volatile uint8_t c;
    __attribute__((unused)) volatile uint8_t r;
    TimeOperation time_op;
-   const long ops=100000000;
+   const long ops=runtime_adjusted_ops(100000000);
    for(long i=0;i<ops;++i)
    {
       c=column_number(s);
@@ -825,7 +825,7 @@ BOOST_AUTO_TEST_CASE( time_board_pos )
    volatile uint64_t s=(1UL<<(8*(8-(1))));
    __attribute__((unused)) volatile uint64_t c;
    TimeOperation time_op;
-   const long ops=600000000;
+   const long ops=runtime_adjusted_ops(600000000);
    for(long i=0;i<ops;++i)
       c=get_board_pos(s);
    // portable version is 15% faster, but code-complexity increases
@@ -834,15 +834,16 @@ BOOST_AUTO_TEST_CASE( time_board_pos )
 }
 
 template<typename T>
-void time_move(T fun, long count, const char* description)
+void time_move(T fun, long raw_ops, const char* description)
 {
+   long ops=runtime_adjusted_ops(raw_ops);
    volatile uint64_t s=(1UL<<(4*(8-(4))));
    __attribute__((unused)) volatile uint64_t r;
    TimeOperation time_op;
    volatile uint64_t obstacles=random()&~s;
-   for(long i=0;i<count;++i)
+   for(long i=0;i<ops;++i)
       r=fun(s,obstacles);
-   time_op.time_report(description,count);
+   time_op.time_report(description,ops);
 }
 
 BOOST_AUTO_TEST_CASE( time_moves )
@@ -864,7 +865,7 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
    __attribute__((unused)) volatile uint64_t r;
    volatile uint64_t in=0X100110011001F30UL;
    TimeOperation time_op;
-   constexpr long ops=80000000;
+   const long ops=runtime_adjusted_ops(80000000);
    for(long i=0;i<ops;++i)
    {
       r=count_bits_set(in);

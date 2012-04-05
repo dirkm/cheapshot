@@ -7,28 +7,37 @@
 
 namespace cheapshot
 {
-   struct no_hash
+   namespace control
    {
-      typedef scoped_move_no_hash<no_hash,move_info> scoped_move;
-      typedef scoped_move_no_hash<no_hash,move_info2> scoped_move2;
-   };
+      // helpers to sweeten engine-configuration in the controllers below
+      class noop; class zobrist;
 
-   struct with_hash
-   {
-      with_hash(uint64_t initial_hash):
-         hash(initial_hash)
-      {};
+      template<typename EngineController,typename Type=zobrist>
+      struct scoped_hash
+      {
+      public:
+         template<typename HashFun, typename... Args>
+         scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args):
+            sh(ec.hash,hashfun,args...) // std::forward ??
+         {}
+      private:
+         cheapshot::scoped_hash sh;
+      };
 
-      typedef scoped_move_with_hash<with_hash,move_info> scoped_move;
-      typedef scoped_move_with_hash<with_hash,move_info2> scoped_move2;
-      
-      uint64_t hash;
-   };
+      template<typename EngineController>
+      struct scoped_hash<EngineController,noop>
+      {
+      public:
+         template<typename HashFun, typename... Args>
+         scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args)
+         {}
+      };
+   }
 
-   class max_ply_cutoff_base
+   class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff_base(int max_depth):
+      explicit constexpr max_ply_cutoff(int max_depth):
          remaining_depth(max_depth)
       {}
 
@@ -45,27 +54,22 @@ namespace cheapshot
          return r;
       }
 
-      void increment_depth()
+      void increment_ply()
       {
          --remaining_depth;
       }
 
-      void decrement_depth()
+      void decrement_ply()
       {
          ++remaining_depth;
       }
 
-      max_ply_cutoff_base(const max_ply_cutoff_base&) = delete;
-      max_ply_cutoff_base& operator=(const max_ply_cutoff_base&) = delete;
+      max_ply_cutoff(const max_ply_cutoff&) = delete;
+      max_ply_cutoff& operator=(const max_ply_cutoff&) = delete;
+
+      typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
    private:
       int remaining_depth;
-   };
-
-   struct max_ply_cutoff: max_ply_cutoff_base, no_hash
-   {
-      explicit constexpr max_ply_cutoff(int max_depth):
-         max_ply_cutoff_base(max_depth)
-      {}   
    };
 
    // TODO: implement
@@ -85,15 +89,15 @@ namespace cheapshot
       }
 
       void
-      increment_depth()
+      increment_ply()
       {
-         mpc.increment_depth();
+         mpc.increment_ply();
       }
 
       void
-      decrement_depth()
+      decrement_ply()
       {
-         mpc.decrement_depth();
+         mpc.decrement_ply();
       }
    private:
       max_ply_cutoff mpc;
@@ -121,9 +125,6 @@ namespace cheapshot
       uint64_t eval;
       move_info best_move;
    };
-
-   // typedef std::unordered_map<uint64_t>
-
 }
 
 #endif

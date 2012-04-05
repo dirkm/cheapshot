@@ -23,15 +23,15 @@ namespace
       1 // fullmove number
    };
 
-   struct move_checker_base
+   struct move_checker
    {
-      move_checker_base(const std::initializer_list<board_t>& boards_):
+      move_checker(const std::initializer_list<board_t>& boards_):
          is_position_reached(false),
          idx(0),
          boards(boards_)
       {}
 
-      move_checker_base(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
+      move_checker(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
          is_position_reached(false),
          idx(0)
       {
@@ -60,37 +60,27 @@ namespace
 
       bool is_position_reached;
 
-      void increment_depth()
+      void increment_ply()
       {
          ++idx;
       }
 
-      void decrement_depth()
+      void decrement_ply()
       {
          --idx;
       }
 
       std::size_t idx;
       std::vector<board_t> boards;
-   };
-
-   struct move_checker: move_checker_base, no_hash
-   {
-      move_checker(const std::initializer_list<board_t>& boards):
-         move_checker_base(boards)
-      {}
-
-      move_checker(board_t& b, side c, context& ctx, const std::initializer_list<const char*>& input_moves):
-         move_checker_base(b,c,ctx,input_moves)
-      {}
+      typedef control::scoped_hash<move_checker,control::noop> scoped_hash;
    };
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   class do_until_ply_cutoff_base
+   class do_until_ply_cutoff
    {
    public:
-      do_until_ply_cutoff_base(int max_depth, const funpos& fun_):
+      do_until_ply_cutoff(int max_depth, const funpos& fun_):
          mpc(max_depth),
          fun(fun_)
       {}
@@ -105,27 +95,20 @@ namespace
       }
 
       void
-      increment_depth()
+      increment_ply()
       {
-         mpc.increment_depth();
+         mpc.increment_ply();
       }
 
       void
-      decrement_depth()
+      decrement_ply()
       {
-         mpc.decrement_depth();
+         mpc.decrement_ply();
       }
-
+      typedef control::scoped_hash<do_until_ply_cutoff,control::noop> scoped_hash;
    private:
-      max_ply_cutoff_base mpc;
+      max_ply_cutoff mpc;
       funpos fun;
-   };
-
-   struct do_until_ply_cutoff: do_until_ply_cutoff_base, no_hash
-   {
-      do_until_ply_cutoff(int max_depth, const funpos& fun):
-         do_until_ply_cutoff_base(max_depth,fun)
-      {}
    };
 }
 
@@ -313,7 +296,7 @@ BOOST_AUTO_TEST_CASE( scoped_move_test )
    uint64_t dest=scan_canvas(c,'p');
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
-      scoped_move_t<move_info2> scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
+      scoped_move<move_info2> scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
       BOOST_CHECK_EQUAL(b,scan_board(
                            "........\n"
                            "........\n"
@@ -356,7 +339,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
 
-      scoped_move_t<move_info2> scope(castle_info<side::white>(b,sci));
+      scoped_move<move_info2> scope(castle_info<side::white>(b,sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -467,7 +450,7 @@ BOOST_AUTO_TEST_CASE( castle_test )
          "R...K...\n");
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
 
-      scoped_move_t<move_info2> scope(castle_info<side::white>(b,lci));
+      scoped_move<move_info2> scope(castle_info<side::white>(b,lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -986,7 +969,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    const board_t b=test_board1;
    volatile uint8_t r=0;
    TimeOperation time_op;
-   const long ops=6000000;
+   const long ops=runtime_adjusted_ops(6000000);
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
@@ -1001,7 +984,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
 {
    board_t mate_board=scan_board(canvas_mate_board1);
    TimeOperation time_op;
-   constexpr long ops=100000;
+   const long ops=runtime_adjusted_ops(100000);
    volatile int nrPlies=1;
    for(long i=0;i<ops;++i)
    {
@@ -1025,7 +1008,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
       ".K.B....\n");
 
    TimeOperation time_op;
-   constexpr long ops=3;
+   const long ops=runtime_adjusted_ops(3);
    volatile int nrPlies=17;
    for(long i=0;i<ops;++i)
    {
@@ -1057,7 +1040,7 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
       "........\n"
       "......K.\n");
    TimeOperation time_op;
-   constexpr long ops=1;
+   const long ops=runtime_adjusted_ops(1);
    for(long i=0;i<ops;++i)
    {
       max_ply_cutoff cutoff(7);
@@ -1144,6 +1127,11 @@ BOOST_AUTO_TEST_CASE( input_move_test )
 
 BOOST_AUTO_TEST_CASE( complete_hash_test )
 {
+   //BOOST_CHECK(__builtin_constant_p(2+3));
+   // const uint64_t h=zhash_turn(side::white);
+   // BOOST_CHECK(__builtin_constant_p(h));
+   // BOOST_CHECK(__builtin_constant_p(zhash_turn(side::white)^zhash_turn(side::black)));
+
    board_t b=initial_board();
    std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
    int nodes=0;
@@ -1152,7 +1140,7 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    auto f=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
       {
          ++nodes;
-         uint64_t hash=zobrist_hash(board,t,ctx);
+         uint64_t hash=zhash(board,t,ctx);
          auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
 
          auto lb = r.lower_bound(hash);
@@ -1177,15 +1165,15 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
-struct hash_checker: with_hash
+struct hash_checker
 {
    hash_checker(uint64_t initial_hash, const std::initializer_list<board_t>& boards):
-      with_hash(initial_hash),
+      hash(initial_hash),
       mc(boards)
    {}
 
    hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
-      with_hash(zobrist_hash(b,c,ctx)),
+      hash(zhash(b,c,ctx)),
       mc(b,c,ctx,input_moves)
    {}
 
@@ -1195,34 +1183,58 @@ struct hash_checker: with_hash
       bool r=mc.try_position(board,c,ctx,bm);
       if(r)
       {
-         uint64_t complete_hash=zobrist_hash(board,c,ctx);
+         uint64_t complete_hash=zhash(board,c,ctx);
          BOOST_CHECK_EQUAL(hash,complete_hash);
       }
       return r;
    }
 
-   void increment_depth()
+   void increment_ply()
    {
-      mc.increment_depth();
+      mc.increment_ply();
    }
 
-   void decrement_depth()
+   void decrement_ply()
    {
-      mc.decrement_depth();
+      mc.decrement_ply();
    }
 
-   move_checker_base mc;
+   typedef control::scoped_hash<hash_checker> scoped_hash;
+   uint64_t hash;
+   move_checker mc;
 };
 
 
-BOOST_AUTO_TEST_CASE( basic_inc_hash_test )
+BOOST_AUTO_TEST_CASE( incremental_hash_test )
 {
-   // no ctx changes (castling, en passant)
-   board_t b=initial_board();
-   context ctx=null_context;
-   hash_checker hashcheck(b,ctx,side::white,
-      {"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
-   analyze_position<side::white>(b,null_context,hashcheck);
+   {
+      // no ctx changes (castling, en passant)
+      board_t b=initial_board();
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,
+         {"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
+      analyze_position<side::white>(b,null_context,hashcheck);
+   }
+   {
+      // en passant
+      board_t b=initial_board();
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,
+         {"e2-e4","e7-e5","Ng1-f3"});
+      analyze_position<side::white>(b,null_context,hashcheck);
+   }
+   {
+      // castling
+      board_t b=initial_board();
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,
+          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+      analyze_position<side::white>(b,null_context,hashcheck);
+   }
+   // TODO: promotions, more complete coverage
 }
 
 BOOST_AUTO_TEST_SUITE_END()

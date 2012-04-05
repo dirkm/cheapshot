@@ -23,6 +23,14 @@ constexpr char initial_canvas[]=
    "PPPPPPPP\n"
    "RNBQKBNR\n";
 
+
+// TODO: constexpr
+inline long 
+runtime_adjusted_ops(long ops, long divisor=10, long multiplier=1)
+{
+   return std::max((ops*multiplier)/divisor,1L);
+};
+
 class TimeOperation
 {
 public:

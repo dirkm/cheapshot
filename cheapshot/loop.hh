@@ -6,6 +6,7 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 #include "cheapshot/iterator.hh"
+#include "cheapshot/hash.hh"
 
 namespace cheapshot
 {
@@ -89,21 +90,21 @@ namespace cheapshot
       uint64_t mask;
    };
 
-   inline
-   uint64_t
-   zobrist_hash(const move_info& mi)
-   {
-      return zobrist_hash2(mi.moved_side,mi.moved_piece,mi.mask);
-   }
-
    typedef std::array<move_info,2> move_info2;
 
    inline
    uint64_t
-   zobrist_hash(const move_info2& mi2)
+   zhash(const move_info& mi)
+   {
+      return zhash2(mi.moved_side,mi.moved_piece,mi.mask);
+   }
+
+   inline
+   uint64_t
+   zhash(const move_info2& mi2)
    {
       return
-         zobrist_hash(mi2[0])^zobrist_hash(mi2[1]);
+         zhash(mi2[0])^zhash(mi2[1]);
    }
 
    template<side S>
@@ -130,9 +131,8 @@ namespace cheapshot
             break;
       }
 
-      return {{
-            basic_move_info<S>(board,p,origin,destination),
-            move_info{board,other_side(S),capt_piece,dest_xor_mask}
+      return {{basic_move_info<S>(board,p,origin,destination),
+               move_info{board,other_side(S),capt_piece,dest_xor_mask}
          }};
    }
 
@@ -159,9 +159,8 @@ namespace cheapshot
    en_passant_info(board_t& board,uint64_t origin, uint64_t destination)
    {
       // TODO: row & column can be sped up
-      return {{
-            move_info{board,S,piece::pawn,origin|destination},
-            move_info{board,other_side(S),piece::pawn,row(origin)&column(destination)}
+      return {{move_info{board,S,piece::pawn,origin|destination},
+               move_info{board,other_side(S),piece::pawn,row(origin)&column(destination)}
          }};
    }
 
@@ -178,27 +177,27 @@ namespace cheapshot
    }
 
    template<typename Info>
-   class scoped_move_t;
+   class scoped_move;
 
    template<>
-   class scoped_move_t<move_info>
+   class scoped_move<move_info>
    {
    public:
-      explicit scoped_move_t(const move_info& mi):
+      explicit scoped_move(const move_info& mi):
          piece(mi.board[idx(mi.moved_side)][idx(mi.moved_piece)]),
          mask(mi.mask)
       {
          make_move(piece,mask);
       }
 
-      ~scoped_move_t()
+      ~scoped_move()
       {
          make_move(piece,mask);
       }
 
-      scoped_move_t(const scoped_move_t&) = delete;
-      scoped_move_t& operator=(const scoped_move_t&) = delete;
-      scoped_move_t& operator=(scoped_move_t&&) = delete;
+      scoped_move(const scoped_move&) = delete;
+      scoped_move& operator=(const scoped_move&) = delete;
+      scoped_move& operator=(scoped_move&&) = delete;
    private:
       uint64_t& piece;
       uint64_t mask;
@@ -206,96 +205,17 @@ namespace cheapshot
 
    // TODO: unhappy with this
    template<>
-   class scoped_move_t<move_info2>
+   class scoped_move<move_info2>
    {
    public:
-      explicit scoped_move_t(const move_info2& mi):
+      explicit scoped_move(const move_info2& mi):
          scoped_move0(mi[0]),
          scoped_move1(mi[1])
       {}
    private:
-      scoped_move_t<move_info> scoped_move0;
-      scoped_move_t<move_info> scoped_move1;
+      scoped_move<move_info> scoped_move0;
+      scoped_move<move_info> scoped_move1;
    };
-
-   template<typename EngineController, typename Info>
-   class scoped_move_with_hash
-   {
-   public:
-      scoped_move_with_hash(EngineController& engine_controller_, const Info& mi):
-         engine_controller(engine_controller_),
-         scoped_move(mi),
-         old_hash(engine_controller_.hash)
-      {
-         // TODO: has to be done once per board only
-         engine_controller.hash^=
-            (zobrist_hash_turn(side::white)^zobrist_hash_turn(side::black));
-         engine_controller.hash^=zobrist_hash(mi);
-      }
-
-      ~scoped_move_with_hash()
-      {
-         engine_controller.hash=old_hash;
-      }
-   private:
-      EngineController& engine_controller;
-      scoped_move_t<Info> scoped_move;
-      uint64_t old_hash;
-   };
-
-   template<typename EngineController, typename Info>
-   class scoped_move_no_hash
-   {
-   public:
-      explicit scoped_move_no_hash(EngineController&, const Info& mi):
-         scoped_move(mi)
-      {}
-   private:
-      scoped_move_t<Info> scoped_move;
-   };
-
-   struct score_t
-   {
-      // high scores mean a better position for the color with the move
-      // no_valid_move is used internally, to flag an invalid position
-      // the engine strives to maximize the score for each color per turn
-      static const int checkmate=std::numeric_limits<int>::max()-2;
-      static const int stalemate=checkmate-1;
-      static const int no_valid_move=std::numeric_limits<int>::min();
-      int value;
-   };
-
-   struct move_set
-   {
-      piece moved_piece;
-      uint64_t origin;
-      uint64_t destinations;
-   };
-
-   template<typename EngineController>
-   class scoped_depth_increment
-   {
-   public:
-      explicit scoped_depth_increment(EngineController& ec_):
-         ec(ec_)
-      {
-         ec.increment_depth();
-      }
-
-      ~scoped_depth_increment()
-      {
-         ec.decrement_depth();
-      }
-
-      scoped_depth_increment(const scoped_depth_increment&) = delete;
-      scoped_depth_increment& operator=(const scoped_depth_increment&) = delete;
-   private:
-      EngineController& ec;
-   };
-
-   template<side S, typename EngineController>
-   score_t
-   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& ec);
 
    template<side S>
    uint64_t
@@ -310,7 +230,72 @@ namespace cheapshot
       return own_under_attack;
    }
 
+   struct score_t
+   {
+      // high scores mean a better position for the color with the move
+      // no_valid_move is used internally, to flag an invalid position
+      // the engine strives to maximize the score for each color per turn
+      static constexpr int checkmate=std::numeric_limits<int>::max()-2;
+      static constexpr int stalemate=checkmate-1;
+      static constexpr int no_valid_move=std::numeric_limits<int>::min();
+      int value;
+   };
+
+   struct move_set
+   {
+      piece moved_piece;
+      uint64_t origin;
+      uint64_t destinations;
+   };
+
+   // specialized helpers for use within analyze_position
+
+   template<typename EngineController, typename Info>
+   class scoped_move_hash
+   {
+   private:
+      typedef uint64_t(*hash_fun_t)(const Info& mi);
+   public:
+      scoped_move_hash(EngineController& ec, const Info& mi):
+         sc_move(mi),
+         sc_hash(ec,(hash_fun_t)zhash,mi)
+      {}
+   private:
+      scoped_move<Info> sc_move;
+      typename EngineController::scoped_hash sc_hash;
+   };
+
+   template<typename EngineController>
+   class scoped_make_turn
+   {
+   public:
+      explicit scoped_make_turn(EngineController& ec_):
+         ec(ec_),
+         sc_hash(ec,zhash_make_turn)
+      {
+         ec.increment_ply();
+      }
+
+      ~scoped_make_turn()
+      {
+         ec.decrement_ply();
+      }
+
+      scoped_make_turn(const scoped_make_turn&) = delete;
+      scoped_make_turn& operator=(const scoped_make_turn&) = delete;
+   private:
+      EngineController& ec;
+      typename EngineController::scoped_hash sc_hash;
+   };
+
+   template<side S, typename EngineController>
+   score_t
+   recurse_and_evaluate(score_t last_score,board_t& board, const context& ctx, const EngineController& ec);
+
    // main program loop
+   // written as a single big routine because there is a lot of shared state, and performance is critical.
+
+   // Behaviour can be tuned through the EngineController template-parameter
 
    // board is not changed at the end of analyze_position but used internally as scratchbuffer
    //  hence, it is passed as non-const ref.
@@ -318,8 +303,8 @@ namespace cheapshot
    score_t
    analyze_position(board_t& board, const context& oldctx, EngineController& ec)
    {
-      typedef typename EngineController::scoped_move scoped_move;
-      typedef typename EngineController::scoped_move2 scoped_move2;
+      typedef scoped_move_hash<EngineController,move_info> basic_move_scope;
+      typedef scoped_move_hash<EngineController,move_info2> basic_move_scope2;
 
       board_metrics bm(board);
 
@@ -336,7 +321,6 @@ namespace cheapshot
 
       {
          const bool king_en_prise=get_side<other_side(S)>(board)[idx(piece::king)]&opponent_under_attack;
-         // std::cout << "king en prise " << king_en_prise << " " << opponent_under_attack << std::endl;
          if(king_en_prise)
          {
             return {-score_t::no_valid_move};
@@ -350,9 +334,11 @@ namespace cheapshot
 
       context ctx=oldctx;
       ctx.ep_info=0ULL;
+      typename EngineController::scoped_hash
+         scoped_ep1(ec,zhash_ep_change0,oldctx.ep_info);
 
       score_t score{score_t::no_valid_move};
-      scoped_depth_increment<EngineController> scoped_depth(ec);
+      scoped_make_turn<EngineController> scoped_turn(ec);
 
       // en passant captures
       for(auto origin_iter=bit_iterator(
@@ -363,7 +349,7 @@ namespace cheapshot
          uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
          if(ep_capture)
          {
-            scoped_move2 scope(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
+            basic_move_scope2 mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
             score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
          }
       }
@@ -371,6 +357,9 @@ namespace cheapshot
       ctx.castling_rights|=castling_block_mask<S>(
          get_side<S>(board)[idx(piece::rook)],
          get_side<S>(board)[idx(piece::king)]);
+
+      typename EngineController::scoped_hash
+         scoped_castling(ec,zhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
 
       static constexpr castling_t castling[]=
          {
@@ -382,7 +371,7 @@ namespace cheapshot
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
             // castling
-            scoped_move2 scope(ec,castle_info<S>(board,cit));
+            basic_move_scope2 mv(ec,castle_info<S>(board,cit));
             score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
          }
 
@@ -397,12 +386,13 @@ namespace cheapshot
                for(bit_iterator dest_iter(moveset.destinations);dest_iter!=bit_iterator();++dest_iter)
                {
                   // pawn to promotion square
-                  scoped_move2 scope(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
-                  static constexpr piece piece_promotions[]={piece::queen,piece::knight,piece::rook,piece::bishop};
+                  basic_move_scope2 mv(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
+                  static constexpr piece piece_promotions[]=
+                     {piece::queen,piece::knight,piece::rook,piece::bishop};
                   for(const piece& prom: piece_promotions)
                   {
                      // all promotions
-                     scoped_move2 scope2(ec,promotion_info<S>(board,prom,*dest_iter));
+                     basic_move_scope2 scope2(ec,promotion_info<S>(board,prom,*dest_iter));
                      score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
                   }
                }
@@ -411,8 +401,11 @@ namespace cheapshot
                {
                   // normal pawn move
                   uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-                  scoped_move2 scope(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
+                  basic_move_scope2 mv(
+                     ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                   ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+                  typename EngineController::scoped_hash
+                     scoped_ep2(ec,zhash_ep_change0,ctx.ep_info);
                   score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
                   ctx.ep_info=0ULL;
                }
@@ -425,15 +418,17 @@ namespace cheapshot
                 ++dest_iter)
             {
                // normal captures
-               scoped_move2 scope(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
+               basic_move_scope2 mv(
+                  ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
                score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
             }
             for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
-               // normal moves
-               scoped_move scope(ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
+               // normal movesx
+               basic_move_scope mv(
+                  ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
                score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
             }
          }
