@@ -23,6 +23,33 @@ constexpr char initial_canvas[]=
    "PPPPPPPP\n"
    "RNBQKBNR\n";
 
+constexpr char en_passant_initial_canvas[]=
+   "....k...\n"
+   "...p....\n"
+   "........\n"
+   "....P...\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   "....K...\n";
+
+constexpr char en_passant_after_capture_canvas[]=
+   "....k...\n"
+   "........\n"
+   "...P....\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   "....K...\n";
+
+constexpr cheapshot::context null_context=
+{
+   0ULL, /*ep_info*/
+   0ULL, /*castling_rights*/
+   1, // halfmove clock
+   1 // fullmove number
+};
 
 // TODO: constexpr
 inline long 

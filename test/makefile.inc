@@ -12,7 +12,7 @@ $~unittest_other.o: $(call depend, $~unittest_other.cc)
 
 $~unittest: LDFLAGS += -lboost_unit_test_framework
 
-$~unittest: $~unittest_bitops.o $~unittest_other.o
+$~unittest: $~unittest_bitops.o $~unittest_other.o $~unittest_io.o
 	$(CXX) $& $(LDFLAGS) -o $@ $(LIBS)
 
 $~print_position: $(call depend, $~print_position.cc)

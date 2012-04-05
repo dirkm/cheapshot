@@ -15,14 +15,6 @@ using namespace cheapshot;
 
 namespace
 {
-   constexpr cheapshot::context null_context=
-   {
-      0ULL, /*ep_info*/
-      0ULL, /*castling_rights*/
-      1, // halfmove clock
-      1 // fullmove number
-   };
-
    struct move_checker
    {
       move_checker(const std::initializer_list<board_t>& boards_):
@@ -618,28 +610,11 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
                         score_t({-score_t::stalemate}));
    }
 }
+
 namespace
 {
-   const board_t en_passant_initial_board=scan_board(
-      "....k...\n"
-      "...p....\n"
-      "........\n"
-      "....P...\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "....K...\n");
-
-   const board_t en_passant_after_capture_board=scan_board(
-      "....k...\n"
-      "........\n"
-      "...P....\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "........\n"
-      "....K...\n");
-
+   const board_t en_passant_initial_board=scan_board(en_passant_initial_canvas);
+   const board_t en_passant_after_capture_board=scan_board(en_passant_after_capture_canvas);
 }
 
 BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
@@ -1048,81 +1023,6 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
                         score_t({-score_t::checkmate}));
    }
    time_op.time_report("endgame mate in 7 plies",ops);
-}
-
-struct check_io_message
-{
-   check_io_message(const char* fragment_):
-      fragment(fragment_)
-   {}
-
-   bool operator()(const cheapshot::io_error& ex)
-   {
-      return strstr(ex.what(),fragment)!=NULL;
-   }
-
-private:
-   const char* fragment;
-};
-
-BOOST_AUTO_TEST_CASE( input_move_test )
-{
-   {
-      board_t b=initial_board();
-      context ctx=null_context;
-      make_long_algebraic_moves
-         (b,side::white,ctx,
-          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
-      boost::test_tools::output_test_stream ots;
-      print_board(b,ots);
-      BOOST_CHECK(ots.is_equal("r.bqkb.r\n"
-                               "pppp.ppp\n"
-                               "..n..n..\n"
-                               "....p...\n"
-                               "..B.P...\n"
-                               ".....N..\n"
-                               "PPPP.PPP\n"
-                               "RNBQ.RK.\n"));
-   }
-   {
-      board_t b=en_passant_initial_board;
-      context ctx=null_context;
-      make_long_algebraic_moves
-         (b,side::black,ctx,{"d7-d5","e5xd6e.p."});
-      BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
-   }
-   {
-      board_t b=initial_board();
-      context ctx=null_context;
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{""}),
-         cheapshot::io_error,
-         check_io_message("invalid character"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2-e5"}),
-         cheapshot::io_error,
-         check_io_message("invalid destination"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e3-e4"}),
-         cheapshot::io_error,
-         check_io_message("missing piece"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xd3"}),
-         cheapshot::io_error,
-         check_io_message("invalid destination"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xd3e.p."}),
-         cheapshot::io_error,
-         check_io_message("en passant"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xe4"}),
-         cheapshot::io_error,
-         check_io_message("capture"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2@e4"}),
-         cheapshot::io_error,
-         check_io_message("separator"));
-   }
 }
 
 BOOST_AUTO_TEST_CASE( complete_hash_test )
