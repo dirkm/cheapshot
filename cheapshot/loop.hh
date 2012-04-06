@@ -92,21 +92,6 @@ namespace cheapshot
 
    typedef std::array<move_info,2> move_info2;
 
-   inline
-   uint64_t
-   zhash(const move_info& mi)
-   {
-      return zhash2(mi.moved_side,mi.moved_piece,mi.mask);
-   }
-
-   inline
-   uint64_t
-   zhash(const move_info2& mi2)
-   {
-      return
-         zhash(mi2[0])^zhash(mi2[1]);
-   }
-
    template<side S>
    move_info
    basic_move_info(board_t& board, piece p, uint64_t origin, uint64_t destination)
@@ -176,6 +161,24 @@ namespace cheapshot
       make_move(mi.board[idx(mi.moved_side)][idx(mi.moved_piece)],mi.mask);
    }
 
+   inline
+   uint64_t
+   hhash(const move_info& mi)
+   {
+      uint64_t pos=mi.board[idx(mi.moved_side)][idx(mi.moved_piece)];
+      uint64_t oldpos=pos^mi.mask;
+      return 
+         hhash(mi.moved_side,mi.moved_piece,oldpos)^
+         hhash(mi.moved_side,mi.moved_piece,pos);
+   }
+
+   inline
+   uint64_t
+   hhash(const move_info2& mi)
+   {
+      return hhash(mi[0])^hhash(mi[1]);
+   }
+
    template<typename Info>
    class scoped_move;
 
@@ -203,7 +206,7 @@ namespace cheapshot
       uint64_t mask;
    };
 
-   // TODO: unhappy with this
+   // TODO: unhappy with this, gcc 4.7 allows array-member initialization
    template<>
    class scoped_move<move_info2>
    {
@@ -249,7 +252,6 @@ namespace cheapshot
    };
 
    // specialized helpers for use within analyze_position
-
    template<typename EngineController, typename Info>
    class scoped_move_hash
    {
@@ -258,7 +260,7 @@ namespace cheapshot
    public:
       scoped_move_hash(EngineController& ec, const Info& mi):
          sc_move(mi),
-         sc_hash(ec,(hash_fun_t)zhash,mi)
+         sc_hash(ec,(hash_fun_t)hhash,mi)
       {}
    private:
       scoped_move<Info> sc_move;
@@ -271,7 +273,7 @@ namespace cheapshot
    public:
       explicit scoped_make_turn(EngineController& ec_):
          ec(ec_),
-         sc_hash(ec,zhash_make_turn)
+         sc_hash(ec,hhash_make_turn)
       {
          ec.increment_ply();
       }
@@ -335,7 +337,7 @@ namespace cheapshot
       context ctx=oldctx;
       ctx.ep_info=0ULL;
       typename EngineController::scoped_hash
-         scoped_ep1(ec,zhash_ep_change0,oldctx.ep_info);
+         scoped_ep1(ec,hhash_ep_change0,oldctx.ep_info);
 
       score_t score{score_t::no_valid_move};
       scoped_make_turn<EngineController> scoped_turn(ec);
@@ -359,7 +361,7 @@ namespace cheapshot
          get_side<S>(board)[idx(piece::king)]);
 
       typename EngineController::scoped_hash
-         scoped_castling(ec,zhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
+         scoped_castling(ec,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
 
       static constexpr castling_t castling[]=
          {
@@ -405,7 +407,7 @@ namespace cheapshot
                      ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                   ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                   typename EngineController::scoped_hash
-                     scoped_ep2(ec,zhash_ep_change0,ctx.ep_info);
+                     scoped_ep2(ec,hhash_ep_change0,ctx.ep_info);
                   score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
                   ctx.ep_info=0ULL;
                }

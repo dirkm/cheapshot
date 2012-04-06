@@ -70,33 +70,6 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( init_board_test )
-{
-   boost::test_tools::output_test_stream ots;
-   board_t b= initial_board();
-   print_board(b,ots);
-   BOOST_CHECK( ots.is_equal(initial_canvas));
-}
-
-BOOST_AUTO_TEST_CASE( canvas_test )
-{
-   boost::test_tools::output_test_stream ots;
-   static constexpr char test_canvas[]=
-      "X.......\n"
-      "XX...X..\n"
-      "X.X...X.\n"
-      "XXX..XX.\n"
-      "X..X...X\n"
-      "XX.X.X.X\n"
-      "X.XX..XX\n"
-      "XXXX.XXX\n";
-   constexpr uint64_t test_val=0x123456789ABCDEFUL;
-
-   print_position(test_val,ots);
-   BOOST_CHECK( ots.is_equal(test_canvas));
-   BOOST_CHECK_EQUAL(scan_canvas(test_canvas,'X'),test_val);
-}
-
 BOOST_AUTO_TEST_CASE( primitive_test )
 {
    BOOST_CHECK_EQUAL(highest_bit_no_zero(0xF123UL),0x8000UL);

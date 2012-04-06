@@ -11,7 +11,7 @@
 
 using namespace cheapshot;
 
-// more complex testcases
+// tests not classified yet
 
 namespace
 {
@@ -646,6 +646,16 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
 
 }
 
+constexpr char multiple_promotions_initial_board[]=
+   ".n.qk...\n"
+   "..P.....\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   "........\n"
+   ".......K\n";
+
 BOOST_AUTO_TEST_CASE( analyze_promotion_test )
 {
    {
@@ -696,15 +706,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       }
    }
    {
-      board_t multiple_promotions_initial=scan_board(
-         ".n.qk...\n"
-         "..P.....\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         "........\n"
-         ".......K\n");
+      board_t multiple_promotions_initial=scan_board(multiple_promotions_initial_board);
       {
          board_t multiple_promotions1=scan_board(
             ".R.qk...\n"
@@ -1040,7 +1042,7 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    auto f=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
       {
          ++nodes;
-         uint64_t hash=zhash(board,t,ctx);
+         uint64_t hash=hhash(board,t,ctx);
          auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
 
          auto lb = r.lower_bound(hash);
@@ -1073,7 +1075,7 @@ struct hash_checker
    {}
 
    hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
-      hash(zhash(b,c,ctx)),
+      hash(hhash(b,c,ctx)),
       mc(b,c,ctx,input_moves)
    {}
 
@@ -1083,8 +1085,10 @@ struct hash_checker
       bool r=mc.try_position(board,c,ctx,bm);
       if(r)
       {
-         uint64_t complete_hash=zhash(board,c,ctx);
+         uint64_t complete_hash=hhash(board,c,ctx);
          BOOST_CHECK_EQUAL(hash,complete_hash);
+         // print_board(board,std::cout);
+         // std::cout << std::endl << std::endl;
       }
       return r;
    }
@@ -1126,6 +1130,15 @@ BOOST_AUTO_TEST_CASE( incremental_hash_test )
       analyze_position<side::white>(b,null_context,hashcheck);
    }
    {
+      // capture
+      board_t b=initial_board();
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,{"e2-e4","d7-d5","e4xd5"});
+      analyze_position<side::white>(b,null_context,hashcheck);
+   }
+
+   {
       // castling
       board_t b=initial_board();
       context ctx=null_context;
@@ -1134,7 +1147,39 @@ BOOST_AUTO_TEST_CASE( incremental_hash_test )
           {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
       analyze_position<side::white>(b,null_context,hashcheck);
    }
-   // TODO: promotions, more complete coverage
+   {
+      board_t b=scan_board(multiple_promotions_initial_board);
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,
+         {"c7xb8=Q","Ke8-f8"});
+   }
+   {
+      // Byrne-Fischer game of the century
+      board_t b=initial_board();
+      context ctx=null_context;
+      hash_checker hashcheck(
+         b,ctx,side::white,{
+            "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
+               "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
+               "Qd1-b3","d5xc4","Qb3xc4","c7-c6","e2-e4",
+               "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
+               "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
+               "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
+               "Be7-c5","Rf8-e8","Ke1-f1","Bg4-e6","Bc5xb6",
+               "Be6xc4","Kf1-g1","Nc3-e2","Kg1-f1","Ne2xd4",
+               "Kf1-g1","Nd4-e2","Kg1-f1","Ne2-c3","Kf1-g1",
+               "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
+               "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
+               "Re8xe1","Qb6-d8","Bg7-f8","Nf3xe1","Bc4-d5",
+               "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
+               "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5",
+               "Kg1-f1","Ne4-g3","Kf1-e1","Bc5-b4","Ke1-d1",
+               "Bd5-b3","Kd1-c1","Ng3-e2","Kc1-b1","Ne2-c3",
+               "Kb1-c1","Ra2-c2"
+               });
+      analyze_position<side::white>(b,null_context,hashcheck);
+   }
 }
-
+               
 BOOST_AUTO_TEST_SUITE_END()

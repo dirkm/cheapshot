@@ -3,9 +3,11 @@
 
 #include "cheapshot/board.hh"
 
-//  Zobrist hashing is used.
-//  This allows to update the hash incrementally.
-///  zhash is used as stem for this group of functions, to limit name-collisions
+//  incremental hashing is used, but no zobrist hashing
+//   The table in zobrist hashing is replaced by a bitmixer
+//   all locations of a single piece are hashed in a single step
+
+//  hhash is used as stem for this group of functions, to limit name-collisions (h=hybrid)
 
 namespace cheapshot
 {
@@ -40,59 +42,48 @@ namespace cheapshot
    }
 
    inline uint64_t
-   zhash(side c, piece p, uint64_t s)
+   hhash(side c, piece pc, uint64_t p)
    {
       using namespace detail;
-      return bit_mixer(premix(c)^premix(idx(p))^s);
-   }
-
-   // s2: origin and destination of a piece (2 bits set)
-   inline uint64_t
-   zhash2(side c, piece p, uint64_t s2)
-   {
-      bit_iterator it(s2);
-      uint64_t r=zhash(c,p,*it++);
-      r^=zhash(c,p,*it);
-      return r;
+      return bit_mixer(premix(c)^premix(idx(pc))^p);
    }
 
    inline uint64_t
-   zhash(side c,const board_side& bs)
+   hhash(side c,const board_side& bs)
    {
       uint64_t r=0ULL;
       for(piece pc=piece::pawn;pc<piece::count;++pc)
       {
          uint64_t p=bs[idx(pc)];
-         for(bit_iterator it=bit_iterator(p);it!=bit_iterator();++it)
-            r^=zhash(c,pc,*it);
+         r^=hhash(c,pc,p);
       }
       return r;
    }
 
    inline uint64_t
-   zhash(const board_t& board)
+   hhash(const board_t& board)
    {
       return
-         zhash(side::white,board[idx(side::white)])^
-         zhash(side::black,board[idx(side::black)]);
+         hhash(side::white,board[idx(side::white)])^
+         hhash(side::black,board[idx(side::black)]);
    }
 
    inline uint64_t
-   zhash_castling(uint64_t castling_mask)
+   hhash_castling(uint64_t castling_mask)
    {
       using namespace detail;
       return bit_mixer(premix(6)^castling_mask); // magic number
    }
 
    inline uint64_t
-   zhash_ep(uint64_t ep_info)
+   hhash_ep(uint64_t ep_info)
    {
       using namespace detail;
       return bit_mixer(premix(7)^ep_info); // magic number
    }
 
    inline uint64_t
-   zhash_turn(side t)
+   hhash_turn(side t)
    {
       using namespace detail;
       return bit_mixer(premix(t));
@@ -100,27 +91,28 @@ namespace cheapshot
 
    // as used in analyze_position
    inline uint64_t
-   zhash_make_turn()
+   hhash_make_turn()
    {
-      return (zhash_turn(side::white)^
-              zhash_turn(side::black));
+      return (hhash_turn(side::white)^
+              hhash_turn(side::black));
    }
 
    inline uint64_t
-   zhash_ep_change0(uint64_t ep_info)
+   hhash_ep_change0(uint64_t ep_info)
    {
-      if(ep_info) return zhash_ep(ep_info)^zhash_ep(0ULL);
+      if(ep_info) return hhash_ep(ep_info)^hhash_ep(0ULL);
       else return 0ULL;
    }
 
    inline uint64_t
-   zhash_castling_change(uint64_t cm1, uint64_t cm2)
+   hhash_castling_change(uint64_t cm1, uint64_t cm2)
    {
-      if(cm1!=cm2)
+      if(cm1!=cm2) 
          return
-            zhash_castling(cm1)^
-            zhash_castling(cm2);
-      else return 0ULL;
+            (hhash_castling(cm1)^
+             hhash_castling(cm2));
+      else 
+         return 0ULL;
    }
 
    class scoped_hash
@@ -147,20 +139,20 @@ namespace cheapshot
    };
 
    inline uint64_t
-   zhash_context(const context& ctx)
+   hhash_context(const context& ctx)
    {
       return
-         zhash_ep(ctx.ep_info)^
-         zhash_castling(ctx.castling_rights);
+         hhash_ep(ctx.ep_info)^
+         hhash_castling(ctx.castling_rights);
    }
 
    inline uint64_t
-   zhash(const board_t& board, side t, const context& ctx)
+   hhash(const board_t& board, side t, const context& ctx)
    {
       return
-         zhash(board)^
-         zhash_turn(t)^
-         zhash_context(ctx);
+         hhash(board)^
+         hhash_turn(t)^
+         hhash_context(ctx);
    }
 } // cheapshot
 

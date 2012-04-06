@@ -510,6 +510,7 @@ namespace cheapshot
             make_move(m);
       }
 
+      // TODO: checks not flagged
       template<side S>
       void
       make_move(board_t& board, context& ctx, const input_move& im)
@@ -547,9 +548,10 @@ namespace cheapshot
                uint64_t dests=movegen(im.origin,bm.all_pieces());
                if(!(dests&im.destination))
                   throw io_error("trying to move to an invalid destination");
+               bool destinationOccupied=im.destination&bm.opposing<S>();
                if(im.is_capture)
                {
-                  if(!(im.destination&bm.opposing<S>()))
+                  if(!destinationOccupied)
                      throw io_error("trying to capture a missing piece");
                   move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
                   for(auto m: mi2)
@@ -557,6 +559,8 @@ namespace cheapshot
                }
                else
                {
+                  if(destinationOccupied)
+                     throw io_error("capture without indication with 'x'");
                   move_info mi=basic_move_info<S>(board,im.moving_piece,im.origin,im.destination);
                   make_move(mi);
                }
@@ -577,7 +581,7 @@ namespace cheapshot
       }
    }
 
-   extern void // TODO: return piece as well
+   extern void
    make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s)
    {
       input_move im=scan_long_algebraic_move(s);
@@ -590,6 +594,7 @@ namespace cheapshot
       }
    }
 
+   // TODO: templatize on container type
    extern void
    make_long_algebraic_moves(board_t& board, side c, context& ctx,
                              const std::initializer_list<const char*>& input_moves,
