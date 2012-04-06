@@ -10,9 +10,9 @@ namespace cheapshot
    namespace control
    {
       // helpers to sweeten engine-configuration in the controllers below
-      class noop; class zobrist;
+      class noop; class incremental_hash;
 
-      template<typename EngineController,typename Type=zobrist>
+      template<typename EngineController,typename Type=incremental_hash>
       struct scoped_hash
       {
       public:
