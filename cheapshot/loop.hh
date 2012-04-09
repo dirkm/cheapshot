@@ -311,7 +311,7 @@ namespace cheapshot
       board_metrics bm(board);
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
-      auto basic_moves_end=basic_moves.begin();
+      auto basic_moves_end=begin(basic_moves);
       uint64_t opponent_under_attack=0ULL;
 
       on_basic_moves<S>(

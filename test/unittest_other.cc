@@ -1,4 +1,6 @@
 #include <map>
+#include <limits>
+#include <unordered_map>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
@@ -102,6 +104,7 @@ namespace
       max_ply_cutoff mpc;
       funpos fun;
    };
+
 }
 
 namespace cheapshot
@@ -1046,14 +1049,14 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
          auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
 
          auto lb = r.lower_bound(hash);
-         if(lb!=r.end())
+         if(lb!=end(r))
             if(!(r.key_comp()(hash,lb->first)))
             {
                ++matches;
                BOOST_CHECK(state==lb->second);
                return;
             }
-         r.insert(lb,std::make_pair(hash,state));
+         r.insert(lb,std::make_pair(hash,state)); // emplace_hint?
       };
 
    TimeOperation time_op;
@@ -1144,7 +1147,7 @@ BOOST_AUTO_TEST_CASE( incremental_hash_test )
       context ctx=null_context;
       hash_checker hashcheck(
          b,ctx,side::white,
-          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+         {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
       analyze_position<side::white>(b,null_context,hashcheck);
    }
    {
@@ -1181,5 +1184,134 @@ BOOST_AUTO_TEST_CASE( incremental_hash_test )
       analyze_position<side::white>(b,null_context,hashcheck);
    }
 }
-               
+
+BOOST_AUTO_TEST_SUITE_END()
+
+enum class toy;
+
+namespace std
+{
+   template <>
+   class hash<toy>
+   {
+   public:
+      size_t operator()(toy x) const
+      {
+         return hash<int>()((int)x);
+      }
+   };
+}
+
+/*
+                  o---------- w0_0  -----------o
+                  |                            |
+                  |                            |
+                b1_0                         b1_1
+               /    \                        /   \
+              /      \                      /     \
+             /        \                    /       \
+         w2_0        w2_1              w2_2         w2_3
+           /\          |                /\            |
+          /  \         |               /  \           |
+         /    \        |              /    \          |
+     b3_0      b3_1  b3_2          b3_3     b3_4     b3_5
+      /\        |      |            /\        |       /\
+     /  \       |      |           /  \       |      /  \
+    /    \      |      |          /    \      |     /    \
+  w4_0 w4_1   w4_2   w4_3       w4_4 w4_5   w4_6   w4_7  w4_8
+    10  +I      5     3          -I   4       5     -7    -5
+*/
+
+enum class toy{
+   w0_0,
+      b1_0,b1_1,
+      w2_0,w2_1,w2_2,w2_3,
+      b3_0,b3_1,b3_2,b3_3,b3_4,b3_5,
+      w4_0,w4_1,w4_2,w4_3,w4_4,w4_5,w4_6,w4_7,w4_8,w4_9
+      };
+
+const char* to_string(toy n)
+{
+   static const char* repr[]=
+      {"w0_0",
+       "b1_0","b1_1",
+       "w2_0","w2_1","w2_2","w2_3",
+       "b3_0","b3_1","b3_2","b3_3","b3_4","b3_5",
+       "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8","w4_9"};
+   return repr[idx(n)];
+};
+
+BOOST_AUTO_TEST_SUITE(alpha_beta_suite)
+
+typedef std::unordered_map<toy,std::pair<std::vector<toy>,int> > tree_t;
+
+constexpr int alpha_init=std::numeric_limits<int>::min()/2;
+constexpr int beta_init=std::numeric_limits<int>::max()/2;
+
+constexpr int white_win=std::numeric_limits<int>::max()/4;
+
+// freestanding implementation
+int
+negamax(const tree_t& t, toy s,int alpha=alpha_init,int beta=beta_init)
+{
+   std::cout << "reached " << to_string(s) << " alpha " << alpha
+             << " beta " << beta << std::endl;
+   const auto& v=t.find(s)->second;
+   if(v.first.empty())
+   {
+      std::cout << to_string(s) << " val " << v.second << std::endl;
+      return v.second;
+   }
+   for(toy child: v.first)
+   {
+      int local_alpha=-negamax(t,child,-beta,-alpha);
+      std::cout << to_string(s) << " local alpha: " << local_alpha
+                << " alpha " << alpha
+                << " beta: " << beta << std::endl;
+      if(local_alpha>=beta)
+      {
+         std::cout << "beta cutoff" << std::endl;
+         return local_alpha;
+      }
+      if(local_alpha>alpha)
+      {
+         std::cout << "alpha improvement" << std::endl;
+         alpha=local_alpha;
+      }
+   }
+   return alpha;
+}
+
+BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
+{
+   constexpr int branch=std::numeric_limits<int>::min();
+   const tree_t game_tree{
+      {toy::w0_0,{{toy::b1_0,toy::b1_1},branch}},
+      {toy::b1_0,{{toy::w2_0,toy::w2_1},branch}},
+      {toy::b1_1,{{toy::w2_2,toy::w2_3},branch}},
+      {toy::w2_0,{{toy::b3_0,toy::b3_1},branch}},
+      {toy::w2_1,{{toy::b3_2},branch}},
+      {toy::w2_2,{{toy::b3_3,toy::b3_4},branch}},
+      {toy::w2_3,{{toy::b3_5},branch}},
+      {toy::b3_0,{{toy::w4_0,toy::w4_1},branch}},
+      {toy::b3_1,{{toy::w4_2},branch}},
+      {toy::b3_2,{{toy::w4_3},branch}},
+      {toy::b3_3,{{toy::w4_4,toy::w4_5},branch}},
+      {toy::b3_4,{{toy::w4_6},branch}},
+      {toy::b3_5,{{toy::w4_7,toy::w4_8},branch}},
+      {toy::w4_0,{{},10}},
+      {toy::w4_1,{{},white_win}},
+      {toy::w4_2,{{},5}},
+      {toy::w4_3,{{},3}},
+      {toy::w4_4,{{},-white_win}},
+      {toy::w4_5,{{},4}},
+      {toy::w4_6,{{},5}},
+      {toy::w4_7,{{},-7}},
+      {toy::w4_8,{{},-5}}
+   };
+   toy state=toy::w0_0;
+   int r=negamax(game_tree,state);
+   std::cout << "result " << r << std::endl;
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,6 +1,6 @@
 #; -*-makefile-*-
 
-CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall
+CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall -fno-deduce-init-list
 LIBS :=
 LDFLAGS :=
 

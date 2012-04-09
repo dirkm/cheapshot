@@ -32,6 +32,44 @@ namespace cheapshot
          scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args)
          {}
       };
+
+   // alpha, beta templatized
+
+      template<typename EngineController>
+      struct scope_negamax
+      {
+         scope_negamax(EngineController& ec_):
+            alpha(ec_.alpha_input),
+            beta(ec_.beta_input),
+            ec(ec_)
+         {
+            std::swap(ec.alpha_input,ec.beta_input);
+            ec.alpha_input=-ec.alpha_input;
+            ec.beta_input=-ec.beta_input;
+         }
+
+      // true: return with cutoff
+      // false: go on
+         bool
+         alpha_beta(int val)
+         {
+            if(val>beta)
+               return true;
+            if(val>alpha)
+               alpha=val;
+            return false;
+         };
+
+         ~scope_negamax()
+         {
+            ec.alpha_input=alpha;
+            ec.beta_input=beta;
+         }
+      private:
+         uint64_t alpha;
+         uint64_t beta;
+         EngineController& ec;
+      };
    }
 
    class max_ply_cutoff
@@ -72,37 +110,17 @@ namespace cheapshot
       int remaining_depth;
    };
 
-   // TODO: implement
+   // TODO : testcase without chess
    class negamax
    {
    public:
-      negamax(int max_depth):
-         mpc(max_depth),
-         alpha(0),
-         beta(0)
+      negamax():
+         alpha_input(std::numeric_limits<int>::min()),
+         beta_input(std::numeric_limits<int>::max())
       {}
-
-      bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
-      {
-         return mpc.try_position(board,c,ctx,bm);
-      }
-
-      void
-      increment_ply()
-      {
-         mpc.increment_ply();
-      }
-
-      void
-      decrement_ply()
-      {
-         mpc.decrement_ply();
-      }
    private:
-      max_ply_cutoff mpc;
-      int alpha;
-      int beta;
+      int alpha_input; // the worst known end-score from past evaluations
+      int beta_input; // the best score, with which the opponent would allow this position
    };
 
    namespace detail
