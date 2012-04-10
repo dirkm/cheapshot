@@ -167,7 +167,7 @@ namespace cheapshot
    {
       uint64_t pos=mi.board[idx(mi.moved_side)][idx(mi.moved_piece)];
       uint64_t oldpos=pos^mi.mask;
-      return 
+      return
          hhash(mi.moved_side,mi.moved_piece,oldpos)^
          hhash(mi.moved_side,mi.moved_piece,pos);
    }
@@ -428,7 +428,7 @@ namespace cheapshot
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
-               // normal movesx
+               // normal moves
                basic_move_scope mv(
                   ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
                score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);

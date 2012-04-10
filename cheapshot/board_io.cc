@@ -293,7 +293,7 @@ namespace cheapshot
                };
 
             if(rs==rsstart)
-               throw io_error("en-passant info is empty");
+               throw io_error("castling rights info is empty");
             return r;
          }
 

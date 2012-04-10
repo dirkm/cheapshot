@@ -1,6 +1,5 @@
 #include <map>
 #include <limits>
-#include <unordered_map>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
@@ -1227,12 +1226,13 @@ enum class toy{
       b1_0,b1_1,
       w2_0,w2_1,w2_2,w2_3,
       b3_0,b3_1,b3_2,b3_3,b3_4,b3_5,
-      w4_0,w4_1,w4_2,w4_3,w4_4,w4_5,w4_6,w4_7,w4_8,w4_9
+      w4_0,w4_1,w4_2,w4_3,w4_4,w4_5,w4_6,w4_7,w4_8,w4_9,
+      count
       };
 
 const char* to_string(toy n)
 {
-   static const char* repr[]=
+   static const char* repr[count<toy>()]=
       {"w0_0",
        "b1_0","b1_1",
        "w2_0","w2_1","w2_2","w2_3",
@@ -1243,41 +1243,38 @@ const char* to_string(toy n)
 
 BOOST_AUTO_TEST_SUITE(alpha_beta_suite)
 
-typedef std::unordered_map<toy,std::pair<std::vector<toy>,int> > tree_t;
+typedef std::array<std::pair<
+      std::vector<toy>,
+      int>,
+   count<toy>()> tree_t;
 
 constexpr int alpha_init=std::numeric_limits<int>::min()/2;
 constexpr int beta_init=std::numeric_limits<int>::max()/2;
 
 constexpr int white_win=std::numeric_limits<int>::max()/4;
 
-// freestanding implementation
+typedef std::function<void (toy,const tree_t::value_type& v)> fun_init_t;
+typedef std::function<void (toy,toy,int,int,int)> fun_cutoff_t;
+
+// freestanding implementation with inspection-functions
 int
-negamax(const tree_t& t, toy s,int alpha=alpha_init,int beta=beta_init)
+negamax(const tree_t& t, toy s,
+        fun_init_t finit,
+        fun_cutoff_t fcutoff,
+        int alpha=alpha_init,int beta=beta_init)
 {
-   std::cout << "reached " << to_string(s) << " alpha " << alpha
-             << " beta " << beta << std::endl;
-   const auto& v=t.find(s)->second;
+   const auto& v=t[idx(s)];
+   finit(s,v);
    if(v.first.empty())
-   {
-      std::cout << to_string(s) << " val " << v.second << std::endl;
       return v.second;
-   }
    for(toy child: v.first)
    {
-      int local_alpha=-negamax(t,child,-beta,-alpha);
-      std::cout << to_string(s) << " local alpha: " << local_alpha
-                << " alpha " << alpha
-                << " beta: " << beta << std::endl;
+      int local_alpha=-negamax(t,child,finit,fcutoff,-beta,-alpha);
+      fcutoff(s,child,alpha,beta,local_alpha);
       if(local_alpha>=beta)
-      {
-         std::cout << "beta cutoff" << std::endl;
          return local_alpha;
-      }
-      if(local_alpha>alpha)
-      {
-         std::cout << "alpha improvement" << std::endl;
+      else if(local_alpha>alpha)
          alpha=local_alpha;
-      }
    }
    return alpha;
 }
@@ -1285,32 +1282,53 @@ negamax(const tree_t& t, toy s,int alpha=alpha_init,int beta=beta_init)
 BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 {
    constexpr int branch=std::numeric_limits<int>::min();
-   const tree_t game_tree{
-      {toy::w0_0,{{toy::b1_0,toy::b1_1},branch}},
-      {toy::b1_0,{{toy::w2_0,toy::w2_1},branch}},
-      {toy::b1_1,{{toy::w2_2,toy::w2_3},branch}},
-      {toy::w2_0,{{toy::b3_0,toy::b3_1},branch}},
-      {toy::w2_1,{{toy::b3_2},branch}},
-      {toy::w2_2,{{toy::b3_3,toy::b3_4},branch}},
-      {toy::w2_3,{{toy::b3_5},branch}},
-      {toy::b3_0,{{toy::w4_0,toy::w4_1},branch}},
-      {toy::b3_1,{{toy::w4_2},branch}},
-      {toy::b3_2,{{toy::w4_3},branch}},
-      {toy::b3_3,{{toy::w4_4,toy::w4_5},branch}},
-      {toy::b3_4,{{toy::w4_6},branch}},
-      {toy::b3_5,{{toy::w4_7,toy::w4_8},branch}},
-      {toy::w4_0,{{},10}},
-      {toy::w4_1,{{},white_win}},
-      {toy::w4_2,{{},5}},
-      {toy::w4_3,{{},3}},
-      {toy::w4_4,{{},-white_win}},
-      {toy::w4_5,{{},4}},
-      {toy::w4_6,{{},5}},
-      {toy::w4_7,{{},-7}},
-      {toy::w4_8,{{},-5}}
-   };
+   static const tree_t game_tree{{
+      /*w0_0*/ {{toy::b1_0,toy::b1_1},branch},
+      /*b1_0*/ {{toy::w2_0,toy::w2_1},branch},
+      /*b1_1*/ {{toy::w2_2,toy::w2_3},branch},
+      /*w2_0*/ {{toy::b3_0,toy::b3_1},branch},
+      /*w2_1*/ {{toy::b3_2},branch},
+      /*w2_2*/ {{toy::b3_3,toy::b3_4},branch},
+      /*w2_3*/ {{toy::b3_5},branch},
+      /*b3_0*/ {{toy::w4_0,toy::w4_1},branch},
+      /*b3_1*/ {{toy::w4_2},branch},
+      /*b3_2*/ {{toy::w4_3},branch},
+      /*b3_3*/ {{toy::w4_4,toy::w4_5},branch},
+      /*b3_4*/ {{toy::w4_6},branch},
+      /*b3_5*/ {{toy::w4_7,toy::w4_8},branch},
+      /*w4_0*/ {{},10},
+      /*w4_1*/ {{},white_win},
+      /*w4_2*/ {{},5},
+      /*w4_3*/ {{},3},
+      /*w4_4*/ {{},-white_win},
+      /*w4_5*/ {{},4},
+      /*w4_6*/ {{},5},
+      /*w4_7*/ {{},-7},
+      /*w4_8*/ {{},-5}
+      }};
    toy state=toy::w0_0;
-   int r=negamax(game_tree,state);
+
+   auto finit_dump = [](toy s, const tree_t::value_type& v)
+   {
+      std::cout << "init " << to_string(s);
+      if(v.first.empty())
+         std::cout << " value " << v.second;
+      std::cout << std::endl;
+   };
+
+   auto fcutoff_dump=[](toy s,toy child , int alpha, int beta, int local_alpha)
+   {
+      std::cout << to_string(s)
+                << " child: " << to_string(child)
+                << " local alpha: " << local_alpha
+                << " alpha " << alpha
+                << " beta: " << beta
+                << " beta_cutoff: "  << std::boolalpha << (local_alpha>=beta)
+                << " alpha_improvement: " << std::boolalpha << (local_alpha>alpha)
+                << std::endl;
+   };
+
+   int r=negamax(game_tree,state,finit_dump,fcutoff_dump);
    std::cout << "result " << r << std::endl;
 }
 
