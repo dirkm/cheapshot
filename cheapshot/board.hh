@@ -105,6 +105,15 @@ namespace cheapshot
       return b;
    }
 
+   inline uint64_t
+   obstacles(const board_side& bs)
+   {
+      uint64_t r=0;
+      for(uint64_t p: bs)
+         r|=p;
+      return r;
+   }
+
    inline void
    assert_valid_board(const board_t& b)
    {

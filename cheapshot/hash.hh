@@ -107,11 +107,11 @@ namespace cheapshot
    inline uint64_t
    hhash_castling_change(uint64_t cm1, uint64_t cm2)
    {
-      if(cm1!=cm2) 
+      if(cm1!=cm2)
          return
             (hhash_castling(cm1)^
              hhash_castling(cm2));
-      else 
+      else
          return 0ULL;
    }
 
@@ -132,7 +132,6 @@ namespace cheapshot
       }
       scoped_hash(const scoped_hash&) = delete;
       scoped_hash& operator=(const scoped_hash&) = delete;
-      scoped_hash& operator=(scoped_hash&&) = delete;
    private:
       uint64_t& hashref;
       uint64_t oldhash;

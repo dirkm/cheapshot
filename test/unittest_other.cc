@@ -1,5 +1,5 @@
 #include <map>
-#include <limits>
+#include <set>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
@@ -7,7 +7,7 @@
 #include "test/unittest.hh"
 
 #include "cheapshot/board_io.hh"
-#include "cheapshot/engine.hh"
+#include "cheapshot/control.hh"
 #include "cheapshot/loop.hh"
 
 using namespace cheapshot;
@@ -104,24 +104,6 @@ namespace
       funpos fun;
    };
 
-}
-
-namespace cheapshot
-{
-   bool
-   operator==(const score_t& l, const score_t& r)
-   {
-      return (l.value==r.value);
-   }
-
-   bool
-   operator!=(const score_t& l, const score_t& r) {return !(l==r);}
-
-   std::ostream&
-   operator<<(std::ostream& os, const score_t &s)
-   {
-      return os << s.value;
-   }
 }
 
 BOOST_AUTO_TEST_SUITE(basic_engine_suite)
@@ -573,13 +555,13 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".....k.K\n");
       max_ply_cutoff cutoff(1);
       BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,cutoff),
-                        score_t({-score_t::checkmate}));
+                        -score::checkmate);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
       max_ply_cutoff cutoff(1);
       BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,cutoff),
-                        score_t({-score_t::checkmate}));
+                        -score::checkmate);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -594,7 +576,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..B...K.\n");
       max_ply_cutoff cutoff(1);
       BOOST_CHECK_EQUAL(analyze_position<side::black>(mate_board,null_context,cutoff),
-                        score_t({-score_t::checkmate}));
+                        -score::checkmate);
    }
    {
       // wikipedia stalemate article
@@ -609,7 +591,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n");
       max_ply_cutoff cutoff(1);
       BOOST_CHECK_EQUAL(analyze_position<side::black>(stalemate_board,null_context,cutoff),
-                        score_t({-score_t::stalemate}));
+                        -score::stalemate);
    }
 }
 
@@ -702,9 +684,9 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       {
          board_t bmirror=mirror(promotion_initial);
          move_checker check({bmirror,mirror(promotion_mate_queen)});
-         score_t s=analyze_position<side::black>(bmirror,null_context,check);
+         int s=analyze_position<side::black>(bmirror,null_context,check);
          BOOST_CHECK(check.is_position_reached);
-         BOOST_CHECK_EQUAL(s,score_t{score_t::checkmate});
+         BOOST_CHECK_EQUAL(s,score::checkmate);
       }
    }
    {
@@ -758,9 +740,9 @@ template<side S>
 void
 scan_mate(int depth, board_t b)
 {
-   constexpr score_t score=(S==side::white)?
-      score_t{score_t::checkmate}:
-   score_t{-score_t::checkmate};
+   constexpr int score=(S==side::white)?
+      score::checkmate:
+      -score::checkmate;
    max_ply_cutoff cutoff(depth);
    BOOST_CHECK_EQUAL(analyze_position<S>(b,null_context,cutoff),score);
 }
@@ -1024,7 +1006,7 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    {
       max_ply_cutoff cutoff(7);
       BOOST_CHECK_EQUAL(analyze_position<side::black>(rook_queen_mate,null_context,cutoff),
-                        score_t({-score_t::checkmate}));
+                        -score::checkmate);
    }
    time_op.time_report("endgame mate in 7 plies",ops);
 }
@@ -1061,11 +1043,13 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    TimeOperation time_op;
    do_until_ply_cutoff cutoff(5,f);
    analyze_position<side::white>(b,null_context,cutoff);
-   //  6
-   // matches: 3661173 with ops: 5072213
-   // real time: 80.31 user time: 79.44 system time: 0.47 ops/sec: 63157.9
+   //  cutoff: 6
+   // BOOST_CHECK_EQUAL(matches,3661173);
+   // BOOST_CHECK_EQUAL(nodes,5072213);
 
-   std::cout << "matches: " << matches << " with nodes: " << nodes << std::endl;
+   //  cutoff: 5
+   BOOST_CHECK_EQUAL(matches,97342);
+   BOOST_CHECK_EQUAL(nodes,206604);
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
@@ -1248,35 +1232,48 @@ typedef std::array<std::pair<
       int>,
    count<toy>()> tree_t;
 
-constexpr int alpha_init=std::numeric_limits<int>::min()/2;
-constexpr int beta_init=std::numeric_limits<int>::max()/2;
-
-constexpr int white_win=std::numeric_limits<int>::max()/4;
-
 typedef std::function<void (toy,const tree_t::value_type& v)> fun_init_t;
-typedef std::function<void (toy,toy,int,int,int)> fun_cutoff_t;
+typedef std::function<void (toy,toy,int,int)> fun_cutoff_t;
 
 // freestanding implementation with inspection-functions
 int
-negamax(const tree_t& t, toy s,
-        fun_init_t finit,
-        fun_cutoff_t fcutoff,
-        int alpha=alpha_init,int beta=beta_init)
+negamax_book(const tree_t& t, toy s,
+             fun_init_t finit, fun_cutoff_t fcutoff,
+             int alpha=-score::limit,
+             int beta=score::limit)
 {
    const auto& v=t[idx(s)];
    finit(s,v);
    if(v.first.empty())
-      return v.second;
-   for(toy child: v.first)
-   {
-      int local_alpha=-negamax(t,child,finit,fcutoff,-beta,-alpha);
-      fcutoff(s,child,alpha,beta,local_alpha);
-      if(local_alpha>=beta)
-         return local_alpha;
-      else if(local_alpha>alpha)
-         alpha=local_alpha;
-   }
+      alpha=v.second;
+   else for(toy child: v.first)
+        {
+           // int local_alpha=-negamax(t,child,finit,fcutoff,-beta,-alpha);
+           alpha=std::max(alpha,-negamax_book(t,child,finit,fcutoff,-beta,-alpha));
+           fcutoff(s,child,alpha,beta);
+           if(alpha>=beta)
+              break;
+        }
    return alpha;
+}
+
+inline void
+negamax(const tree_t& t, toy s,
+        fun_init_t finit, fun_cutoff_t fcutoff,
+        cheapshot::negamax& nm)
+{
+   const auto& v=t[idx(s)];
+   finit(s,v);
+   cheapshot::scoped_score<cheapshot::negamax> sc(nm);
+   if(v.first.empty())
+      nm.score=v.second;
+   else for(toy child: v.first)
+        {
+           negamax(t,child,finit,fcutoff,nm);
+           fcutoff(s,child,nm.score,nm.beta);
+           if(nm.cutoff())
+              break;
+        }
 }
 
 BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
@@ -1297,10 +1294,10 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       /*b3_4*/ {{toy::w4_6},branch},
       /*b3_5*/ {{toy::w4_7,toy::w4_8},branch},
       /*w4_0*/ {{},10},
-      /*w4_1*/ {{},white_win},
+      /*w4_1*/ {{},score::checkmate},
       /*w4_2*/ {{},5},
       /*w4_3*/ {{},3},
-      /*w4_4*/ {{},-white_win},
+      /*w4_4*/ {{},-score::checkmate},
       /*w4_5*/ {{},4},
       /*w4_6*/ {{},5},
       /*w4_7*/ {{},-7},
@@ -1308,28 +1305,50 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       }};
    toy state=toy::w0_0;
 
-   auto finit_dump = [](toy s, const tree_t::value_type& v)
-   {
-      std::cout << "init " << to_string(s);
-      if(v.first.empty())
-         std::cout << " value " << v.second;
-      std::cout << std::endl;
+   static std::set<toy> ignored_nodes{
+      {toy::w4_8},
+      {toy::w4_5}
    };
 
-   auto fcutoff_dump=[](toy s,toy child , int alpha, int beta, int local_alpha)
+   auto finit=[](toy s, const tree_t::value_type& v)
    {
-      std::cout << to_string(s)
-                << " child: " << to_string(child)
-                << " local alpha: " << local_alpha
-                << " alpha " << alpha
-                << " beta: " << beta
-                << " beta_cutoff: "  << std::boolalpha << (local_alpha>=beta)
-                << " alpha_improvement: " << std::boolalpha << (local_alpha>alpha)
-                << std::endl;
+      // std::cout << "init " << to_string(s);
+      // if(v.first.empty())
+      //    std::cout << " value " << v.second;
+      // std::cout << std::endl;
+      BOOST_CHECK(ignored_nodes.find(s)==ignored_nodes.end());
    };
 
-   int r=negamax(game_tree,state,finit_dump,fcutoff_dump);
-   std::cout << "result " << r << std::endl;
+   static std::set<std::pair<toy,toy> > beta_cutoffs{
+      {toy::b3_1,toy::w4_2},
+      {toy::b3_3,toy::w4_4},
+      {toy::b3_5,toy::w4_7},
+      {toy::b1_1,toy::w2_3},
+      {toy::b3_1,toy::w4_2},
+      {toy::b3_3,toy::w4_4},
+      {toy::b3_5,toy::w4_7},
+      {toy::b1_1,toy::w2_3}
+   };
+
+   auto fcutoff=[](toy s,toy child , int alpha, int beta)
+   {
+      // std::cout << to_string(s)
+      // << " child: " << to_string(child)
+      // << " alpha " << std::setw(2) << alpha
+      // << " beta: " << std::setw(2) << beta
+      // << " beta_cutoff: "  << std::boolalpha << (alpha>=beta)
+      // << std::endl;
+      BOOST_CHECK_EQUAL(
+         beta_cutoffs.find({s,child})!=beta_cutoffs.end(),
+         (alpha>=beta));
+   };
+
+   int r=negamax_book(game_tree,state,finit,fcutoff);
+   BOOST_CHECK_EQUAL(r,3);
+
+   cheapshot::negamax nm;
+   negamax(game_tree,state,finit,fcutoff,nm);
+   BOOST_CHECK_EQUAL(nm.score,-3);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,8 +1,9 @@
 #; -*-makefile-*-
 
 CFLAGS := -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall -fno-deduce-init-list
+#CFLAGS += -funroll-loops # 10 % faster on gcc 4.6.1
 LIBS :=
-LDFLAGS :=
+LDFLAGS := -Wl,--as-needed
 
 ## to use gprof, compile with the flags below
 #CFLAGS := -g -O3 -pg -I. -std=c++0x -march=native -mtune=native

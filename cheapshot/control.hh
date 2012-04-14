@@ -1,8 +1,9 @@
-#ifndef CHEAPSHOT_ENGINE_HH
-#define CHEAPSHOT_ENGINE_HH
+#ifndef CHEAPSHOT_CONTROL_HH
+#define CHEAPSHOT_CONTROL_HH
 
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
+#include "cheapshot/hash.hh"
 #include "cheapshot/loop.hh"
 
 namespace cheapshot
@@ -31,44 +32,9 @@ namespace cheapshot
          template<typename HashFun, typename... Args>
          scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args)
          {}
-      };
 
-   // alpha, beta templatized
-
-      template<typename EngineController>
-      struct scope_negamax
-      {
-         scope_negamax(EngineController& ec_):
-            alpha(ec_.alpha_input),
-            beta(ec_.beta_input),
-            ec(ec_)
-         {
-            std::swap(ec.alpha_input,ec.beta_input);
-            ec.alpha_input=-ec.alpha_input;
-            ec.beta_input=-ec.beta_input;
-         }
-
-      // true: return with cutoff
-      // false: go on
-         bool
-         alpha_beta(int val)
-         {
-            if(val>beta)
-               return true;
-            if(val>alpha)
-               alpha=val;
-            return false;
-         };
-
-         ~scope_negamax()
-         {
-            ec.alpha_input=alpha;
-            ec.beta_input=beta;
-         }
-      private:
-         uint64_t alpha;
-         uint64_t beta;
-         EngineController& ec;
+         scoped_hash(const scoped_hash&) = delete;
+         scoped_hash& operator=(const scoped_hash&) = delete;
       };
    }
 
@@ -84,11 +50,6 @@ namespace cheapshot
       {
          // assert_valid_board(board);
          bool r=(remaining_depth!=0);
-         // if (!r)
-         // {
-         //    print_board(board,std::cout);
-         //    std::cout << std::endl << std::endl;
-         // }
          return r;
       }
 
@@ -110,25 +71,91 @@ namespace cheapshot
       int remaining_depth;
    };
 
+
+   template<typename T> class scoped_score;
+
    // TODO : testcase without chess
-   class negamax
+   struct minimax
    {
    public:
-      negamax():
-         alpha_input(std::numeric_limits<int>::min()),
-         beta_input(std::numeric_limits<int>::max())
-      {}
+      int score;
+      static constexpr bool cutoff() { return false; }
+   };
+
+   template<>
+   class scoped_score<minimax>
+   {
+      scoped_score(minimax& m_):
+         m(m_),
+         old_score(m.score)
+      {
+         m.score=score::no_valid_move;
+      }
+
+      ~scoped_score()
+      {
+         m.score=std::max(old_score,-m.score);
+      }
+      scoped_score(const scoped_score&) = delete;
+      scoped_score& operator=(const scoped_score&) = delete;
    private:
-      int alpha_input; // the worst known end-score from past evaluations
-      int beta_input; // the best score, with which the opponent would allow this position
+      minimax& m;
+      int old_score;
+   };
+
+   struct negamax
+   {
+      constexpr negamax():
+         alpha(-score::limit),
+         score(-score::limit),
+         beta(score::limit)
+      {}
+      int alpha;
+      int score;
+      int beta;
+      constexpr bool cutoff() const { return score>=beta; }
+
+      negamax(const negamax&) = delete;
+      negamax& operator=(const negamax&) = delete;
+   };
+
+   template<>
+   class scoped_score<negamax>
+   {
+   public:
+      scoped_score(negamax& m_):
+         m(m_),
+         old_alpha(m.alpha),
+         old_score(m.score),
+         old_beta(m.beta)
+      {
+         // alpha and score are separate variables
+         //   since score is set to no_valid_move at the start of analyze_position
+         m.alpha=-old_beta;
+         m.score=score::no_valid_move;
+         m.beta=-old_alpha;
+      }
+
+      ~scoped_score()
+      {
+         m.score=std::max(old_score,-m.score);
+         m.alpha=std::max(old_alpha,m.score);
+         m.beta=old_beta;
+      }
+      scoped_score(const scoped_score&) = delete;
+      scoped_score& operator=(const scoped_score&) = delete;
+   private:
+      negamax& m;
+      int old_alpha;
+      int old_score;
+      int old_beta;
    };
 
    namespace detail
    {
       constexpr uint64_t weight[count<piece>()]=
       {
-         1, 3, 3, 5, 9,
-         std::numeric_limits<uint64_t>::max() // TODO
+         1, 3, 3, 5, 9, score::limit
       };
    }
 

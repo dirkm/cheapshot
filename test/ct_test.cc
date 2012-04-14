@@ -2,16 +2,17 @@
 #include "cheapshot/extra_bitops.hh"
 #include "cheapshot/hash.hh"
 #include "cheapshot/iterator.hh"
+#include "cheapshot/loop.hh"
 
 // file with compile-time tests
 
 namespace cheapshot
 {
-   constexpr bool 
+   constexpr bool
    test_highest_bit(uint64_t v, uint64_t h)
    {
-      return 
-         (highest_bit_no_zero(v)==h) && 
+      return
+         (highest_bit_no_zero(v)==h) &&
          (highest_bit_portable(v)==h);
    }
 
@@ -30,4 +31,6 @@ namespace cheapshot
 
    constexpr castling_t ci=cheapshot::long_castling<side::white>();
    // constexpr uint64_t bm=bit_mixer(0ULL);
+
+   static_assert(count_bits_set(score::limit)==1,"");
 }
