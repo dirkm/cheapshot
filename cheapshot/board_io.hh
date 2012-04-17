@@ -19,8 +19,8 @@ namespace cheapshot
    extern void
    fill_canvas(uint64_t p,canvas_t& canvas,char piece_repr) noexcept;
 
-   extern void
-   fill_canvas(const board_t& board,canvas_t& canvas) noexcept;
+   extern canvas_t
+   make_canvas(const board_t& board) noexcept;
 
    extern void
    print_canvas(canvas_t& canvas,std::ostream& os);

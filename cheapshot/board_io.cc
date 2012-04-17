@@ -17,24 +17,24 @@ namespace cheapshot
       constexpr piece_to_character_t repr_pieces_white{{'P','N','B','R','Q','K'}};
       constexpr piece_to_character_t repr_pieces_black{{'p','n','b','r','q','k'}};
 
-      std::tuple<side,piece>
+      std::pair<side,piece>
       character_to_piece(char p)
       {
          switch(p)
          {
-            case 'B': return std::make_tuple(side::white,piece::bishop);
-            case 'K': return std::make_tuple(side::white,piece::king);
-            case 'N': return std::make_tuple(side::white,piece::knight);
-            case 'P': return std::make_tuple(side::white,piece::pawn);
-            case 'Q': return std::make_tuple(side::white,piece::queen);
-            case 'R': return std::make_tuple(side::white,piece::rook);
-            case 'b': return std::make_tuple(side::black,piece::bishop);
-            case 'k': return std::make_tuple(side::black,piece::king);
-            case 'n': return std::make_tuple(side::black,piece::knight);
-            case 'p': return std::make_tuple(side::black,piece::pawn);
-            case 'q': return std::make_tuple(side::black,piece::queen);
-            case 'r': return std::make_tuple(side::black,piece::rook);
-            default : return std::make_tuple(side::white,piece::count); // error case
+            case 'B': return {side::white,piece::bishop};
+            case 'K': return {side::white,piece::king};
+            case 'N': return {side::white,piece::knight};
+            case 'P': return {side::white,piece::pawn};
+            case 'Q': return {side::white,piece::queen};
+            case 'R': return {side::white,piece::rook};
+            case 'b': return {side::black,piece::bishop};
+            case 'k': return {side::black,piece::king};
+            case 'n': return {side::black,piece::knight};
+            case 'p': return {side::black,piece::pawn};
+            case 'q': return {side::black,piece::queen};
+            case 'r': return {side::black,piece::rook};
+            default : return {side::white,piece::count}; // error case
          }
       }
 
@@ -119,12 +119,14 @@ namespace cheapshot
       }
    }
 
-   extern void
-   fill_canvas(const board_t& board,canvas_t& canvas) noexcept
+   extern canvas_t
+   make_canvas(const board_t& board) noexcept
    {
+      canvas_t canvas;
       canvas.fill('.');
       fill_canvas_side(board[idx(side::white)],canvas,repr_pieces_white);
       fill_canvas_side(board[idx(side::black)],canvas,repr_pieces_black);
+      return canvas;
    }
 
 
@@ -142,9 +144,7 @@ namespace cheapshot
    extern void
    print_board(const board_t& board, std::ostream& os)
    {
-      canvas_t canvas;
-      fill_canvas(board,canvas);
-      print_canvas(canvas,os);
+      print_canvas(make_canvas(board),os);
    }
 
    extern void
@@ -334,8 +334,7 @@ namespace cheapshot
       extern void
       print_position(const board_t& board, std::ostream& os)
       {
-         canvas_t canvas;
-         fill_canvas(board,canvas);
+         canvas_t canvas=make_canvas(board);
          for(int i=7;;--i)
          {
             int offset=0;

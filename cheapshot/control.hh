@@ -13,24 +13,24 @@ namespace cheapshot
       // helpers to sweeten engine-configuration in the controllers below
       class noop; class incremental_hash;
 
-      template<typename EngineController,typename Type=incremental_hash>
+      template<typename Controller,typename Type=incremental_hash>
       struct scoped_hash
       {
       public:
          template<typename HashFun, typename... Args>
-         scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args):
+         scoped_hash(Controller& ec, const HashFun& hashfun, Args&&...  args):
             sh(ec.hash,hashfun,args...) // std::forward ??
          {}
       private:
          cheapshot::scoped_hash sh;
       };
 
-      template<typename EngineController>
-      struct scoped_hash<EngineController,noop>
+      template<typename Controller>
+      struct scoped_hash<Controller,noop>
       {
       public:
          template<typename HashFun, typename... Args>
-         scoped_hash(EngineController& ec, const HashFun& hashfun, Args&&...  args)
+         scoped_hash(Controller& ec, const HashFun& hashfun, Args&&...  args)
          {}
 
          scoped_hash(const scoped_hash&) = delete;
@@ -74,16 +74,18 @@ namespace cheapshot
 
    template<typename T> class scoped_score;
 
-   // TODO : testcase without chess
    struct minimax
    {
+      minimax():
+         score(-score::limit)
+      {}
    public:
       int score;
       static constexpr bool cutoff() { return false; }
    };
 
    template<>
-   class scoped_score<minimax>
+   struct scoped_score<minimax>
    {
       scoped_score(minimax& m_):
          m(m_),
@@ -142,6 +144,7 @@ namespace cheapshot
          m.alpha=std::max(old_alpha,m.score);
          m.beta=old_beta;
       }
+
       scoped_score(const scoped_score&) = delete;
       scoped_score& operator=(const scoped_score&) = delete;
    private:

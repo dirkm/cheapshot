@@ -294,6 +294,8 @@ namespace cheapshot
 
    // board is not changed at the end of analyze_position but used internally as scratchbuffer
    //  hence, it is passed as non-const ref.
+
+   // ec = engine_controller
    template<side S, typename Controller>
    int
    analyze_position(board_t& board, const context& oldctx, Controller& ec)

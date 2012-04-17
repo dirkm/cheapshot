@@ -1210,7 +1210,7 @@ enum class toy{
       b1_0,b1_1,
       w2_0,w2_1,w2_2,w2_3,
       b3_0,b3_1,b3_2,b3_3,b3_4,b3_5,
-      w4_0,w4_1,w4_2,w4_3,w4_4,w4_5,w4_6,w4_7,w4_8,w4_9,
+      w4_0,w4_1,w4_2,w4_3,w4_4,w4_5,w4_6,w4_7,w4_8,
       count
       };
 
@@ -1221,7 +1221,7 @@ const char* to_string(toy n)
        "b1_0","b1_1",
        "w2_0","w2_1","w2_2","w2_3",
        "b3_0","b3_1","b3_2","b3_3","b3_4","b3_5",
-       "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8","w4_9"};
+       "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8"};
    return repr[idx(n)];
 };
 
@@ -1246,7 +1246,8 @@ negamax_book(const tree_t& t, toy s,
    finit(s,v);
    if(v.first.empty())
       alpha=v.second;
-   else for(toy child: v.first)
+   else
+      for(toy child: v.first)
         {
            // int local_alpha=-negamax(t,child,finit,fcutoff,-beta,-alpha);
            alpha=std::max(alpha,-negamax_book(t,child,finit,fcutoff,-beta,-alpha));
@@ -1257,21 +1258,25 @@ negamax_book(const tree_t& t, toy s,
    return alpha;
 }
 
+typedef std::function<void (toy,toy)> fun_cutoff_prune_t;
+
+template<typename Algo>
 inline void
-negamax(const tree_t& t, toy s,
-        fun_init_t finit, fun_cutoff_t fcutoff,
-        cheapshot::negamax& nm)
+prune(const tree_t& t, toy s,
+        fun_init_t finit, fun_cutoff_prune_t fcutoff,
+        Algo& algo_data)
 {
    const auto& v=t[idx(s)];
    finit(s,v);
-   cheapshot::scoped_score<cheapshot::negamax> sc(nm);
+   cheapshot::scoped_score<Algo> sc(algo_data);
    if(v.first.empty())
-      nm.score=v.second;
-   else for(toy child: v.first)
+      algo_data.score=v.second;
+   else
+      for(toy child: v.first)
         {
-           negamax(t,child,finit,fcutoff,nm);
-           fcutoff(s,child,nm.score,nm.beta);
-           if(nm.cutoff())
+           prune(t,child,finit,fcutoff,algo_data);
+           fcutoff(s,child);
+           if(algo_data.cutoff())
               break;
         }
 }
@@ -1305,21 +1310,17 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       }};
    toy state=toy::w0_0;
 
-   static std::set<toy> ignored_nodes{
+   static const std::set<toy> ignored_nodes{
       {toy::w4_8},
       {toy::w4_5}
    };
 
    auto finit=[](toy s, const tree_t::value_type& v)
    {
-      // std::cout << "init " << to_string(s);
-      // if(v.first.empty())
-      //    std::cout << " value " << v.second;
-      // std::cout << std::endl;
-      BOOST_CHECK(ignored_nodes.find(s)==ignored_nodes.end());
+      BOOST_CHECK(ignored_nodes.find(s)==end(ignored_nodes));
    };
 
-   static std::set<std::pair<toy,toy> > beta_cutoffs{
+   static const std::set<std::pair<toy,toy> > beta_cutoffs{
       {toy::b3_1,toy::w4_2},
       {toy::b3_3,toy::w4_4},
       {toy::b3_5,toy::w4_7},
@@ -1330,25 +1331,41 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       {toy::b1_1,toy::w2_3}
    };
 
-   auto fcutoff=[](toy s,toy child , int alpha, int beta)
+   auto fcutoff=[](toy s,toy child, int alpha, int beta)
    {
-      // std::cout << to_string(s)
-      // << " child: " << to_string(child)
-      // << " alpha " << std::setw(2) << alpha
-      // << " beta: " << std::setw(2) << beta
-      // << " beta_cutoff: "  << std::boolalpha << (alpha>=beta)
-      // << std::endl;
       BOOST_CHECK_EQUAL(
-         beta_cutoffs.find({s,child})!=beta_cutoffs.end(),
+         beta_cutoffs.find({s,child})!=end(beta_cutoffs),
          (alpha>=beta));
    };
 
-   int r=negamax_book(game_tree,state,finit,fcutoff);
-   BOOST_CHECK_EQUAL(r,3);
+   {
+      int r=negamax_book(game_tree,state,finit,fcutoff);
+      BOOST_CHECK_EQUAL(r,3);
+   }
+   {
+      std::set<toy> nodes;
+      auto finit_minimax=[&nodes](toy s, const tree_t::value_type& v){
+         auto ni=nodes.insert(s);
+         BOOST_CHECK(ni.second);
+      };
 
-   cheapshot::negamax nm;
-   negamax(game_tree,state,finit,fcutoff,nm);
-   BOOST_CHECK_EQUAL(nm.score,-3);
+      auto fcutoff_minimax=[](toy s,toy child){};
+
+      cheapshot::minimax mm;
+      prune(game_tree,state,finit_minimax,fcutoff_minimax,mm);
+      BOOST_CHECK_EQUAL(nodes.size(),count<toy>());
+      BOOST_CHECK_EQUAL(mm.score,-3);
+   }
+   {
+      cheapshot::negamax nm;
+      auto fcutoff_negamax=[&fcutoff,&nm](toy s,toy child)
+         {
+         return fcutoff(s,child,nm.score,nm.beta);
+      };
+
+      prune(game_tree,state,finit,fcutoff_negamax,nm);
+      BOOST_CHECK_EQUAL(nm.score,-3);
+   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
