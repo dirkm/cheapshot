@@ -36,6 +36,92 @@ namespace cheapshot
          scoped_hash(const scoped_hash&) = delete;
          scoped_hash& operator=(const scoped_hash&) = delete;
       };
+
+      template<typename T> class scoped_score;
+
+      struct minimax
+      {
+         constexpr minimax():
+            score(-score::limit)
+         {}
+
+         int score;
+         static constexpr bool cutoff() { return false; }
+
+         minimax(const minimax&) = delete;
+         minimax& operator=(const minimax&) = delete;
+      };
+
+      template<>
+      struct scoped_score<minimax>
+      {
+         scoped_score(minimax& m_):
+            m(m_),
+            old_score(m.score)
+         {
+            m.score=score::no_valid_move;
+         }
+
+         ~scoped_score()
+         {
+            m.score=std::max(old_score,-m.score);
+         }
+
+         scoped_score(const scoped_score&) = delete;
+         scoped_score& operator=(const scoped_score&) = delete;
+      private:
+         minimax& m;
+         int old_score;
+      };
+
+      struct negamax
+      {
+         constexpr negamax():
+            alpha(-score::limit),
+            score(-score::limit),
+            beta(score::limit)
+         {}
+         int alpha;
+         int score;
+         int beta;
+         constexpr bool cutoff() const { return score>=beta; }
+
+         negamax(const negamax&) = delete;
+         negamax& operator=(const negamax&) = delete;
+      };
+
+      template<>
+      class scoped_score<negamax>
+      {
+      public:
+         scoped_score(negamax& m_):
+            m(m_),
+            old_alpha(m.alpha),
+            old_score(m.score),
+            old_beta(m.beta)
+         {
+            // alpha and score are separate variables
+            //   since score is set to no_valid_move at the start of analyze_position
+            m.alpha=-old_beta;
+            m.score=score::no_valid_move;
+            m.beta=-old_alpha;
+         }
+
+         ~scoped_score()
+         {
+            m.score=std::max(old_score,-m.score);
+            m.alpha=std::max(old_alpha,m.score);
+            m.beta=old_beta;
+         }
+
+         scoped_score(const scoped_score&) = delete;
+         scoped_score& operator=(const scoped_score&) = delete;
+      private:
+         negamax& m;
+         int old_alpha;
+         int old_score;
+         int old_beta;
+      };
    }
 
    class max_ply_cutoff
@@ -67,95 +153,9 @@ namespace cheapshot
       max_ply_cutoff& operator=(const max_ply_cutoff&) = delete;
 
       typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
+      control::minimax pruning;
    private:
       int remaining_depth;
-   };
-
-
-   template<typename T> class scoped_score;
-
-   struct minimax
-   {
-      minimax():
-         score(-score::limit)
-      {}
-
-      int score;
-      static constexpr bool cutoff() { return false; }
-
-      minimax(const minimax&) = delete;
-      minimax& operator=(const minimax&) = delete;
-   };
-
-   template<>
-   struct scoped_score<minimax>
-   {
-      scoped_score(minimax& m_):
-         m(m_),
-         old_score(m.score)
-      {
-         m.score=score::no_valid_move;
-      }
-
-      ~scoped_score()
-      {
-         m.score=std::max(old_score,-m.score);
-      }
-
-      scoped_score(const scoped_score&) = delete;
-      scoped_score& operator=(const scoped_score&) = delete;
-   private:
-      minimax& m;
-      int old_score;
-   };
-
-   struct negamax
-   {
-      constexpr negamax():
-         alpha(-score::limit),
-         score(-score::limit),
-         beta(score::limit)
-      {}
-      int alpha;
-      int score;
-      int beta;
-      constexpr bool cutoff() const { return score>=beta; }
-
-      negamax(const negamax&) = delete;
-      negamax& operator=(const negamax&) = delete;
-   };
-
-   template<>
-   class scoped_score<negamax>
-   {
-   public:
-      scoped_score(negamax& m_):
-         m(m_),
-         old_alpha(m.alpha),
-         old_score(m.score),
-         old_beta(m.beta)
-      {
-         // alpha and score are separate variables
-         //   since score is set to no_valid_move at the start of analyze_position
-         m.alpha=-old_beta;
-         m.score=score::no_valid_move;
-         m.beta=-old_alpha;
-      }
-
-      ~scoped_score()
-      {
-         m.score=std::max(old_score,-m.score);
-         m.alpha=std::max(old_alpha,m.score);
-         m.beta=old_beta;
-      }
-
-      scoped_score(const scoped_score&) = delete;
-      scoped_score& operator=(const scoped_score&) = delete;
-   private:
-      negamax& m;
-      int old_alpha;
-      int old_score;
-      int old_beta;
    };
 
    namespace detail

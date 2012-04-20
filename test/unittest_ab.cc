@@ -89,7 +89,7 @@ prune(const tree_t& t, toy s,
 {
    const auto& v=t[idx(s)];
    finit(s,v);
-   cheapshot::scoped_score<Algo> sc(algo_data);
+   cheapshot::control::scoped_score<Algo> sc(algo_data);
    if(v.first.empty())
       algo_data.score=v.second;
    else
@@ -171,13 +171,13 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 
       auto fcutoff_minimax=[](toy s,toy child){};
 
-      cheapshot::minimax mm;
+      cheapshot::control::minimax mm;
       prune(game_tree,state,finit_minimax,fcutoff_minimax,mm);
       BOOST_CHECK_EQUAL(nodes.size(),count<toy>());
       BOOST_CHECK_EQUAL(mm.score,-3);
    }
    {
-      cheapshot::negamax nm;
+      cheapshot::control::negamax nm;
       auto fcutoff_negamax=[&fcutoff,&nm](toy s,toy child){
          return fcutoff(s,child,nm.score,nm.beta);
       };

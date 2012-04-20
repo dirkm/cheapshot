@@ -15,7 +15,7 @@ main(int argc, const char* argv[])
          "prints true if a forced mate from the specified position is found within the\n"
          "  number of plies\n"
          "plies: max ply-depth to be searched\n"
-         "fen: fen-string as a single parameter (e.g. escaped with \"'s)."
+         "fen: fen-string as a single parameter (e.g. \"quoted\")."
                 << std::endl;
       return 1;
    }
@@ -29,7 +29,7 @@ main(int argc, const char* argv[])
       int nrplies=std::atoi(argv[1]);
       ++nrplies; // position with checkmate has to checked as well, to determine mate/stalemate.
       cheapshot::max_ply_cutoff cutoff(nrplies);
-      int s=cheapshot::analyze_position(b,c,ctx,cutoff);
+      int s=cheapshot::score_position(b,c,ctx,cutoff);
       std::cout << std::boolalpha << (s==cheapshot::score::checkmate) << std::endl;
       return 0;
    }

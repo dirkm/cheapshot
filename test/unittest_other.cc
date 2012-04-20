@@ -66,6 +66,7 @@ namespace
       std::size_t idx;
       std::vector<board_t> boards;
       typedef control::scoped_hash<move_checker,control::noop> scoped_hash;
+      control::minimax pruning;
    };
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
@@ -99,6 +100,7 @@ namespace
          mpc.decrement_ply();
       }
       typedef control::scoped_hash<do_until_ply_cutoff,control::noop> scoped_hash;
+      control::minimax pruning;
    private:
       max_ply_cutoff mpc;
       funpos fun;
@@ -554,14 +556,14 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          ".....k.K\n");
       max_ply_cutoff cutoff(1);
-      BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,cutoff),
-                        -score::checkmate);
+      analyze_position<side::white>(mate_board,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
       max_ply_cutoff cutoff(1);
-      BOOST_CHECK_EQUAL(analyze_position<side::white>(mate_board,null_context,cutoff),
-                        -score::checkmate);
+      analyze_position<side::white>(mate_board,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -575,8 +577,8 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".PB...P.\n"
          "..B...K.\n");
       max_ply_cutoff cutoff(1);
-      BOOST_CHECK_EQUAL(analyze_position<side::black>(mate_board,null_context,cutoff),
-                        -score::checkmate);
+      analyze_position<side::black>(mate_board,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    {
       // wikipedia stalemate article
@@ -590,8 +592,8 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n");
       max_ply_cutoff cutoff(1);
-      BOOST_CHECK_EQUAL(analyze_position<side::black>(stalemate_board,null_context,cutoff),
-                        -score::stalemate);
+      analyze_position<side::black>(stalemate_board,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::stalemate);
    }
 }
 
@@ -684,9 +686,9 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       {
          board_t bmirror=mirror(promotion_initial);
          move_checker check({bmirror,mirror(promotion_mate_queen)});
-         int s=analyze_position<side::black>(bmirror,null_context,check);
+         analyze_position<side::black>(bmirror,null_context,check);
          BOOST_CHECK(check.is_position_reached);
-         BOOST_CHECK_EQUAL(s,score::checkmate);
+         BOOST_CHECK_EQUAL(check.pruning.score,score::checkmate);
       }
    }
    {
@@ -744,7 +746,8 @@ scan_mate(int depth, board_t b)
       score::checkmate:
       -score::checkmate;
    max_ply_cutoff cutoff(depth);
-   BOOST_CHECK_EQUAL(analyze_position<S>(b,null_context,cutoff),score);
+   analyze_position<S>(b,null_context,cutoff);
+   BOOST_CHECK_EQUAL(cutoff.pruning.score,score);
 }
 
 template<side S, typename... Boards>
@@ -1005,8 +1008,8 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
    for(long i=0;i<ops;++i)
    {
       max_ply_cutoff cutoff(7);
-      BOOST_CHECK_EQUAL(analyze_position<side::black>(rook_queen_mate,null_context,cutoff),
-                        -score::checkmate);
+      analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    time_op.time_report("endgame mate in 7 plies",ops);
 }
@@ -1090,6 +1093,7 @@ struct hash_checker
    }
 
    typedef control::scoped_hash<hash_checker> scoped_hash;
+   control::minimax pruning;
    uint64_t hash;
    move_checker mc;
 };
