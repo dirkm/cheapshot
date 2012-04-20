@@ -131,7 +131,7 @@ namespace cheapshot
 
 
    extern void
-   print_canvas(canvas_t& c,std::ostream& os)
+   print_canvas(const canvas_t& c,std::ostream& os)
    {
       for(int i=7;i>=0;--i)
       {
@@ -211,9 +211,9 @@ namespace cheapshot
          board_t b{{{{0ULL}}}};
          for(uint8_t i=0;;++i)
          {
-            int num_inc;
-            for(uint8_t j=0;j<8;j+=num_inc,++rs)
+            for(uint8_t j=0;j<8;++rs)
             {
+               int num_inc;
                if(std::isdigit(*rs))
                   num_inc=(*rs-'0');
                else
@@ -231,6 +231,9 @@ namespace cheapshot
                   }
                   num_inc=1;
                }
+               j+=num_inc;
+               if(j>8)
+                  throw io_error("offset out of bounds");
             }
             if(i==7)
                break;

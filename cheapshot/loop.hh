@@ -55,21 +55,63 @@ namespace cheapshot
                }};
    }
 
-   // calls "op" on all valid basic moves
-   // op needs signature (*)(piece p, uint64_t orig, uint64_t dests)
+   constexpr std::array<move_generator_t,count<piece>()-1>
+   basic_piece_move_generators()
+   {
+      return {{jump_knight,
+               slide_bishop,
+               slide_rook,
+               slide_queen,
+               move_king
+               }};
+   }
+
+   constexpr std::array<piece,4> piece_promotions={{
+         piece::queen,piece::knight,piece::rook,piece::bishop}};
+
+   template<side S>
+   constexpr std::array<castling_t,2>
+   castling_generators()
+   {
+      return {{
+            short_castling<S>(),
+            long_castling<S>(),
+         }};
+   }
+
    template<side S, typename Op>
    void
-   on_basic_moves(const board_t& board, const board_metrics& bm, Op op)
+   on_piece_moves(const board_t& board, const board_metrics& bm, const Op& op)
    {
       const uint64_t all_pieces=bm.all_pieces();
-      auto p=std::begin(get_side<S>(board));
-      auto t=piece::pawn;
-      for(auto movegen: basic_move_generators<S>())
+      auto p=std::begin(get_side<S>(board))+1;
+      auto t=piece::knight;
+      for(auto movegen: basic_piece_move_generators())
       {
          for(auto it=bit_iterator(*p);it!=bit_iterator();++it)
             op(t,*it,movegen(*it,all_pieces)&~bm.own<S>());
          ++p;++t;
       }
+   }
+
+   template<side S, typename Op>
+   void
+   on_pawn_moves(const board_t& board, const board_metrics& bm, const Op& op)
+   {
+      const uint64_t all_pieces=bm.all_pieces();
+      uint64_t p=get_side<S>(board)[idx(piece::pawn)];
+      for(auto it=bit_iterator(p);it!=bit_iterator();++it)
+         op(piece::pawn,*it,slide_and_capture_with_pawn<S>(*it,all_pieces)&~bm.own<S>());
+   }
+
+   // calls "op" on all valid basic moves
+   // op needs signature (*)(piece p, uint64_t orig, uint64_t dests)
+   template<side S, typename Op>
+   void
+   on_basic_moves(const board_t& board, const board_metrics& bm, const Op& op)
+   {
+      on_pawn_moves<S>(board,bm,op);
+      on_piece_moves<S>(board,bm,op);
    }
 
    // complete info about a move, meant to be shortlived
@@ -306,22 +348,24 @@ namespace cheapshot
       board_metrics bm(board);
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
-      auto basic_moves_end=begin(basic_moves);
+      std::array<move_set,16>::iterator basic_moves_end=begin(basic_moves);
+      std::array<move_set,16>::const_iterator pawn_moves_end;
       uint64_t opponent_under_attack=0ULL;
-
-      on_basic_moves<S>(
-         board,bm,[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests)
-         {
+      {
+         auto visit=[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests){
             *basic_moves_end++=move_set{p,orig,dests};
             opponent_under_attack|=dests;
-         });
+         };
+
+         on_pawn_moves<S>(board,bm,visit);
+         pawn_moves_end=basic_moves_end;
+         on_piece_moves<S>(board,bm,visit);
+      }
 
       {
          const bool king_en_prise=get_side<other_side(S)>(board)[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
-         {
             return -score::no_valid_move;
-         }
       }
 
       if(!ec.try_position(board,S,oldctx,bm))
@@ -350,68 +394,43 @@ namespace cheapshot
          }
       }
 
-      ctx.castling_rights|=castling_block_mask<S>(
-         get_side<S>(board)[idx(piece::rook)],
-         get_side<S>(board)[idx(piece::king)]);
+      ctx.castling_rights|=castling_block_mask<S>(get_side<S>(board)[idx(piece::rook)],
+                                                  get_side<S>(board)[idx(piece::king)]);
 
       typename Controller::scoped_hash
          scoped_castling(ec,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
 
-      static constexpr castling_t castling[]=
-         {
-            short_castling<S>(),
-            long_castling<S>(),
-         };
-
-      for(const auto& cit: castling)
+      // castling
+      for(const auto& cit: castling_generators<S>())
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
-            // castling
             scoped2 mv(ec,castle_info<S>(board,cit));
             score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
          }
 
-      // evaluate moves
-      for(auto moveset_it=std::begin(basic_moves);moveset_it!=basic_moves_end;++moveset_it)
+      // pawns
+      for(auto moveset_it=std::begin(basic_moves);moveset_it!=pawn_moves_end;++moveset_it)
       {
          auto& moveset=*moveset_it;
-         if(moveset.moved_piece==piece::pawn)
-         {
-            uint64_t prom_mask=promoting_pawns<S>(moveset.destinations);
-            if(prom_mask)
-               for(bit_iterator dest_iter(moveset.destinations);dest_iter!=bit_iterator();++dest_iter)
+         if(promoting_pawns<S>(moveset.destinations))
+            for(bit_iterator dest_iter(moveset.destinations);dest_iter!=bit_iterator(); ++dest_iter)
+            {
+               // pawn to promotion square
+               scoped2 mv(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
+               for(auto prom: piece_promotions)
                {
-                  // pawn to promotion square
-                  scoped2 mv(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
-                  static constexpr piece piece_promotions[]=
-                     {piece::queen,piece::knight,piece::rook,piece::bishop};
-                  for(const piece& prom: piece_promotions)
-                  {
-                     // all promotions
-                     scoped2 mv2(ec,promotion_info<S>(board,prom,*dest_iter));
-                     score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
-                  }
-               }
-            else
-               for(bit_iterator dest_iter(moveset.destinations);dest_iter!=bit_iterator();++dest_iter)
-               {
-                  // normal pawn move
-                  uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-                  scoped2 mv(ec,basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
-                  ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
-                  typename Controller::scoped_hash scoped_ep(ec,hhash_ep_change0,ctx.ep_info);
+                  // all promotions
+                  scoped2 mv2(ec,promotion_info<S>(board,prom,*dest_iter));
                   score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
-                  ctx.ep_info=0ULL;
                }
-         }
+            }
          else
          {
-            // TODO: checks should be checked first
             for(bit_iterator dest_iter(moveset.destinations&bm.opposing<S>());
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
-               // normal captures
+               // captures
                scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
                score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
             }
@@ -419,10 +438,37 @@ namespace cheapshot
                 dest_iter!=bit_iterator();
                 ++dest_iter)
             {
-               // normal moves
-               scoped mv(ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
+               //  moves / ep info
+               uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+               scoped mv(ec,basic_move_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
+               ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+               typename Controller::scoped_hash scoped_ep(ec,hhash_ep_change0,ctx.ep_info);
                score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
+               ctx.ep_info=0ULL;
             }
+         }
+      }
+
+      // pieces
+      for(auto moveset_it=pawn_moves_end;moveset_it!=basic_moves_end;++moveset_it)
+      {
+         auto& moveset=*moveset_it;
+         // TODO: checks should be checked first
+         for(bit_iterator dest_iter(moveset.destinations&bm.opposing<S>());
+             dest_iter!=bit_iterator();
+             ++dest_iter)
+         {
+            // captures
+            scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
+            score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
+         }
+         for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
+             dest_iter!=bit_iterator();
+             ++dest_iter)
+         {
+            // moves
+            scoped mv(ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
+            score=recurse_and_evaluate<other_side(S)>(score,board,ctx,ec);
          }
       }
 

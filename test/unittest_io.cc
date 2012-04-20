@@ -137,6 +137,24 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
       print_fen(b,turn,ctx,ots);
       BOOST_CHECK(ots.is_equal(ep_pos));
    }
+   {
+      const char* fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN2";
+      BOOST_CHECK_EXCEPTION(
+         fen::scan_position(fen),cheapshot::io_error,
+         check_io_message("bounds"));
+   }
+   {
+      const char* fen="rnbzkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+      BOOST_CHECK_EXCEPTION(
+         fen::scan_position(fen),cheapshot::io_error,
+         check_io_message("character"));
+   }
+   {
+      const char* fen="rnbqkbnr#pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+      BOOST_CHECK_EXCEPTION(
+         fen::scan_position(fen),cheapshot::io_error,
+         check_io_message("character"));
+   }
 }
 
 BOOST_AUTO_TEST_CASE( input_move_test )

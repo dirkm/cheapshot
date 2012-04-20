@@ -23,7 +23,7 @@ namespace cheapshot
    make_canvas(const board_t& board) noexcept;
 
    extern void
-   print_canvas(canvas_t& canvas,std::ostream& os);
+   print_canvas(const canvas_t& canvas,std::ostream& os);
 
    extern void
    print_board(const board_t& board, std::ostream& os);

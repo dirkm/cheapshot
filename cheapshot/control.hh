@@ -79,9 +79,12 @@ namespace cheapshot
       minimax():
          score(-score::limit)
       {}
-   public:
+
       int score;
       static constexpr bool cutoff() { return false; }
+
+      minimax(const minimax&) = delete;
+      minimax& operator=(const minimax&) = delete;
    };
 
    template<>
@@ -98,6 +101,7 @@ namespace cheapshot
       {
          m.score=std::max(old_score,-m.score);
       }
+
       scoped_score(const scoped_score&) = delete;
       scoped_score& operator=(const scoped_score&) = delete;
    private:
@@ -158,7 +162,7 @@ namespace cheapshot
    {
       constexpr uint64_t weight[count<piece>()]=
       {
-         1, 3, 3, 5, 9, score::limit
+         1, 3, 3, 5, 9, 0 /* kings are neved captured */
       };
    }
 
