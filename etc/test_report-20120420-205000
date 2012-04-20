@@ -1,0 +1,55 @@
+Date: Fri Apr 20 20:50:00 CEST 2012
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++-46
+COLLECT_LTO_WRAPPER=/home/dirk/local/libexec/gcc/x86_64-unknown-linux-gnu/4.6.1/lto-wrapper
+Target: x86_64-unknown-linux-gnu
+Configured with: ./configure --prefix=/home/dirk/local --program-suffix=-46 --enable-languages=c,c++,lto
+Thread model: posix
+gcc version 4.6.1 (GCC) 
+CFlags: -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall -fno-deduce-init-list
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit 787b8e1f372768e4edf8eee38a19f04cfd2f4eb7
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Fri Apr 20 20:49:37 2012 +0200
+
+    negamax integrated in main-loop
+Tests
+Running 38 test cases...
+column/row calculation
+ real time: 0.26 user time: 0.26 system time: 0 ops/sec: 9.61538e+07
+board pos
+ real time: 0.22 user time: 0.22 system time: 0 ops/sec: 6.81818e+08
+slide pawn up
+ real time: 0.06 user time: 0.06 system time: 0 ops/sec: 4.16667e+08
+slide pawn down
+ real time: 0.05 user time: 0.04 system time: 0 ops/sec: 5e+08
+capture with pawn up
+ real time: 0.04 user time: 0.05 system time: 0 ops/sec: 6.25e+08
+capture with pawn down
+ real time: 0.05 user time: 0.04 system time: 0 ops/sec: 5e+08
+knight jump
+ real time: 0.21 user time: 0.21 system time: 0 ops/sec: 1.19048e+08
+slide bishop
+ real time: 0.21 user time: 0.22 system time: 0 ops/sec: 4.7619e+07
+slide rook
+ real time: 0.18 user time: 0.18 system time: 0 ops/sec: 5.55556e+07
+slide queen
+ real time: 0.18 user time: 0.18 system time: 0 ops/sec: 2.77778e+07
+move king
+ real time: 0.08 user time: 0.07 system time: 0 ops/sec: 2.5e+08
+count set bits
+ real time: 0.3 user time: 0.3 system time: 0 ops/sec: 6.66667e+07
+move set walk
+ real time: 0.19 user time: 0.19 system time: 0 ops/sec: 7.89474e+06
+mate check (value is significantly less than nps)
+ real time: 0.18 user time: 0.18 system time: 0 ops/sec: 138889
+caged kings at ply depth 17
+ real time: 0.2 user time: 0.19 system time: 0 ops/sec: 5
+endgame mate in 7 plies
+ real time: 0.63 user time: 0.64 system time: 0 ops/sec: 1.5873
+all-at-once hashes from start position
+ real time: 2.01 user time: 1.98 system time: 0.02 ops/sec: 102788
