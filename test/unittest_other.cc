@@ -16,6 +16,23 @@ using namespace cheapshot;
 
 namespace
 {
+   template<typename Controller>
+   struct scoped_ply_idx
+   {
+      scoped_ply_idx(Controller& mc_):
+         mc(mc_)
+      {
+         ++mc.idx;
+      }
+
+      ~scoped_ply_idx()
+      {
+         --mc.idx;
+      };
+      Controller& mc;
+   };
+
+
    struct move_checker
    {
       move_checker(const std::initializer_list<board_t>& boards_):
@@ -52,60 +69,36 @@ namespace
       }
 
       bool is_position_reached;
-
-      void increment_ply()
-      {
-         ++idx;
-      }
-
-      void decrement_ply()
-      {
-         --idx;
-      }
-
-      std::size_t idx;
-      std::vector<board_t> boards;
       typedef control::scoped_hash<move_checker,control::noop> scoped_hash;
       control::minimax pruning;
+
+      std::size_t idx;
+      typedef scoped_ply_idx<move_checker> scoped_ply;
+   private:
+      std::vector<board_t> boards;
    };
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   class do_until_ply_cutoff
+   class do_until_ply_cutoff: public max_ply_cutoff
    {
    public:
       do_until_ply_cutoff(int max_depth, const funpos& fun_):
-         mpc(max_depth),
+         max_ply_cutoff(max_depth),
          fun(fun_)
       {}
 
       bool
       try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(!mpc.try_position(board,c,ctx,bm))
+         if(!max_ply_cutoff::try_position(board,c,ctx,bm))
             return false;
          fun(board,c,ctx,bm);
          return true;
       }
-
-      void
-      increment_ply()
-      {
-         mpc.increment_ply();
-      }
-
-      void
-      decrement_ply()
-      {
-         mpc.decrement_ply();
-      }
-      typedef control::scoped_hash<do_until_ply_cutoff,control::noop> scoped_hash;
-      control::minimax pruning;
    private:
-      max_ply_cutoff mpc;
       funpos fun;
    };
-
 }
 
 BOOST_AUTO_TEST_SUITE(basic_engine_suite)
@@ -1031,7 +1024,6 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
          ++nodes;
          uint64_t hash=hhash(board,t,ctx);
          auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
-
          auto lb = r.lower_bound(hash);
          if(lb!=end(r))
             if(!(r.key_comp()(hash,lb->first)))
@@ -1046,7 +1038,7 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    TimeOperation time_op;
    do_until_ply_cutoff cutoff(5,f);
    analyze_position<side::white>(b,null_context,cutoff);
-   //  cutoff: 6
+   //  cutoff: 6 // duration 50s
    // BOOST_CHECK_EQUAL(matches,3661173);
    // BOOST_CHECK_EQUAL(nodes,5072213);
 
@@ -1056,46 +1048,31 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
    time_op.time_report("all-at-once hashes from start position",nodes);
 }
 
-struct hash_checker
+struct hash_checker: move_checker
 {
    hash_checker(uint64_t initial_hash, const std::initializer_list<board_t>& boards):
-      hash(initial_hash),
-      mc(boards)
+      move_checker(boards),
+      hash(initial_hash)
    {}
 
    hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
-      hash(hhash(b,c,ctx)),
-      mc(b,c,ctx,input_moves)
+      move_checker(b,c,ctx,input_moves),
+      hash(hhash(b,c,ctx))
    {}
 
    bool
    try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
    {
-      bool r=mc.try_position(board,c,ctx,bm);
-      if(r)
-      {
-         uint64_t complete_hash=hhash(board,c,ctx);
-         BOOST_CHECK_EQUAL(hash,complete_hash);
-         // print_board(board,std::cout);
-         // std::cout << std::endl << std::endl;
-      }
-      return r;
-   }
-
-   void increment_ply()
-   {
-      mc.increment_ply();
-   }
-
-   void decrement_ply()
-   {
-      mc.decrement_ply();
+      if(!move_checker::try_position(board,c,ctx,bm))
+         return false;
+      uint64_t complete_hash=hhash(board,c,ctx);
+      BOOST_CHECK_EQUAL(hash,complete_hash);
+      return true;
    }
 
    typedef control::scoped_hash<hash_checker> scoped_hash;
    control::minimax pruning;
    uint64_t hash;
-   move_checker mc;
 };
 
 

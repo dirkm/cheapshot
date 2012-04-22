@@ -37,6 +37,28 @@ namespace cheapshot
          scoped_hash& operator=(const scoped_hash&) = delete;
       };
 
+      template<typename Controller>
+      class scoped_ply_count
+      {
+      public:
+         explicit scoped_ply_count(Controller& ec_):
+            ec(ec_)
+         {
+            --ec.remaining_plies;
+         }
+
+         ~scoped_ply_count()
+         {
+            ++ec.remaining_plies;
+         }
+
+         scoped_ply_count(const scoped_ply_count&) = delete;
+         scoped_ply_count& operator=(const scoped_ply_count&) = delete;
+      private:
+         Controller& ec;
+      };
+
+
       template<typename T> class scoped_score;
 
       struct minimax
@@ -124,38 +146,27 @@ namespace cheapshot
       };
    }
 
+   // class to control the behaviour of analyze_position
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(int max_depth):
-         remaining_depth(max_depth)
+      explicit constexpr max_ply_cutoff(int max_plies):
+         remaining_plies(max_plies)
       {}
 
       bool
       try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
-         bool r=(remaining_depth!=0);
+         bool r=(remaining_plies!=0);
          return r;
       }
 
-      void increment_ply()
-      {
-         --remaining_depth;
-      }
-
-      void decrement_ply()
-      {
-         ++remaining_depth;
-      }
-
-      max_ply_cutoff(const max_ply_cutoff&) = delete;
-      max_ply_cutoff& operator=(const max_ply_cutoff&) = delete;
-
       typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
       control::minimax pruning;
-   private:
-      int remaining_depth;
+
+      typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
+      int remaining_plies;
    };
 
    namespace detail

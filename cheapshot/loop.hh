@@ -307,21 +307,11 @@ namespace cheapshot
    {
    public:
       explicit scoped_make_turn(Controller& ec_):
-         ec(ec_),
-         sc_hash(ec,hhash_make_turn)
-      {
-         ec.increment_ply();
-      }
-
-      ~scoped_make_turn()
-      {
-         ec.decrement_ply();
-      }
-
-      scoped_make_turn(const scoped_make_turn&) = delete;
-      scoped_make_turn& operator=(const scoped_make_turn&) = delete;
+         sc_ply(ec_),
+         sc_hash(ec_,hhash_make_turn)
+      {}
    private:
-      Controller& ec;
+      typename Controller::scoped_ply sc_ply;
       typename Controller::scoped_hash sc_hash;
    };
 
