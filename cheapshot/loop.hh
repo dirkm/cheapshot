@@ -334,8 +334,8 @@ namespace cheapshot
    {
       typedef scoped_move_hash<Controller,move_info> scoped;
       typedef scoped_move_hash<Controller,move_info2> scoped2;
-      int& score=ec.pruning.score;
 
+      // preparations
       board_metrics bm(board);
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
@@ -353,6 +353,9 @@ namespace cheapshot
          on_piece_moves<S>(board,bm,visit);
       }
 
+      int& score=ec.pruning.score;
+
+      // check position validity
       {
          const bool king_en_prise=get_side<other_side(S)>(board)[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
@@ -362,6 +365,7 @@ namespace cheapshot
          }
       }
 
+      // check if leaf-node
       if(!ec.try_position(board,S,oldctx,bm))
       {
          score=0;

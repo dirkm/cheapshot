@@ -731,24 +731,24 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
    }
 }
 
-template<side S>
+template<side S, typename Controller>
 void
 scan_mate(int depth, board_t b)
 {
    constexpr int score=(S==side::white)?
       score::checkmate:
       -score::checkmate;
-   max_ply_cutoff cutoff(depth);
+   Controller cutoff(depth);
    analyze_position<S>(b,null_context,cutoff);
    BOOST_CHECK_EQUAL(cutoff.pruning.score,score);
 }
 
-template<side S, typename... Boards>
+template<side S, typename Controller, typename... Boards>
 void
 scan_mate(int depth, board_t b, Boards... board_pack)
 {
-   scan_mate<other_side(S)>(depth-1,board_pack...);
-   scan_mate<S>(depth, b);
+   scan_mate<other_side(S),Controller>(depth-1,board_pack...);
+   scan_mate<S,Controller>(depth, b);
 }
 
 BOOST_AUTO_TEST_CASE( find_mate_test )
@@ -816,7 +816,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::black>(5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff>(5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff_ab>(5,b1,b2,b3,b4,b5);
    }
    {
       board_t b=scan_board(
@@ -860,7 +861,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::white>(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff>(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff_ab>(4,b,b1,b2,b3);
    }
 
    {
@@ -917,7 +919,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::white>(4,b);
+      scan_mate<side::white,max_ply_cutoff>(4,b);
+      scan_mate<side::white,max_ply_cutoff_ab>(4,b);
    }
 }
 
@@ -1009,11 +1012,6 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
 
 BOOST_AUTO_TEST_CASE( complete_hash_test )
 {
-   //BOOST_CHECK(__builtin_constant_p(2+3));
-   // const uint64_t h=zhash_turn(side::white);
-   // BOOST_CHECK(__builtin_constant_p(h));
-   // BOOST_CHECK(__builtin_constant_p(zhash_turn(side::white)^zhash_turn(side::black)));
-
    board_t b=initial_board();
    std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
    int nodes=0;
@@ -1050,11 +1048,6 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
 
 struct hash_checker: move_checker
 {
-   hash_checker(uint64_t initial_hash, const std::initializer_list<board_t>& boards):
-      move_checker(boards),
-      hash(initial_hash)
-   {}
-
    hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
       move_checker(b,c,ctx,input_moves),
       hash(hhash(b,c,ctx))
@@ -1063,11 +1056,9 @@ struct hash_checker: move_checker
    bool
    try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
    {
-      if(!move_checker::try_position(board,c,ctx,bm))
-         return false;
       uint64_t complete_hash=hhash(board,c,ctx);
       BOOST_CHECK_EQUAL(hash,complete_hash);
-      return true;
+      return move_checker::try_position(board,c,ctx,bm);
    }
 
    typedef control::scoped_hash<hash_checker> scoped_hash;
