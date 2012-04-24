@@ -80,18 +80,19 @@ namespace
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   class do_until_ply_cutoff: public max_ply_cutoff
+   template<typename Pruning>
+   class do_until_ply_cutoff: public max_ply_cutoff<Pruning>
    {
    public:
       do_until_ply_cutoff(int max_depth, const funpos& fun_):
-         max_ply_cutoff(max_depth),
+         max_ply_cutoff<Pruning>(max_depth),
          fun(fun_)
       {}
 
       bool
       try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(!max_ply_cutoff::try_position(board,c,ctx,bm))
+         if(!max_ply_cutoff<Pruning>::try_position(board,c,ctx,bm))
             return false;
          fun(board,c,ctx,bm);
          return true;
@@ -548,13 +549,13 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      max_ply_cutoff cutoff(1);
+      max_ply_cutoff<control::minimax> cutoff(1);
       analyze_position<side::white>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      max_ply_cutoff cutoff(1);
+      max_ply_cutoff<control::minimax> cutoff(1);
       analyze_position<side::white>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
@@ -569,7 +570,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      max_ply_cutoff cutoff(1);
+      max_ply_cutoff<control::minimax> cutoff(1);
       analyze_position<side::black>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
@@ -584,7 +585,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n"
          "........\n");
-      max_ply_cutoff cutoff(1);
+      max_ply_cutoff<control::minimax> cutoff(1);
       analyze_position<side::black>(stalemate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::stalemate);
    }
@@ -731,24 +732,76 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
    }
 }
 
-template<side S, typename Controller>
-void
-scan_mate(int depth, board_t b)
+namespace
 {
-   constexpr int score=(S==side::white)?
-      score::checkmate:
-      -score::checkmate;
-   Controller cutoff(depth);
-   analyze_position<S>(b,null_context,cutoff);
-   BOOST_CHECK_EQUAL(cutoff.pruning.score,score);
+   template<side S, typename Controller>
+   void
+   scan_mate(int depth, board_t b)
+   {
+      constexpr int score=(S==side::white)?
+         score::checkmate:
+         -score::checkmate;
+      Controller cutoff(depth);
+      analyze_position<S>(b,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.pruning.score,score);
+   }
+
+   template<side S, typename Controller, typename... Boards>
+   void
+   scan_mate(int depth, board_t b, Boards... board_pack)
+   {
+      scan_mate<other_side(S),Controller>(depth-1,board_pack...);
+      scan_mate<S,Controller>(depth, b);
+   }
+
+   struct negamax_stat: control::negamax
+   {
+      negamax_stat():
+         negamax_cutoffs(0)
+      {}
+
+      int negamax_cutoffs;
+
+      bool cutoff()
+      {
+         bool r=control::negamax::cutoff();
+         if(r)
+            ++negamax_cutoffs;
+         return r;
+      }
+   };
+
+   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat>
+   {
+   public:
+      max_ply_cutoff_stat(int max_depth):
+         max_ply_cutoff<negamax_stat>(max_depth),
+         positions_tried(0)
+      {}
+
+      bool
+      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      {
+         if(!max_ply_cutoff<negamax_stat>::try_position(board,c,ctx,bm))
+            return false;
+         ++positions_tried;
+         return true;
+      }
+      int positions_tried;
+   };
 }
 
-template<side S, typename Controller, typename... Boards>
-void
-scan_mate(int depth, board_t b, Boards... board_pack)
+namespace
 {
-   scan_mate<other_side(S),Controller>(depth-1,board_pack...);
-   scan_mate<S,Controller>(depth, b);
+   constexpr char mate_in_3_canvas[]=
+      "rn.q.r..\n"
+      "p....pk.\n"
+      ".p...R.p\n"
+      "..ppP..Q\n"
+      "...P....\n"
+      "..P....P\n"
+      "P.P...P.\n"
+      ".R....K.\n";
 }
 
 BOOST_AUTO_TEST_CASE( find_mate_test )
@@ -756,15 +809,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
    {
 // white to move mate in 3
 // http://chesspuzzles.com/mate-in-three
-      board_t b=cheapshot::scan_board(
-         "rn.q.r..\n"
-         "p....pk.\n"
-         ".p...R.p\n"
-         "..ppP..Q\n"
-         "...P....\n"
-         "..P....P\n"
-         "P.P...P.\n"
-         ".R....K.\n");
+      board_t b=cheapshot::scan_board(mate_in_3_canvas);
 
       const board_t b1=scan_board(
          "rn.q.r..\n"
@@ -816,8 +861,9 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::black,max_ply_cutoff>(5,b1,b2,b3,b4,b5);
-      scan_mate<side::black,max_ply_cutoff_ab>(5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff<control::minimax> >(5,b1,b2,b3,b4,b5);
+      // negamax is considerably faster
+      scan_mate<side::white,max_ply_cutoff<control::negamax> >(6,b,b1,b2,b3,b4,b5);
    }
    {
       board_t b=scan_board(
@@ -861,8 +907,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::white,max_ply_cutoff>(4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff_ab>(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b,b1,b2,b3);
    }
 
    {
@@ -919,8 +965,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.is_position_reached);
       }
-      scan_mate<side::white,max_ply_cutoff>(4,b);
-      scan_mate<side::white,max_ply_cutoff_ab>(4,b);
+      scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b);
+      scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b);
    }
 }
 
@@ -945,10 +991,10 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    board_t mate_board=scan_board(canvas_mate_board1);
    TimeOperation time_op;
    const long ops=runtime_adjusted_ops(100000);
-   volatile int nrPlies=1;
+   volatile int nr_plies=1;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff cutoff(nrPlies);
+      max_ply_cutoff<control::minimax> cutoff(nr_plies);
       analyze_position<side::white>(mate_board,null_context,cutoff);
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
@@ -969,16 +1015,16 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
 
    TimeOperation time_op;
    const long ops=runtime_adjusted_ops(3);
-   volatile int nrPlies=17;
+   volatile int nr_plies=17;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff cutoff(nrPlies);
+      max_ply_cutoff<control::minimax> cutoff(nr_plies);
       analyze_position<side::white>(caged_kings,null_context,cutoff);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_simple_mate )
+BOOST_AUTO_TEST_CASE( time_endgame_mate )
 {
    // http://www.mychessblog.com/7-endgame-positions-with-endgame-tactics-for-quick-checkmate-part-1/
    // board_t rook_queen_mate=scan_board(
@@ -999,15 +1045,46 @@ BOOST_AUTO_TEST_CASE( time_simple_mate )
       "........\n"
       "........\n"
       "......K.\n");
-   TimeOperation time_op;
-   const long ops=runtime_adjusted_ops(1);
-   for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff cutoff(7);
-      analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
-      BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(1);
+      for(long i=0;i<ops;++i)
+      {
+         max_ply_cutoff<control::minimax> cutoff(7);
+         analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
+         BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
+      }
+      time_op.time_report("endgame mate in 7 plies",ops);
    }
-   time_op.time_report("endgame mate in 7 plies",ops);
+   {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(20);
+      for(long i=0;i<ops;++i)
+      {
+         max_ply_cutoff<control::negamax> cutoff(7);
+         analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
+         BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
+      }
+      time_op.time_report("endgame mate in 7 plies (ab)",ops);
+   }
+}
+
+BOOST_AUTO_TEST_CASE( time_pruning_mate )
+{
+   board_t b=cheapshot::scan_board(mate_in_3_canvas);
+   // minimax
+   // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
+   {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(10);
+      for(long i=0;i<ops;++i)
+      {
+         max_ply_cutoff<control::negamax> cutoff(6);
+         analyze_position<side::white>(b,null_context,cutoff);
+         BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate);
+      }
+      time_op.time_report("middlegame mate in 6 plies (ab)",ops);
+   }
 }
 
 BOOST_AUTO_TEST_CASE( complete_hash_test )
@@ -1034,7 +1111,7 @@ BOOST_AUTO_TEST_CASE( complete_hash_test )
       };
 
    TimeOperation time_op;
-   do_until_ply_cutoff cutoff(5,f);
+   do_until_ply_cutoff<control::minimax> cutoff(5,f);
    analyze_position<side::white>(b,null_context,cutoff);
    //  cutoff: 6 // duration 50s
    // BOOST_CHECK_EQUAL(matches,3661173);

@@ -6,8 +6,6 @@
 #include "cheapshot/hash.hh"
 #include "cheapshot/loop.hh"
 
-#include <iostream>
-
 namespace cheapshot
 {
    namespace control
@@ -108,10 +106,7 @@ namespace cheapshot
          int alpha;
          int score;
          int beta;
-         constexpr bool cutoff() const
-         {
-            return score>=beta;
-         }
+         constexpr bool cutoff() const { return score>=beta; }
 
          negamax(const negamax&) = delete;
          negamax& operator=(const negamax&) = delete;
@@ -152,6 +147,7 @@ namespace cheapshot
    }
 
    // combination of controls, to be used in analyze_position
+   template<typename Pruning>
    class max_ply_cutoff
    {
    public:
@@ -168,31 +164,9 @@ namespace cheapshot
       }
 
       typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
-      control::minimax pruning;
+      Pruning pruning;
 
       typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
-      int remaining_plies;
-   };
-
-   class max_ply_cutoff_ab
-   {
-   public:
-      explicit constexpr max_ply_cutoff_ab(int max_plies):
-         remaining_plies(max_plies)
-      {}
-
-      bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
-      {
-         // assert_valid_board(board);
-         bool r=(remaining_plies!=0);
-         return r;
-      }
-
-      typedef control::scoped_hash<max_ply_cutoff_ab,control::noop> scoped_hash;
-      control::negamax pruning;
-
-      typedef control::scoped_ply_count<max_ply_cutoff_ab> scoped_ply;
       int remaining_plies;
    };
 
