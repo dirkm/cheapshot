@@ -390,7 +390,7 @@ namespace cheapshot
          if(ep_capture)
          {
             scoped2 mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
-            if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                return;
          }
       }
@@ -406,7 +406,7 @@ namespace cheapshot
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
             scoped2 mv(ec,castle_info<S>(board,cit));
-            if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                return;
          }
 
@@ -423,7 +423,7 @@ namespace cheapshot
                {
                   // all promotions
                   scoped2 mv2(ec,promotion_info<S>(board,prom,*dest_iter));
-                  if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+                  if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                      return;
                }
             }
@@ -435,7 +435,7 @@ namespace cheapshot
             {
                // captures
                scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-               if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+               if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                   return;
             }
             for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -447,7 +447,7 @@ namespace cheapshot
                scoped mv(ec,basic_move_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                typename Controller::scoped_hash scoped_ep(ec,hhash_ep_change0,ctx.ep_info);
-               if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+               if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                   return;
                ctx.ep_info=0ULL;
             }
@@ -465,7 +465,7 @@ namespace cheapshot
          {
             // captures
             scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-            if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                return;
          }
          for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -474,7 +474,7 @@ namespace cheapshot
          {
             // moves
             scoped mv(ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-            if(recurse_with_cutoff<other_side(S)>(score,board,ctx,ec))
+            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                return;
          }
       }
@@ -493,7 +493,7 @@ namespace cheapshot
 
    template<side S, typename Controller>
    bool
-   recurse_with_cutoff(int last_score,board_t& board, const context& ctx, Controller& ec)
+   recurse_with_cutoff(board_t& board, const context& ctx, Controller& ec)
    {
       {
          control::scoped_score<decltype(ec.pruning)> scope(ec.pruning);

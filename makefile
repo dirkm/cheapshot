@@ -2,7 +2,7 @@ include makefile.inc
 
 EXEC :=
 cleanfiles :=
-clean_default := *.o *.a *.so *.so.* *.d
+clean_default := *.o *.a *.so *.so.* *.d *.su
 
 default: progs
 
