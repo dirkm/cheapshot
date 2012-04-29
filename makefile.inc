@@ -14,7 +14,7 @@ LDFLAGS := -Wl,--as-needed
 
 ## non-standard compilers (gcc 4.6.1 is good enough)
 CXX := g++-46
-#CXX := g++-4.7
+#xCXX := g++-4.7
 #CXX := g++-trunk
 #CXX:=/usr/lib/gcc-snapshot/bin/g++
 

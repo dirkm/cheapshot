@@ -317,7 +317,7 @@ namespace cheapshot
 
    template<side S, typename Controller>
    int
-   recurse_with_cutoff(int last_score,board_t& board, const context& ctx, const Controller& ec);
+   recurse_with_cutoff(board_t& board, const context& ctx, const Controller& ec);
 
    // main program loop
    // written as a single big routine because there is a lot of shared state, and performance is critical.
