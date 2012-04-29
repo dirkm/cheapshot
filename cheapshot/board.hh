@@ -127,9 +127,9 @@ namespace cheapshot
             r|=p;
          }
          bsmap^=r;
-         assert(count_bits_set(bsmap)<=16); // no more than 16 pieces per side
+         assert(count_set_bits(bsmap)<=16); // no more than 16 pieces per side
          assert(is_single_bit(bs[idx(piece::king)])); // exactly one king
-         assert(count_bits_set(bs[idx(piece::pawn)])<=8);
+         assert(count_set_bits(bs[idx(piece::pawn)])<=8);
       }
    }
 } // cheapshot

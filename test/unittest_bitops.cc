@@ -757,7 +757,7 @@ BOOST_AUTO_TEST_CASE( time_count_set_bits )
    const long ops=runtime_adjusted_ops(80000000);
    for(long i=0;i<ops;++i)
    {
-      r=count_bits_set(in);
+      r=count_set_bits(in);
    }
    time_op.time_report("count set bits",ops);
 }

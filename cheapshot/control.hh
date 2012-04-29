@@ -156,11 +156,13 @@ namespace cheapshot
       {}
 
       bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
-         bool r=(remaining_plies!=0);
-         return r;
+         bool leaf_node=(remaining_plies==0);
+         if(leaf_node)
+            pruning.score=0;
+         return leaf_node;
       }
 
       typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
@@ -172,16 +174,34 @@ namespace cheapshot
 
    namespace detail
    {
-      constexpr uint64_t weight[count<piece>()]=
+      // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
+      constexpr int weight[count<piece>()-1]=
       {
-         1, 3, 3, 5, 9, 0 /* kings are neved captured */
+         100, 320, 330, 500, 900 /* kings are neved captured */
       };
    }
 
-   constexpr uint64_t
+   constexpr int
    weight(piece p)
    {
       return detail::weight[idx(p)];
+   }
+
+   inline int
+   score_material(const board_side& side)
+   {
+      int r=0;
+      for(piece p=piece::pawn;p<piece::king;++p)
+         r+=count_set_bits(side[idx(p)])*weight(p);
+      return r;
+   }
+
+   inline int
+   score_material(const board_t& b)
+   {
+      return
+         score_material(b[idx(side::white)])-
+         score_material(b[idx(side::black)]);
    }
 
    struct transposition_info

@@ -16,34 +16,17 @@ using namespace cheapshot;
 
 namespace
 {
-   template<typename Controller>
-   struct scoped_ply_idx
-   {
-      scoped_ply_idx(Controller& mc_):
-         mc(mc_)
-      {
-         ++mc.idx;
-      }
-
-      ~scoped_ply_idx()
-      {
-         --mc.idx;
-      };
-      Controller& mc;
-   };
-
-
-   struct move_checker
+   struct move_checker: public max_ply_cutoff<control::minimax>
    {
       move_checker(const std::initializer_list<board_t>& boards_):
-         is_position_reached(false),
-         idx(0),
+         max_ply_cutoff<control::minimax>(boards_.size()),
+         all_analyzed(false),
          boards(boards_)
       {}
 
       move_checker(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
-         is_position_reached(false),
-         idx(0)
+         max_ply_cutoff<control::minimax>(input_moves.size()+1),
+         all_analyzed(false)
       {
          make_long_algebraic_moves(b,c,ctx,
                                    input_moves,
@@ -54,26 +37,21 @@ namespace
       }
 
       bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         // std::cout << "trying i " << i << std::endl;
-         if(idx>boards.size())
-            return false;
+         if(max_ply_cutoff<control::minimax>::leaf_check(board,c,ctx,bm))
+            return true;
+         std::size_t idx=boards.size()-remaining_plies;
          if(boards[idx]!=board)
-            return false;
+         {
+            pruning.score=0;
+            return true;
+         }
          if(idx==(boards.size()-1))
-            is_position_reached=true;
-         // print_board(board,std::cout);
-         // std::cout << std::endl << std::endl;
-         return true;
+            all_analyzed=true;
+         return false;
       }
-
-      bool is_position_reached;
-      typedef control::scoped_hash<move_checker,control::noop> scoped_hash;
-      control::minimax pruning;
-
-      std::size_t idx;
-      typedef scoped_ply_idx<move_checker> scoped_ply;
+      bool all_analyzed;
    private:
       std::vector<board_t> boards;
    };
@@ -90,12 +68,12 @@ namespace
       {}
 
       bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(!max_ply_cutoff<Pruning>::try_position(board,c,ctx,bm))
-            return false;
+         if(max_ply_cutoff<Pruning>::leaf_check(board,c,ctx,bm))
+            return true;
          fun(board,c,ctx,bm);
-         return true;
+         return false;
       }
    private:
       funpos fun;
@@ -615,13 +593,13 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
    {
       move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
       analyze_position<side::black>(en_passant_initial,null_context,check);
-      BOOST_CHECK(check.is_position_reached);
+      BOOST_CHECK(check.all_analyzed);
    }
    {
       board_t bmirror=mirror(en_passant_initial);
       move_checker check({bmirror,mirror(en_passant_double_move),mirror(en_passant_after_capture)});
       analyze_position<side::white>(bmirror,null_context,check);
-      BOOST_CHECK(check.is_position_reached);
+      BOOST_CHECK(check.all_analyzed);
    }
 
 }
@@ -661,7 +639,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
       {
          move_checker check({promotion_initial,promotion_mate_queen});
          analyze_position<side::white>(promotion_initial,null_context,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
       }
       {
          board_t promotion_knight=scan_board(
@@ -675,13 +653,13 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n");
          move_checker check({promotion_initial,promotion_knight});
          analyze_position<side::white>(promotion_initial,null_context,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
       }
       {
          board_t bmirror=mirror(promotion_initial);
          move_checker check({bmirror,mirror(promotion_mate_queen)});
          analyze_position<side::black>(bmirror,null_context,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
          BOOST_CHECK_EQUAL(check.pruning.score,score::checkmate);
       }
    }
@@ -699,7 +677,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             ".......K\n");
          move_checker check1({multiple_promotions_initial,multiple_promotions1});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check1);
-         BOOST_CHECK(check1.is_position_reached);
+         BOOST_CHECK(check1.all_analyzed);
       }
       {
          board_t multiple_promotions2=scan_board(
@@ -713,7 +691,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             ".......K\n");
          move_checker check2({multiple_promotions_initial,multiple_promotions2});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check2);
-         BOOST_CHECK(check2.is_position_reached);
+         BOOST_CHECK(check2.all_analyzed);
       }
       {
          board_t multiple_promotions3=scan_board(
@@ -727,7 +705,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             ".......K\n");
          move_checker check3({multiple_promotions_initial,multiple_promotions3});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check3);
-         BOOST_CHECK(check3.is_position_reached);
+         BOOST_CHECK(check3.all_analyzed);
       }
    }
 }
@@ -754,6 +732,7 @@ namespace
       scan_mate<S,Controller>(depth, b);
    }
 
+   // TODO: try to measure Branching Factor
    struct negamax_stat: control::negamax
    {
       negamax_stat():
@@ -780,9 +759,9 @@ namespace
       {}
 
       bool
-      try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(!max_ply_cutoff<negamax_stat>::try_position(board,c,ctx,bm))
+         if(!max_ply_cutoff<negamax_stat>::leaf_check(board,c,ctx,bm))
             return false;
          ++positions_tried;
          return true;
@@ -859,7 +838,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
       {
          move_checker check({b,b1,b2,b3,b4,b5});
          analyze_position<side::white>(b,null_context,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<side::black,max_ply_cutoff<control::minimax> >(5,b1,b2,b3,b4,b5);
       // negamax is considerably faster
@@ -905,7 +884,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
       {
          move_checker check({b,b1,b2,b3});
          analyze_position<side::white>(b,null_context,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b,b1,b2,b3);
       scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b,b1,b2,b3);
@@ -963,7 +942,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ctx.castling_rights|=
             short_castling<side::black>().mask()|long_castling<side::black>().mask();
          analyze_position<side::white>(btemp,ctx,check);
-         BOOST_CHECK(check.is_position_reached);
+         BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b);
       scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b);
@@ -1022,6 +1001,24 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
       analyze_position<side::white>(caged_kings,null_context,cutoff);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
+}
+
+BOOST_AUTO_TEST_CASE( score_material_test )
+{
+   BOOST_CHECK_EQUAL(score_material(initial_board()),0);
+   board_t imbalanced_board=scan_board(
+      "rnbqkbnr\n"
+      "..pppppp\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "PPPPPPP.\n"
+      "RNBQK...\n");
+   BOOST_CHECK_EQUAL(
+      score_material(imbalanced_board),
+      -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
+      weight(piece::pawn));
 }
 
 BOOST_AUTO_TEST_CASE( time_endgame_mate )
@@ -1131,11 +1128,11 @@ struct hash_checker: move_checker
    {}
 
    bool
-   try_position(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+   leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
    {
       uint64_t complete_hash=hhash(board,c,ctx);
       BOOST_CHECK_EQUAL(hash,complete_hash);
-      return move_checker::try_position(board,c,ctx,bm);
+      return move_checker::leaf_check(board,c,ctx,bm);
    }
 
    typedef control::scoped_hash<hash_checker> scoped_hash;

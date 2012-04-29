@@ -68,7 +68,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   count_bits_set(uint64_t p) noexcept
+   count_set_bits(uint64_t p) noexcept
    {
       return __builtin_popcountl(p);
    }

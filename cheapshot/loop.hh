@@ -365,12 +365,8 @@ namespace cheapshot
          }
       }
 
-      // check if leaf-node
-      if(!ec.try_position(board,S,oldctx,bm))
-      {
-         score=0;
+      if(ec.leaf_check(board,S,oldctx,bm))
          return;
-      }
 
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
