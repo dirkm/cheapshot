@@ -1004,7 +1004,8 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
 
 BOOST_AUTO_TEST_CASE( score_material_test )
 {
-   BOOST_CHECK_EQUAL(score_material(initial_board()),0);
+   using control::score_material;using control::weight;
+   BOOST_CHECK_EQUAL(control::score_material(initial_board()),0);
    board_t imbalanced_board=scan_board(
       "rnbqkbnr\n"
       "..pppppp\n"
@@ -1015,7 +1016,7 @@ BOOST_AUTO_TEST_CASE( score_material_test )
       "PPPPPPP.\n"
       "RNBQK...\n");
    BOOST_CHECK_EQUAL(
-      score_material(imbalanced_board),
+      control::score_material(imbalanced_board),
       -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
       weight(piece::pawn));
 }

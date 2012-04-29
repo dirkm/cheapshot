@@ -383,7 +383,7 @@ namespace cheapshot
           ++origin_iter)
       {
          uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
-         if(ep_capture)
+         if(ep_capture!=0ULL)
          {
             scoped2 mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
             if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))

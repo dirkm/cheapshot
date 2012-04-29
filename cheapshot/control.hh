@@ -144,6 +144,33 @@ namespace cheapshot
          int old_score;
          int old_beta;
       };
+
+      namespace detail
+      {
+         // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
+         constexpr int weight[count<piece>()-1]=
+         {
+            100, 320, 330, 500, 900 /* kings are neved captured */
+         };
+      }
+
+      constexpr int
+      weight(piece p)
+      {
+         return detail::weight[idx(p)];
+      }
+
+      inline int
+      score_material(const board_t& b)
+      {
+         int r=0;
+         const board_side& white_side=b[idx(side::white)];
+         const board_side& black_side=b[idx(side::black)];
+         for(piece p=piece::pawn;p<piece::king;++p)
+            r+=(count_set_bits(white_side[idx(p)])-
+                (count_set_bits(black_side[idx(p)])))*weight(p);
+         return r;
+      }
    }
 
    // combination of controls, to be used in analyze_position
@@ -161,7 +188,12 @@ namespace cheapshot
          // assert_valid_board(board);
          bool leaf_node=(remaining_plies==0);
          if(leaf_node)
-            pruning.score=0;
+         {
+            pruning.score=control::score_material(board);
+            // TODO: optimize
+            if(c==side::black)
+               pruning.score=-pruning.score;
+         }
          return leaf_node;
       }
 
@@ -171,38 +203,6 @@ namespace cheapshot
       typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
       int remaining_plies;
    };
-
-   namespace detail
-   {
-      // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
-      constexpr int weight[count<piece>()-1]=
-      {
-         100, 320, 330, 500, 900 /* kings are neved captured */
-      };
-   }
-
-   constexpr int
-   weight(piece p)
-   {
-      return detail::weight[idx(p)];
-   }
-
-   inline int
-   score_material(const board_side& side)
-   {
-      int r=0;
-      for(piece p=piece::pawn;p<piece::king;++p)
-         r+=count_set_bits(side[idx(p)])*weight(p);
-      return r;
-   }
-
-   inline int
-   score_material(const board_t& b)
-   {
-      return
-         score_material(b[idx(side::white)])-
-         score_material(b[idx(side::black)]);
-   }
 
    struct transposition_info
    {
