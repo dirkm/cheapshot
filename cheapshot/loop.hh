@@ -10,6 +10,13 @@
 
 namespace cheapshot
 {
+   namespace control
+   {
+      template<typename T> class scoped_score;
+      template<typename T> class scoped_hash;
+      template<typename T> class scoped_material;
+   }
+
    struct board_metrics
    {
       board_metrics(const board_t& board):
@@ -287,32 +294,32 @@ namespace cheapshot
    };
 
    // specialized helpers for use within analyze_position
-   template<typename Controller, typename Info>
+   template<typename Controller, typename MoveInfo>
    class scoped_move_hash
    {
    private:
-      typedef uint64_t(*hash_fun_t)(const Info& mi);
+      typedef uint64_t(*hash_fun_t)(const MoveInfo& mi);
    public:
-      scoped_move_hash(Controller& ec, const Info& mi):
+      scoped_move_hash(Controller& ec, const MoveInfo& mi):
          sc_move(mi),
-         sc_hash(ec,(hash_fun_t)hhash,mi)
+         sc_hash(ec.hasher,(hash_fun_t)hhash,mi)
       {}
    private:
-      scoped_move<Info> sc_move;
-      typename Controller::scoped_hash sc_hash;
+      scoped_move<MoveInfo> sc_move;
+      control::scoped_hash<decltype(Controller::hasher)> sc_hash;
    };
 
    template<typename Controller>
    class scoped_make_turn
    {
    public:
-      explicit scoped_make_turn(Controller& ec_):
-         sc_ply(ec_),
-         sc_hash(ec_,hhash_make_turn)
+      explicit scoped_make_turn(Controller& ec):
+         sc_ply(ec),
+         sc_hash(ec.hasher,hhash_make_turn)
       {}
    private:
       typename Controller::scoped_ply sc_ply;
-      typename Controller::scoped_hash sc_hash;
+      control::scoped_hash<decltype(Controller::hasher)> sc_hash;
    };
 
    template<side S, typename Controller>
@@ -334,6 +341,8 @@ namespace cheapshot
    {
       typedef scoped_move_hash<Controller,move_info> scoped;
       typedef scoped_move_hash<Controller,move_info2> scoped2;
+      typedef control::scoped_hash<decltype(ec.hasher)> scoped_hash;
+      // typedef control::scoped_material<decltype(ec.material)> scoped_material;
 
       // preparations
       board_metrics bm(board);
@@ -372,7 +381,7 @@ namespace cheapshot
 
       context ctx=oldctx;
       ctx.ep_info=0ULL;
-      typename Controller::scoped_hash scoped_ep1(ec,hhash_ep_change0,oldctx.ep_info);
+      scoped_hash scoped_ep1(ec.hasher,hhash_ep_change0,oldctx.ep_info);
 
       scoped_make_turn<Controller> scoped_turn(ec);
 
@@ -394,8 +403,7 @@ namespace cheapshot
       ctx.castling_rights|=castling_block_mask<S>(get_side<S>(board)[idx(piece::rook)],
                                                   get_side<S>(board)[idx(piece::king)]);
 
-      typename Controller::scoped_hash
-         scoped_castling(ec,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
+      scoped_hash scoped_castling(ec.hasher,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
 
       // castling
       for(const auto& cit: castling_generators<S>())
@@ -442,7 +450,7 @@ namespace cheapshot
                uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
                scoped mv(ec,basic_move_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
-               typename Controller::scoped_hash scoped_ep(ec,hhash_ep_change0,ctx.ep_info);
+               scoped_hash scoped_ep(ec.hasher,hhash_ep_change0,ctx.ep_info);
                if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                   return;
                ctx.ep_info=0ULL;
@@ -480,11 +488,6 @@ namespace cheapshot
          const bool king_under_attack=get_side<S>(board)[idx(piece::king)]&own_under_attack;
          score=king_under_attack?-score::checkmate:-score::stalemate;
       }
-   }
-
-   namespace control
-   {
-      template<typename T> class scoped_score;
    }
 
    template<side S, typename Controller>

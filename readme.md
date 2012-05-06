@@ -32,12 +32,12 @@ The excellent [makefiles](http://locklessinc.com/articles/makefile_tricks/) from
 
 ## Todo
 
-8. hashing/caching
+8. <s>hashing</s>/caching
 1. standard tests like Perft
-1. extend IO to read/write moves
+1. extend IO to <s>read</s>/write moves
 1. implement 3 move repetition/ 50 move-rule
-1. implement alpha-beta/negascout
-1. come up with an eval function
+1. implement <s>alpha-beta</s>/negascout
+1. <s>come up with an eval function</s>
 1. UCI-interface
 1. go through the standard techniques to speed up a chess-engine
 1. ...

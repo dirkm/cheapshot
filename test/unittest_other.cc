@@ -10,21 +10,23 @@
 #include "cheapshot/loop.hh"
 
 using namespace cheapshot;
-
+using namespace cheapshot::control;
 // tests not classified yet
 
 namespace
 {
-   struct move_checker: public max_ply_cutoff<control::minimax>
+   template<typename HashController=noop_hash>
+   struct move_checker: public max_ply_cutoff<minimax,HashController>
    {
+      typedef max_ply_cutoff<minimax,HashController> parent;
       move_checker(const std::initializer_list<board_t>& boards_):
-         max_ply_cutoff<control::minimax>(boards_.size()),
+         parent(boards_.size()),
          all_analyzed(false),
          boards(boards_)
       {}
 
       move_checker(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
-         max_ply_cutoff<control::minimax>(input_moves.size()+1),
+         parent(input_moves.size()+1),
          all_analyzed(false)
       {
          make_long_algebraic_moves(b,c,ctx,
@@ -38,12 +40,12 @@ namespace
       bool
       leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(max_ply_cutoff<control::minimax>::leaf_check(board,c,ctx,bm))
+         if(parent::leaf_check(board,c,ctx,bm))
             return true;
-         std::size_t idx=boards.size()-remaining_plies;
+         std::size_t idx=boards.size()-this->remaining_plies;
          if(boards[idx]!=board)
          {
-            pruning.score=0;
+            this->pruning.score=0;
             return true;
          }
          if(idx==(boards.size()-1))
@@ -57,19 +59,20 @@ namespace
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   template<typename Pruning>
-   class do_until_ply_cutoff: public max_ply_cutoff<Pruning>
+   template<typename Pruning, typename HashController=noop_hash>
+   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController>
    {
+      typedef max_ply_cutoff<Pruning,HashController> parent;
    public:
       do_until_ply_cutoff(int max_depth, const funpos& fun_):
-         max_ply_cutoff<Pruning>(max_depth),
+         parent(max_depth),
          fun(fun_)
       {}
 
       bool
       leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(max_ply_cutoff<Pruning>::leaf_check(board,c,ctx,bm))
+         if(parent::leaf_check(board,c,ctx,bm))
             return true;
          fun(board,c,ctx,bm);
          return false;
@@ -526,13 +529,13 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      max_ply_cutoff<control::minimax> cutoff(1);
+      max_ply_cutoff<minimax,noop_hash> cutoff(1);
       analyze_position<side::white>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      max_ply_cutoff<control::minimax> cutoff(1);
+      max_ply_cutoff<minimax,noop_hash> cutoff(1);
       analyze_position<side::white>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
@@ -547,7 +550,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      max_ply_cutoff<control::minimax> cutoff(1);
+      max_ply_cutoff<minimax,noop_hash> cutoff(1);
       analyze_position<side::black>(mate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
    }
@@ -562,7 +565,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n"
          "........\n");
-      max_ply_cutoff<control::minimax> cutoff(1);
+      max_ply_cutoff<minimax,noop_hash> cutoff(1);
       analyze_position<side::black>(stalemate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::stalemate);
    }
@@ -590,17 +593,16 @@ BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
 
    board_t en_passant_after_capture=en_passant_after_capture_board;
    {
-      move_checker check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
+      move_checker<> check({en_passant_initial,en_passant_double_move,en_passant_after_capture});
       analyze_position<side::black>(en_passant_initial,null_context,check);
       BOOST_CHECK(check.all_analyzed);
    }
    {
       board_t bmirror=mirror(en_passant_initial);
-      move_checker check({bmirror,mirror(en_passant_double_move),mirror(en_passant_after_capture)});
+      move_checker<> check({bmirror,mirror(en_passant_double_move),mirror(en_passant_after_capture)});
       analyze_position<side::white>(bmirror,null_context,check);
       BOOST_CHECK(check.all_analyzed);
    }
-
 }
 
 constexpr char multiple_promotions_initial_board[]=
@@ -636,7 +638,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
          "........\n"
          "........\n");
       {
-         move_checker check({promotion_initial,promotion_mate_queen});
+         move_checker<> check({promotion_initial,promotion_mate_queen});
          analyze_position<side::white>(promotion_initial,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
@@ -650,13 +652,13 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             "........\n");
-         move_checker check({promotion_initial,promotion_knight});
+         move_checker<> check({promotion_initial,promotion_knight});
          analyze_position<side::white>(promotion_initial,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
       {
          board_t bmirror=mirror(promotion_initial);
-         move_checker check({bmirror,mirror(promotion_mate_queen)});
+         move_checker<> check({bmirror,mirror(promotion_mate_queen)});
          analyze_position<side::black>(bmirror,null_context,check);
          BOOST_CHECK(check.all_analyzed);
          BOOST_CHECK_EQUAL(check.pruning.score,score::checkmate);
@@ -674,7 +676,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker check1({multiple_promotions_initial,multiple_promotions1});
+         move_checker<> check1({multiple_promotions_initial,multiple_promotions1});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check1);
          BOOST_CHECK(check1.all_analyzed);
       }
@@ -688,7 +690,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker check2({multiple_promotions_initial,multiple_promotions2});
+         move_checker<> check2({multiple_promotions_initial,multiple_promotions2});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check2);
          BOOST_CHECK(check2.all_analyzed);
       }
@@ -702,7 +704,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker check3({multiple_promotions_initial,multiple_promotions3});
+         move_checker<> check3({multiple_promotions_initial,multiple_promotions3});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check3);
          BOOST_CHECK(check3.all_analyzed);
       }
@@ -731,8 +733,8 @@ namespace
       scan_mate<S,Controller>(depth, b);
    }
 
-   // TODO: try to measure Branching Factor
-   struct negamax_stat: control::negamax
+   // TODO: try to measure branching factor
+   struct negamax_stat: negamax
    {
       negamax_stat():
          negamax_cutoffs(0)
@@ -742,25 +744,26 @@ namespace
 
       bool cutoff()
       {
-         bool r=control::negamax::cutoff();
+         bool r=negamax::cutoff();
          if(r)
             ++negamax_cutoffs;
          return r;
       }
    };
 
-   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat>
+   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat,noop_hash>
    {
+      typedef max_ply_cutoff<negamax_stat,noop_hash> parent;
    public:
       max_ply_cutoff_stat(int max_depth):
-         max_ply_cutoff<negamax_stat>(max_depth),
+         parent(max_depth),
          positions_tried(0)
       {}
 
       bool
       leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
-         if(!max_ply_cutoff<negamax_stat>::leaf_check(board,c,ctx,bm))
+         if(!parent::leaf_check(board,c,ctx,bm))
             return false;
          ++positions_tried;
          return true;
@@ -835,13 +838,13 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "P.P...P.\n"
          ".R....K.\n");
       {
-         move_checker check({b,b1,b2,b3,b4,b5});
+         move_checker<> check({b,b1,b2,b3,b4,b5});
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::black,max_ply_cutoff<control::minimax> >(5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash> >(5,b1,b2,b3,b4,b5);
       // negamax is considerably faster
-      scan_mate<side::white,max_ply_cutoff<control::negamax> >(6,b,b1,b2,b3,b4,b5);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(6,b,b1,b2,b3,b4,b5);
    }
    {
       board_t b=scan_board(
@@ -881,12 +884,12 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          "PPP..PPP\n"
          "RN..K.NR\n");
       {
-         move_checker check({b,b1,b2,b3});
+         move_checker<> check({b,b1,b2,b3});
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(4,b,b1,b2,b3);
    }
 
    {
@@ -936,15 +939,15 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          board_t btemp=b;
          constexpr auto lci=short_castling<side::white>();
          BOOST_CHECK(is_castling_allowed<side::white>(btemp,lci));
-         move_checker check({b,b1,b2,b3});
+         move_checker<> check({b,b1,b2,b3});
          context ctx=null_context;
          ctx.castling_rights|=
             short_castling<side::black>().mask()|long_castling<side::black>().mask();
          analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<control::minimax> >(4,b);
-      scan_mate<side::white,max_ply_cutoff<control::negamax> >(4,b);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(4,b);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(4,b);
    }
 }
 
@@ -972,7 +975,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    volatile int nr_plies=1;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<control::minimax> cutoff(nr_plies);
+      max_ply_cutoff<minimax,noop_hash> cutoff(nr_plies);
       analyze_position<side::white>(mate_board,null_context,cutoff);
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
@@ -996,7 +999,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
    volatile int nr_plies=17;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<control::minimax> cutoff(nr_plies);
+      max_ply_cutoff<minimax,noop_hash> cutoff(nr_plies);
       analyze_position<side::white>(caged_kings,null_context,cutoff);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
@@ -1004,8 +1007,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
 
 BOOST_AUTO_TEST_CASE( score_material_test )
 {
-   using control::score_material;using control::weight;
-   BOOST_CHECK_EQUAL(control::score_material(initial_board()),0);
+   BOOST_CHECK_EQUAL(score_material(initial_board()),0);
    board_t imbalanced_board=scan_board(
       "rnbqkbnr\n"
       "..pppppp\n"
@@ -1016,7 +1018,7 @@ BOOST_AUTO_TEST_CASE( score_material_test )
       "PPPPPPP.\n"
       "RNBQK...\n");
    BOOST_CHECK_EQUAL(
-      control::score_material(imbalanced_board),
+      score_material(imbalanced_board),
       -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
       weight(piece::pawn));
 }
@@ -1047,7 +1049,7 @@ BOOST_AUTO_TEST_CASE( time_endgame_mate )
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
       {
-         max_ply_cutoff<control::minimax> cutoff(7);
+         max_ply_cutoff<minimax,noop_hash> cutoff(7);
          analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
          BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
       }
@@ -1058,7 +1060,7 @@ BOOST_AUTO_TEST_CASE( time_endgame_mate )
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
       {
-         max_ply_cutoff<control::negamax> cutoff(7);
+         max_ply_cutoff<negamax,noop_hash> cutoff(7);
          analyze_position<side::black>(rook_queen_mate,null_context,cutoff);
          BOOST_CHECK_EQUAL(cutoff.pruning.score,-score::checkmate);
       }
@@ -1069,14 +1071,14 @@ BOOST_AUTO_TEST_CASE( time_endgame_mate )
 BOOST_AUTO_TEST_CASE( time_pruning_mate )
 {
    board_t b=cheapshot::scan_board(mate_in_3_canvas);
-   // minimax
-   // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
       {
-         max_ply_cutoff<control::negamax> cutoff(6);
+         max_ply_cutoff<negamax,noop_hash> cutoff(6);
+         // minimax
+         // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
          analyze_position<side::white>(b,null_context,cutoff);
          BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate);
       }
@@ -1084,60 +1086,106 @@ BOOST_AUTO_TEST_CASE( time_pruning_mate )
    }
 }
 
-BOOST_AUTO_TEST_CASE( complete_hash_test )
+namespace
 {
-   board_t b=initial_board();
-   std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
-   int nodes=0;
-   int matches=0;
-
-   auto f=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
-      {
-         ++nodes;
-         uint64_t hash=hhash(board,t,ctx);
-         auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
-         auto lb = r.lower_bound(hash);
-         if(lb!=end(r))
-            if(!(r.key_comp()(hash,lb->first)))
-            {
-               ++matches;
-               BOOST_CHECK(state==lb->second);
-               return;
-            }
-         r.insert(lb,std::make_pair(hash,state)); // emplace_hint?
-      };
-
-   TimeOperation time_op;
-   do_until_ply_cutoff<control::minimax> cutoff(5,f);
-   analyze_position<side::white>(b,null_context,cutoff);
-   //  cutoff: 6 // duration 50s
-   // BOOST_CHECK_EQUAL(matches,3661173);
-   // BOOST_CHECK_EQUAL(nodes,5072213);
-
-   //  cutoff: 5
-   BOOST_CHECK_EQUAL(matches,97342);
-   BOOST_CHECK_EQUAL(nodes,206604);
-   time_op.time_report("all-at-once hashes from start position",nodes);
+   template<typename Cutoff>
+   int
+   time_control(int depth,const char* test_name)
+   {
+      int nodes=0;
+      auto f=[&nodes](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+         {
+            ++nodes;
+         };
+      do_until_ply_cutoff<Cutoff> cutoff(depth,f);
+      board_t b=initial_board();
+      TimeOperation time_op;
+      analyze_position<side::white>(b,null_context,cutoff);
+      time_op.time_report(test_name,nodes);
+      return nodes;
+   }
 }
 
-struct hash_checker: move_checker
+BOOST_AUTO_TEST_CASE( control_timing_test )
+{
+   {
+      // do_until_ply_cutoff<minimax> cutoff(4,f);
+      int nodes=time_control<minimax>(4,"minimax nodes test");
+      //  cutoff: 6 // duration 50s
+      // BOOST_CHECK_EQUAL(nodes,5072213);
+      //  cutoff: 5
+      // BOOST_CHECK_EQUAL(nodes,206604);
+      //  cutoff: 4
+      BOOST_CHECK_EQUAL(nodes,9323);
+   }
+   time_control<negamax>(8,"negamax nodes test");
+   {
+      int nodes=0;
+      auto f=[&nodes](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+         {
+            ++nodes;
+         };
+      do_until_ply_cutoff<minimax,incremental_hash> cutoff(4,f);
+      board_t b=initial_board();
+      TimeOperation time_op;
+      uint64_t initial_hash=hhash(b,side::white,null_context);
+      cutoff.hasher.hash=initial_hash;
+      analyze_position<side::white>(b,null_context,cutoff);
+      BOOST_CHECK_EQUAL(cutoff.hasher.hash,initial_hash);
+      time_op.time_report("incremental hash nodes test",nodes);
+   }
+   {
+      int nodes=0;
+      int matches=0;
+      std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
+      nodes=0;
+      board_t b=initial_board();
+
+      auto fhash=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+         {
+            ++nodes;
+            uint64_t hash=hhash(board,t,ctx);
+            auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
+            auto lb = r.lower_bound(hash);
+            if(lb!=end(r))
+               if(!(r.key_comp()(hash,lb->first)))
+               {
+                  ++matches;
+                  BOOST_CHECK(state==lb->second);
+                  return;
+               }
+            r.insert(lb,std::make_pair(hash,state)); // emplace_hint?
+         };
+
+      TimeOperation time_op;
+      do_until_ply_cutoff<minimax> cutoff(5,fhash);
+      analyze_position<side::white>(b,null_context,cutoff);
+      //  cutoff: 6 // duration 50s
+      // BOOST_CHECK_EQUAL(matches,3661173);
+      // BOOST_CHECK_EQUAL(nodes,5072213);
+
+      //  cutoff: 5
+      BOOST_CHECK_EQUAL(matches,97342);
+      BOOST_CHECK_EQUAL(nodes,206604);
+      time_op.time_report("all-at-once hashes from start position",nodes);
+   }
+}
+
+struct hash_checker: move_checker<incremental_hash>
 {
    hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
-      move_checker(b,c,ctx,input_moves),
-      hash(hhash(b,c,ctx))
-   {}
+      move_checker(b,c,ctx,input_moves)
+   {
+      hasher.hash=hhash(b,c,ctx);
+   }
 
    bool
    leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
    {
       uint64_t complete_hash=hhash(board,c,ctx);
-      BOOST_CHECK_EQUAL(hash,complete_hash);
+      BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
       return move_checker::leaf_check(board,c,ctx,bm);
    }
-
-   typedef control::scoped_hash<hash_checker> scoped_hash;
-   control::minimax pruning;
-   uint64_t hash;
 };
 
 

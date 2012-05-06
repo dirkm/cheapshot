@@ -11,37 +11,42 @@ namespace cheapshot
    namespace control
    {
       // helpers to sweeten engine-configuration in the controllers below
-      class noop; class incremental_hash;
+      struct incremental_hash
+      {
+         uint64_t hash;
+      };
 
-      template<typename Controller,typename Type=incremental_hash>
+      template<typename T=incremental_hash>
       struct scoped_hash
       {
       public:
          template<typename HashFun, typename... Args>
-         scoped_hash(Controller& ec, const HashFun& hashfun, Args&&...  args):
-            sh(ec.hash,hashfun,args...) // std::forward ??
+         scoped_hash(T& hasher, const HashFun& hashfun, Args&&...  args):
+            sh(hasher.hash,hashfun,args...) // std::forward ??
          {}
       private:
          cheapshot::scoped_hash sh;
       };
 
-      template<typename Controller>
-      struct scoped_hash<Controller,noop>
+      struct noop_hash{};
+
+      template<>
+      struct scoped_hash<noop_hash>
       {
       public:
          template<typename HashFun, typename... Args>
-         scoped_hash(Controller& ec, const HashFun& hashfun, Args&&...  args)
+         scoped_hash(noop_hash&, const HashFun& hashfun, Args&&...  args)
          {}
 
          scoped_hash(const scoped_hash&) = delete;
          scoped_hash& operator=(const scoped_hash&) = delete;
       };
 
-      template<typename Controller>
+      template<typename C>
       class scoped_ply_count
       {
       public:
-         explicit scoped_ply_count(Controller& ec_):
+         explicit scoped_ply_count(C& ec_):
             ec(ec_)
          {
             --ec.remaining_plies;
@@ -55,7 +60,7 @@ namespace cheapshot
          scoped_ply_count(const scoped_ply_count&) = delete;
          scoped_ply_count& operator=(const scoped_ply_count&) = delete;
       private:
-         Controller& ec;
+         C& ec;
       };
 
 
@@ -171,10 +176,49 @@ namespace cheapshot
                 (count_set_bits(black_side[idx(p)])))*weight(p);
          return r;
       }
+
+      struct incremental_material
+      {
+         uint64_t material;
+      };
+
+      template<typename Controller=incremental_material>
+      struct scoped_material
+      {
+      public:
+         template<typename HashFun, typename... Args>
+         scoped_material(Controller& mat_cont_, piece p):
+            mat_cont(mat_cont_),
+            old_material(mat_cont.material)
+         {
+            mat_cont.material-=weight(p);
+         }
+
+         ~scoped_material()
+         {
+            mat_cont=old_material;
+         }
+         scoped_material(const scoped_material&) = delete;
+         scoped_material& operator=(const scoped_material&) = delete;
+      private:
+         Controller& mat_cont;
+         int old_material;
+      };
+
+      struct noop_material{};
+
+      template<>
+      struct scoped_material<noop_material>
+      {
+         scoped_material(noop_material& mat_cont_, piece p){}
+
+         scoped_material(const scoped_material&) = delete;
+         scoped_material& operator=(const scoped_material&) = delete;
+      };
    }
 
-   // combination of controls, to be used in analyze_position
-   template<typename Pruning>
+// different controls, to be combined in analyze_position
+   template<typename Pruning, typename HashController>
    class max_ply_cutoff
    {
    public:
@@ -186,22 +230,23 @@ namespace cheapshot
       leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
-         bool leaf_node=(remaining_plies==0);
-         if(leaf_node)
+         bool is_leaf_node=(remaining_plies==0);
+         if(is_leaf_node)
          {
-            pruning.score=control::score_material(board);
+            // pruning.score=control::score_material(board);
+            pruning.score=0;
             // TODO: optimize
             if(c==side::black)
                pruning.score=-pruning.score;
          }
-         return leaf_node;
+         return is_leaf_node;
       }
-
-      typedef control::scoped_hash<max_ply_cutoff,control::noop> scoped_hash;
-      Pruning pruning;
 
       typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
       int remaining_plies;
+
+      HashController hasher;
+      Pruning pruning;
    };
 
    struct transposition_info
