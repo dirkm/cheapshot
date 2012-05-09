@@ -5,6 +5,7 @@
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
+#include "cheapshot/score.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/hash.hh"
 
@@ -128,6 +129,13 @@ namespace cheapshot
       side moved_side;
       piece moved_piece;
       uint64_t mask;
+   };
+
+   inline
+   piece
+   captured_material(const move_info& mi)
+   {
+      return mi.moved_piece;
    };
 
    typedef std::array<move_info,2> move_info2;
@@ -272,20 +280,6 @@ namespace cheapshot
       return own_under_attack;
    }
 
-   namespace score
-   {
-      // high scores mean a better position for the color with the move
-      // no_valid_move is used internally, to flag an invalid position
-      // the engine strives to maximize the score for each color per turn
-
-      // stay clear of highest bit, because possible overflow when negating
-      constexpr int limit=(std::numeric_limits<int>::max()/2)+1;
-
-      constexpr int no_valid_move=-limit;
-      constexpr int checkmate=(-no_valid_move)>>1;
-      constexpr int stalemate=checkmate>>1;
-   };
-
    struct move_set
    {
       piece moved_piece;
@@ -307,6 +301,19 @@ namespace cheapshot
    private:
       scoped_move<MoveInfo> sc_move;
       control::scoped_hash<decltype(Controller::hasher)> sc_hash;
+   };
+
+   template<typename Controller>
+   class scoped_move_hash_capture
+   {
+   public:
+      scoped_move_hash_capture(Controller& ec, const move_info2& mi2):
+         sc_mvhash(ec,mi2),
+         sc_material(ec.material,captured_material(mi2[1]))
+      {}
+   private:
+      scoped_move_hash<Controller,move_info2> sc_mvhash;
+      control::scoped_material<decltype(Controller::material)> sc_material;
    };
 
    template<typename Controller>
@@ -341,8 +348,9 @@ namespace cheapshot
    {
       typedef scoped_move_hash<Controller,move_info> scoped;
       typedef scoped_move_hash<Controller,move_info2> scoped2;
+      typedef scoped_move_hash_capture<Controller> scoped_capture;
       typedef control::scoped_hash<decltype(ec.hasher)> scoped_hash;
-      // typedef control::scoped_material<decltype(ec.material)> scoped_material;
+      typedef control::scoped_material<decltype(ec.material)> scoped_material;
 
       // preparations
       board_metrics bm(board);
@@ -394,7 +402,7 @@ namespace cheapshot
          uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
          if(ep_capture!=0ULL)
          {
-            scoped2 mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
+            scoped_capture mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
             if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
                return;
          }

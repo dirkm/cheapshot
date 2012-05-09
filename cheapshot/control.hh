@@ -186,7 +186,6 @@ namespace cheapshot
       struct scoped_material
       {
       public:
-         template<typename HashFun, typename... Args>
          scoped_material(Controller& mat_cont_, piece p):
             mat_cont(mat_cont_),
             old_material(mat_cont.material)
@@ -245,8 +244,9 @@ namespace cheapshot
       typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
       int remaining_plies;
 
-      HashController hasher;
       Pruning pruning;
+      HashController hasher;
+      control::noop_material material;
    };
 
    struct transposition_info
