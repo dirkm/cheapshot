@@ -123,7 +123,7 @@ namespace cheapshot
          hashref(hashref_),
          oldhash(hashref_)
       {
-         hashref_^=hashfun(args...);
+         hashref_^=hashfun(std::forward<Args>(args)...);
       }
 
       ~scoped_hash()

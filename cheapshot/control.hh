@@ -22,7 +22,7 @@ namespace cheapshot
       public:
          template<typename HashFun, typename... Args>
          scoped_hash(T& hasher, const HashFun& hashfun, Args&&...  args):
-            sh(hasher.hash,hashfun,args...) // std::forward ??
+            sh(hasher.hash,hashfun,std::forward<Args>(args)...)
          {}
       private:
          cheapshot::scoped_hash sh;
@@ -64,34 +64,36 @@ namespace cheapshot
       };
 
 
-      template<typename T> class scoped_score;
+      template<typename T, side S> class scoped_score;
 
       struct minimax
       {
-         constexpr minimax():
-            score(-score::limit)
+         explicit constexpr minimax(side c):
+            score(-score::limit(c))
          {}
 
-         int score;
+         template<side S>
          static constexpr bool cutoff() { return false; }
+
+         int score;
 
          minimax(const minimax&) = delete;
          minimax& operator=(const minimax&) = delete;
       };
 
-      template<>
-      struct scoped_score<minimax>
+      template<side S>
+      struct scoped_score<minimax,S>
       {
          scoped_score(minimax& m_):
             m(m_),
             old_score(m.score)
          {
-            m.score=score::no_valid_move;
+            m.score=score::no_valid_move(other_side(S));
          }
 
          ~scoped_score()
          {
-            m.score=std::max(old_score,-m.score);
+            m.score=score::best<S>(old_score,m.score);
          }
 
          scoped_score(const scoped_score&) = delete;
@@ -103,51 +105,72 @@ namespace cheapshot
 
       struct negamax
       {
-         constexpr negamax():
-            alpha(-score::limit),
-            score(-score::limit),
-            beta(score::limit)
+         explicit constexpr negamax(side c):
+            alpha(-score::limit(side::white)),
+            score(-score::limit(c)),
+            beta(-score::limit(side::black))
          {}
          int alpha;
          int score;
          int beta;
-         constexpr bool cutoff() const { return score>=beta; }
+
+         template<side S>
+         int treshold() const;
+
+         template<side S>
+         int& treshold();
+
+         template<side S>
+         bool cutoff() const { return score::less_equal<S>(treshold<other_side(S)>(),score); }
 
          negamax(const negamax&) = delete;
          negamax& operator=(const negamax&) = delete;
       };
 
       template<>
-      class scoped_score<negamax>
+      inline int
+      negamax::treshold<side::white>() const { return alpha; }
+
+      template<>
+      inline int
+      negamax::treshold<side::black>() const { return beta; }
+
+      template<>
+      inline int&
+      negamax::treshold<side::white>() { return alpha; }
+
+      template<>
+      inline int&
+      negamax::treshold<side::black>() { return beta; }
+
+      template<side S>
+      class scoped_score<negamax,S>
       {
       public:
          scoped_score(negamax& m_):
             m(m_),
-            old_alpha(m.alpha),
+            old_treshold(m.template treshold<S>()),
             old_score(m.score),
-            old_beta(m.beta)
+            old_treshold_other(m.template treshold<other_side(S)>())
          {
-            // alpha and score are separate variables
-            //   since score is set to no_valid_move at the start of analyze_position
-            m.alpha=-old_beta;
-            m.score=score::no_valid_move;
-            m.beta=-old_alpha;
+            m.score=score::no_valid_move(other_side(S));
          }
 
          ~scoped_score()
          {
-            m.score=std::max(old_score,-m.score);
-            m.alpha=std::max(old_alpha,m.score);
-            m.beta=old_beta;
+            m.score=score::best<S>(old_score,m.score);
+            m.template treshold<S>()=score::best<S>(old_treshold,m.score);
+            m.template treshold<other_side(S)>()=old_treshold_other;
          }
 
          scoped_score(const scoped_score&) = delete;
          scoped_score& operator=(const scoped_score&) = delete;
       private:
+
          negamax& m;
-         int old_alpha;
+         int old_treshold;
          int old_score;
-         int old_beta;
+         int old_treshold_other;
       };
 
       namespace detail
@@ -221,8 +244,9 @@ namespace cheapshot
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(int max_plies):
-         remaining_plies(max_plies)
+      explicit constexpr max_ply_cutoff(side c,int max_plies):
+         remaining_plies(max_plies),
+         pruning(c)
       {}
 
       bool
@@ -234,9 +258,6 @@ namespace cheapshot
          {
             // pruning.score=control::score_material(board);
             pruning.score=0;
-            // TODO: optimize
-            if(c==side::black)
-               pruning.score=-pruning.score;
          }
          return is_leaf_node;
       }

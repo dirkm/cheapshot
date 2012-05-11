@@ -13,7 +13,7 @@ namespace cheapshot
 {
    namespace control
    {
-      template<typename T> class scoped_score;
+      template<typename T, side S> class scoped_score;
       template<typename T> class scoped_hash;
       template<typename T> class scoped_material;
    }
@@ -377,7 +377,7 @@ namespace cheapshot
          const bool king_en_prise=get_side<other_side(S)>(board)[idx(piece::king)]&opponent_under_attack;
          if(king_en_prise)
          {
-            score=-score::no_valid_move;
+            score=score::no_valid_move(other_side(S));
             return;
          }
       }
@@ -403,7 +403,7 @@ namespace cheapshot
          if(ep_capture!=0ULL)
          {
             scoped_capture mv(ec,en_passant_info<S>(board,*origin_iter,ep_capture));
-            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+            if(recurse_with_cutoff<S>(board,ctx,ec))
                return;
          }
       }
@@ -418,7 +418,7 @@ namespace cheapshot
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
             scoped2 mv(ec,castle_info<S>(board,cit));
-            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+            if(recurse_with_cutoff<S>(board,ctx,ec))
                return;
          }
 
@@ -435,7 +435,7 @@ namespace cheapshot
                {
                   // all promotions
                   scoped2 mv2(ec,promotion_info<S>(board,prom,*dest_iter));
-                  if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+                  if(recurse_with_cutoff<S>(board,ctx,ec))
                      return;
                }
             }
@@ -447,7 +447,7 @@ namespace cheapshot
             {
                // captures
                scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-               if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+               if(recurse_with_cutoff<S>(board,ctx,ec))
                   return;
             }
             for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -459,7 +459,7 @@ namespace cheapshot
                scoped mv(ec,basic_move_info<S>(board,piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                scoped_hash scoped_ep(ec.hasher,hhash_ep_change0,ctx.ep_info);
-               if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+               if(recurse_with_cutoff<S>(board,ctx,ec))
                   return;
                ctx.ep_info=0ULL;
             }
@@ -477,7 +477,7 @@ namespace cheapshot
          {
             // captures
             scoped2 mv(ec,basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+            if(recurse_with_cutoff<S>(board,ctx,ec))
                return;
          }
          for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -486,15 +486,17 @@ namespace cheapshot
          {
             // moves
             scoped mv(ec,basic_move_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter));
-            if(recurse_with_cutoff<other_side(S)>(board,ctx,ec))
+            if(recurse_with_cutoff<S>(board,ctx,ec))
                return;
          }
       }
 
-      if(score==score::no_valid_move)
+      if(score==score::no_valid_move(S))
       {
          const bool king_under_attack=get_side<S>(board)[idx(piece::king)]&own_under_attack;
-         score=king_under_attack?-score::checkmate:-score::stalemate;
+         score=king_under_attack?
+            score::checkmate(other_side(S)):
+            score::stalemate(other_side(S));
       }
    }
 
@@ -503,10 +505,10 @@ namespace cheapshot
    recurse_with_cutoff(board_t& board, const context& ctx, Controller& ec)
    {
       {
-         control::scoped_score<decltype(ec.pruning)> scope(ec.pruning);
-         analyze_position<S>(board,ctx,ec);
+         control::scoped_score<decltype(ec.pruning),S> scope(ec.pruning);
+         analyze_position<other_side(S)>(board,ctx,ec);
       }
-      return ec.pruning.cutoff();
+      return ec.pruning.template cutoff<S>();
    }
 
    template<typename Controller>
@@ -517,8 +519,10 @@ namespace cheapshot
       {
          case side::white:
             analyze_position<side::white>(board,ctx,ec);
+            break;
          case side::black:
             analyze_position<side::black>(board,ctx,ec);
+            break;
       }
       return ec.pruning.score;
    }

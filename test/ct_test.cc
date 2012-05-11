@@ -32,5 +32,5 @@ namespace cheapshot
    constexpr castling_t ci=cheapshot::long_castling<side::white>();
    // constexpr uint64_t bm=bit_mixer(0ULL);
 
-   static_assert(count_set_bits(score::limit)==1,"");
+   static_assert(count_set_bits(score::limit(side::white))==1,"");
 }
