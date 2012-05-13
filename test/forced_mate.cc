@@ -32,8 +32,8 @@ main(int argc, const char* argv[])
       cheapshot::max_ply_cutoff<control::minimax,control::noop_hash> cutoff(c,nrplies);
       int s=cheapshot::score_position(b,c,ctx,cutoff);
       std::cout <<
-         ((s==cheapshot::score::checkmate(c))?"true/w":
-          (s==cheapshot::score::checkmate(other_side(c))?"true/b":"false"))
+         ((s==cheapshot::score::checkmate(cheapshot::side::white))?"true/w":
+          (s==cheapshot::score::checkmate(cheapshot::side::black))?"true/b":"false")
           << std::endl;
       return 0;
    }
