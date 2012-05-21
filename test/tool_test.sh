@@ -15,3 +15,7 @@ forced_mate_test 3 "2r1nr1k/pp1q1p1p/3bpp2/5P2/1P1Q4/P3P3/1B3P1P/R3K1R1 w Q - 0 
 #morphy
 forced_mate_test 2 "5Kbk/6pp/6P1/8/8/8/8/7R w - - 0 1" "false"
 forced_mate_test 3 "5Kbk/6pp/6P1/8/8/8/8/7R w - - 0 1" "true/w"
+
+# TODO
+# test print_fen
+# test print_position

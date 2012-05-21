@@ -6,6 +6,7 @@
 #include <iosfwd>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 #include "cheapshot/board.hh"
 
@@ -73,7 +74,7 @@ namespace cheapshot
 
    extern void
    make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::initializer_list<const char*>& input_moves,
+                             const std::vector<const char*>& input_moves,
                              const std::function<void (board_t& board, side c, context& ctx)>& fun=
                              [](board_t& board, side c, context& ctx){});
 }

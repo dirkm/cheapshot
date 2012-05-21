@@ -43,6 +43,41 @@ namespace cheapshot
 
       template<side S>
       constexpr int best(int l, int r) {return less_equal<S>(l,r)?r:l; }
+
+      namespace detail
+      {
+         // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
+         constexpr int weight[count<piece>()-1]=
+         {
+            100, 320, 330, 500, 900 /* kings are neved captured */
+         };
+      }
+
+      constexpr int
+      weight(piece p)
+      {
+         return detail::weight[idx(p)];
+      }
+
+      constexpr int
+      weight(side c, piece p)
+      {
+         return (c==side::white)?
+            detail::weight[idx(p)]:
+            -detail::weight[idx(p)];
+      }
+
+      inline int
+      material(const board_t& b)
+      {
+         int r=0;
+         const board_side& white_side=b[idx(side::white)];
+         const board_side& black_side=b[idx(side::black)];
+         for(piece p=piece::pawn;p<piece::king;++p)
+            r+=(count_set_bits(white_side[idx(p)])-
+                (count_set_bits(black_side[idx(p)])))*weight(p);
+         return r;
+      }
    }
 }
 

@@ -15,17 +15,17 @@ using namespace cheapshot::control;
 
 namespace
 {
-   template<typename HashController=noop_hash>
-   struct move_checker: public max_ply_cutoff<minimax,HashController>
+   template<typename HashController=noop_hash, typename MaterialController=noop_material>
+   struct move_checker: public max_ply_cutoff<minimax,HashController,MaterialController>
    {
-      typedef max_ply_cutoff<minimax,HashController> parent;
-      move_checker(side c,const std::initializer_list<board_t>& boards_):
+      typedef max_ply_cutoff<minimax,HashController,MaterialController> parent;
+      move_checker(side c,std::vector<board_t>&& boards_):
          parent(c,boards_.size()),
          all_analyzed(false),
          boards(boards_)
       {}
 
-      move_checker(board_t b, side c, context ctx, const std::initializer_list<const char*>& input_moves):
+      move_checker(board_t b, side c, context ctx, const std::vector<const char*>& input_moves):
          parent(c,input_moves.size()+1),
          all_analyzed(false)
       {
@@ -59,10 +59,10 @@ namespace
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   template<typename Pruning, typename HashController=noop_hash>
-   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController>
+   template<typename Pruning, typename HashController=noop_hash, typename MaterialController=noop_material>
+   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController,MaterialController>
    {
-      typedef max_ply_cutoff<Pruning,HashController> parent;
+      typedef max_ply_cutoff<Pruning,HashController,MaterialController> parent;
    public:
       do_until_ply_cutoff(side c, int max_depth, const funpos& fun_):
          parent(c,max_depth),
@@ -555,11 +555,11 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(side::black,1,mate_board);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::black,1,mate_board);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(side::black,1,mate_board);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::black,1,mate_board);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -572,7 +572,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash> >(side::white,1,mate_board);
+      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,1,mate_board);
    }
    {
       // wikipedia stalemate article
@@ -585,7 +585,7 @@ BOOST_AUTO_TEST_CASE( game_finish_test )
          "........\n"
          "........\n"
          "........\n");
-      max_ply_cutoff<minimax,noop_hash> cutoff(side::black,1);
+      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::black,1);
       analyze_position<side::black>(stalemate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::stalemate(side::white));
    }
@@ -700,9 +700,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker<> check1(
-            side::white,
-            {multiple_promotions_initial,multiple_promotions1});
+         move_checker<> check1(side::white,{multiple_promotions_initial,multiple_promotions1});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check1);
          BOOST_CHECK(check1.all_analyzed);
       }
@@ -716,9 +714,7 @@ BOOST_AUTO_TEST_CASE( analyze_promotion_test )
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker<> check(
-            side::white,
-            {multiple_promotions_initial,multiple_promotions2});
+         move_checker<> check(side::white,{multiple_promotions_initial,multiple_promotions2});
          analyze_position<side::white>(multiple_promotions_initial,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
@@ -763,9 +759,9 @@ namespace
       }
    };
 
-   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat,noop_hash>
+   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat,noop_hash,noop_material>
    {
-      typedef max_ply_cutoff<negamax_stat,noop_hash> parent;
+      typedef max_ply_cutoff<negamax_stat,noop_hash,noop_material> parent;
    public:
       max_ply_cutoff_stat(side c,int max_depth):
          parent(c,max_depth),
@@ -854,10 +850,10 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash> >(side::white,5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,5,b1,b2,b3,b4,b5);
       // scan_mate<side::black,max_ply_cutoff<negamax,noop_hash> >(side::white,5,b1,b2,b3,b4,b5);
       // negamax is considerably faster
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,6,b,b1,b2,b3,b4,b5);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,6,b,b1,b2,b3,b4,b5);
    }
    {
       board_t b=scan_board(
@@ -901,8 +897,8 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(side::white,4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,4,b,b1,b2,b3);
    }
 
    {
@@ -959,22 +955,22 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(side::white,4,b);
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,4,b);
+      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,4,b);
+      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,4,b);
    }
-   {
-      board_t b=scan_board(
-         "rnbqkbn.\n"
-         "ppppp...\n"
-         ".......r\n"
-         "......pp\n"
-         "...P.p..\n"
-         "...BP.B.\n"
-         "PPP..PPP\n"
-         "RN.QK.NR\n"
-         );
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash> >(side::white,4,b);
-   }
+   // {
+   //    board_t b=scan_board(
+   //       ".......Q\n"
+   //       "ppp..N..\n"
+   //       "..n...r.\n"
+   //       "....pb..\n"
+   //       ".....pk.\n"
+   //       "...q....\n"
+   //       "......P.\n"
+   //       "..B.R..K\n"
+   //       );
+   //    scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,10,b);
+   // }
 }
 
 BOOST_AUTO_TEST_CASE( time_walk_moves_test )
@@ -1001,7 +997,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    volatile int nr_plies=1;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<minimax,noop_hash> cutoff(side::white,nr_plies);
+      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::white,nr_plies);
       analyze_position<side::white>(mate_board,null_context,cutoff);
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
@@ -1025,7 +1021,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
    volatile int nr_plies=17;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<minimax,noop_hash> cutoff(side::white,nr_plies);
+      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::white,nr_plies);
       analyze_position<side::white>(caged_kings,null_context,cutoff);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
@@ -1033,7 +1029,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
 
 BOOST_AUTO_TEST_CASE( score_material_test )
 {
-   BOOST_CHECK_EQUAL(score_material(initial_board()),0);
+   BOOST_CHECK_EQUAL(score::material(initial_board()),0);
    board_t imbalanced_board=scan_board(
       "rnbqkbnr\n"
       "..pppppp\n"
@@ -1043,8 +1039,9 @@ BOOST_AUTO_TEST_CASE( score_material_test )
       "........\n"
       "PPPPPPP.\n"
       "RNBQK...\n");
-   BOOST_CHECK_EQUAL(
-      score_material(imbalanced_board),
+
+   using score::weight;
+   BOOST_CHECK_EQUAL(score::material(imbalanced_board),
       -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
       weight(piece::pawn));
 }
@@ -1074,14 +1071,14 @@ BOOST_AUTO_TEST_CASE( time_endgame_mate )
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff<minimax,noop_hash> >(side::white,7,rook_queen_mate);
+         scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff<negamax,noop_hash> >(side::white,7,rook_queen_mate);
+         scan_mate<side::black,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
@@ -1089,7 +1086,7 @@ BOOST_AUTO_TEST_CASE( time_endgame_mate )
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,6,b);
+         scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,6,b);
       // minimax
       // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
       time_op.time_report("middlegame mate in 6 plies (ab)",ops);
@@ -1183,7 +1180,7 @@ BOOST_AUTO_TEST_CASE( control_timing_test )
 
 struct hash_checker: move_checker<incremental_hash>
 {
-   hash_checker(const board_t& b, const context& ctx, side c, const std::initializer_list<const char*>& input_moves):
+   hash_checker(const board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
       move_checker(b,c,ctx,input_moves)
    {
       hasher.hash=hhash(b,c,ctx);
@@ -1198,6 +1195,31 @@ struct hash_checker: move_checker<incremental_hash>
    }
 };
 
+const std::vector<const char*> simple_start={"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"};
+const std::vector<const char*> en_passant_context={"e2-e4","e7-e5","Ng1-f3"};
+const std::vector<const char*> en_passant_capture={"e2-e4","d7-d5","e4xd5"};
+const std::vector<const char*> castling_start={"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"};
+const std::vector<const char*> multiple_promotions_cont={"c7xb8=Q","Ke8-f8"};
+const std::vector<const char*> byrne_fischer=
+{
+   "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
+   "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
+   "Qd1-b3","d5xc4","Qb3xc4","c7-c6","e2-e4",
+   "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
+   "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
+   "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
+   "Be7-c5","Rf8-e8","Ke1-f1","Bg4-e6","Bc5xb6",
+   "Be6xc4","Kf1-g1","Nc3-e2","Kg1-f1","Ne2xd4",
+   "Kf1-g1","Nd4-e2","Kg1-f1","Ne2-c3","Kf1-g1",
+   "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
+   "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
+   "Re8xe1","Qb6-d8","Bg7-f8","Nf3xe1","Bc4-d5",
+   "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
+   "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5",
+   "Kg1-f1","Ne4-g3","Kf1-e1","Bc5-b4","Ke1-d1",
+   "Bd5-b3","Kd1-c1","Ng3-e2","Kc1-b1","Ne2-c3",
+   "Kb1-c1","Ra2-c2"
+};
 
 BOOST_AUTO_TEST_CASE( incremental_hash_test )
 {
@@ -1205,70 +1227,102 @@ BOOST_AUTO_TEST_CASE( incremental_hash_test )
       // no ctx changes (castling, en passant)
       board_t b=initial_board();
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,
-         {"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"});
+      hash_checker hashcheck(b,ctx,side::white,simple_start);
       analyze_position<side::white>(b,null_context,hashcheck);
    }
    {
       // en passant
       board_t b=initial_board();
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,
-         {"e2-e4","e7-e5","Ng1-f3"});
+      hash_checker hashcheck(b,ctx,side::white,en_passant_context);
       analyze_position<side::white>(b,null_context,hashcheck);
    }
    {
       // capture
       board_t b=initial_board();
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,{"e2-e4","d7-d5","e4xd5"});
+      hash_checker hashcheck(b,ctx,side::white,en_passant_capture);
       analyze_position<side::white>(b,null_context,hashcheck);
    }
-
    {
       // castling
       board_t b=initial_board();
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,
-         {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+      hash_checker hashcheck(b,ctx,side::white,castling_start);
       analyze_position<side::white>(b,null_context,hashcheck);
    }
    {
       board_t b=scan_board(multiple_promotions_initial_board);
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,
-         {"c7xb8=Q","Ke8-f8"});
+      hash_checker hashcheck(b,ctx,side::white,multiple_promotions_cont);
    }
    {
       // Byrne-Fischer game of the century
       board_t b=initial_board();
       context ctx=null_context;
-      hash_checker hashcheck(
-         b,ctx,side::white,{
-            "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
-               "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
-               "Qd1-b3","d5xc4","Qb3xc4","c7-c6","e2-e4",
-               "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
-               "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
-               "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
-               "Be7-c5","Rf8-e8","Ke1-f1","Bg4-e6","Bc5xb6",
-               "Be6xc4","Kf1-g1","Nc3-e2","Kg1-f1","Ne2xd4",
-               "Kf1-g1","Nd4-e2","Kg1-f1","Ne2-c3","Kf1-g1",
-               "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
-               "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
-               "Re8xe1","Qb6-d8","Bg7-f8","Nf3xe1","Bc4-d5",
-               "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
-               "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5",
-               "Kg1-f1","Ne4-g3","Kf1-e1","Bc5-b4","Ke1-d1",
-               "Bd5-b3","Kd1-c1","Ng3-e2","Kc1-b1","Ne2-c3",
-               "Kb1-c1","Ra2-c2"
-               });
+      hash_checker hashcheck(b,ctx,side::white,byrne_fischer);
       analyze_position<side::white>(b,null_context,hashcheck);
+   }
+}
+
+struct material_checker: move_checker<noop_hash,incremental_material>
+{
+   material_checker(const board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
+      move_checker(b,c,ctx,input_moves)
+   {
+      material.material=score::material(b);
+   }
+
+   bool
+   leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+   {
+      int complete_material=score::material(board);
+      BOOST_CHECK_EQUAL(material.material,complete_material);
+      return move_checker::leaf_check(board,c,ctx,bm);
+   }
+};
+
+BOOST_AUTO_TEST_CASE( incremental_material_test )
+{
+   {
+      // no ctx changes (castling, en passant)
+      board_t b=initial_board();
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,simple_start);
+      analyze_position<side::white>(b,null_context,matcheck);
+   }
+   {
+      // en passant
+      board_t b=initial_board();
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,en_passant_context);
+      analyze_position<side::white>(b,null_context,matcheck);
+   }
+   {
+      // capture
+      board_t b=initial_board();
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,en_passant_capture);
+      analyze_position<side::white>(b,null_context,matcheck);
+   }
+   {
+      // castling
+      board_t b=initial_board();
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,castling_start);
+      analyze_position<side::white>(b,null_context,matcheck);
+   }
+   {
+      board_t b=scan_board(multiple_promotions_initial_board);
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,multiple_promotions_cont);
+   }
+   {
+      // Byrne-Fischer game of the century
+      board_t b=initial_board();
+      context ctx=null_context;
+      material_checker matcheck(b,ctx,side::white,byrne_fischer);
+      analyze_position<side::white>(b,null_context,matcheck);
    }
 }
 

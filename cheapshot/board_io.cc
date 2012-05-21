@@ -599,7 +599,7 @@ namespace cheapshot
    // TODO: templatize on container type
    extern void
    make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::initializer_list<const char*>& input_moves,
+                             const std::vector<const char*>& input_moves,
                              const std::function<void (board_t& board, side c, context& ctx)>& fun)
    {
       for(const char* input_move: input_moves)
