@@ -3,7 +3,8 @@
 
 #include <ctime>
 #include <iostream>
-#include <sys/times.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
@@ -58,30 +59,49 @@ runtime_adjusted_ops(long ops, long divisor=4, long multiplier=1)
    return std::max((ops*multiplier)/divisor,1L);
 };
 
+constexpr uint64_t
+to_usec(const timeval& t)
+{
+   return t.tv_sec*1000ULL*1000+t.tv_usec;
+}
+
+inline void
+throw_errno_as_runtime_error(const char* prefix)
+{
+   char errormsg[256];
+   strerror_r(errno,errormsg,sizeof(errormsg));
+   std::ostringstream oss;
+   oss << prefix << ": '" << errormsg << "'";
+   throw std::runtime_error(oss.str());
+}
+
 class TimeOperation
 {
 public:
-   TimeOperation():
-      start_time(times(&start_cpu))
+   TimeOperation()
    {
+      if(getrusage(RUSAGE_THREAD,&start_usage))
+         throw_errno_as_runtime_error("getrusage");
    }
 
    void time_report(const char* descr, long ops)
    {
-      tms end_cpu;
-      std::clock_t end_time = times(&end_cpu);
-      float ops_sec=ops/((end_time - start_time)/ticks_per_sec);
+      rusage end_usage;
+      if (getrusage(RUSAGE_THREAD,&end_usage))
+         throw_errno_as_runtime_error("getrusage");
+      uint64_t utime=to_usec(end_usage.ru_utime)-to_usec(start_usage.ru_utime);
+      uint64_t stime=to_usec(end_usage.ru_stime)-to_usec(start_usage.ru_stime);
+      uint64_t ttime=utime+stime;
+      float ops_per_sec=static_cast<float>(ops)*1e6/ttime;
       std::cout << descr << std::endl
-                << " real time: " << (end_time - start_time)/ticks_per_sec
-                << " user time: " <<  (end_cpu.tms_utime - start_cpu.tms_utime)/ticks_per_sec
-                << " system time: " << (end_cpu.tms_stime - start_cpu.tms_stime)/ticks_per_sec
-                << " ops/sec: " << ops_sec
+                << " real time:" << ttime/1e6
+                << " user time:" << utime/1e6
+                << " system time:" << stime/1e6
+                << " ops/sec:" << ops_per_sec
                 << std::endl;
    }
 private:
-   tms start_cpu;
-   std::clock_t start_time;
-   static const float ticks_per_sec;
+   rusage start_usage;
 };
 
 #endif

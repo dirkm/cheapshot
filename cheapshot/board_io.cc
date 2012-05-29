@@ -443,17 +443,21 @@ namespace cheapshot
    namespace
    {
       enum class special_move { normal, long_castling, short_castling, promotion, ep_capture };
+      enum class game_status { normal, check, checkmate };
 
       struct input_move
       {
          special_move type;
          // params below may not be initialized, depending on move type
          bool is_capture;
+         game_status status; // TODO: checks not flagged
          cheapshot::piece moving_piece;
          uint64_t origin;
          uint64_t destination;
          cheapshot::piece promoting_piece;
       };
+
+      // (?:[PNBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:\=[PNBRQK])?|O(-?O){1,2})[\+#]?(\s*[\!\?]+)?)
 
       input_move
       scan_long_algebraic_move(const char* s)
@@ -497,6 +501,20 @@ namespace cheapshot
             else
                im.type=special_move::normal;
          }
+         switch(*s)
+         {
+            default:
+               im.status=game_status::normal;
+               break;
+            case '+':
+               im.status=game_status::check;
+               ++s;
+               break;
+            case '#':
+               im.status=game_status::checkmate;
+               ++s;
+               break;
+         }
          return im;
       }
 
@@ -512,7 +530,6 @@ namespace cheapshot
             make_move(m);
       }
 
-      // TODO: checks not flagged
       template<side S>
       void
       make_move(board_t& board, context& ctx, const input_move& im)
@@ -550,10 +567,10 @@ namespace cheapshot
                uint64_t dests=movegen(im.origin,bm.all_pieces());
                if(!(dests&im.destination))
                   throw io_error("trying to move to an invalid destination");
-               bool destinationOccupied=im.destination&bm.opposing<S>();
+               bool destination_occupied=im.destination&bm.opposing<S>();
                if(im.is_capture)
                {
-                  if(!destinationOccupied)
+                  if(!destination_occupied)
                      throw io_error("trying to capture a missing piece");
                   move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
                   for(auto m: mi2)
@@ -561,7 +578,7 @@ namespace cheapshot
                }
                else
                {
-                  if(destinationOccupied)
+                  if(destination_occupied)
                      throw io_error("capture without indication with 'x'");
                   move_info mi=basic_move_info<S>(board,im.moving_piece,im.origin,im.destination);
                   make_move(mi);

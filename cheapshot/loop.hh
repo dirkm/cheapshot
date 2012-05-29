@@ -358,11 +358,6 @@ namespace cheapshot
    void
    analyze_position(board_t& board, const context& oldctx, Controller& ec)
    {
-      typedef scoped_move_hash<Controller,move_info> scoped;
-      typedef scoped_move_hash<Controller,move_info2> scoped2;
-      typedef scoped_move_hash_material<Controller> scoped_material_change;
-      typedef control::scoped_hash<decltype(ec.hasher)> scoped_hash;
-
       // preparations
       board_metrics bm(board);
 
@@ -395,6 +390,11 @@ namespace cheapshot
 
       if(ec.leaf_check(board,S,oldctx,bm))
          return;
+
+      typedef scoped_move_hash<Controller,move_info> scoped;
+      typedef scoped_move_hash<Controller,move_info2> scoped2;
+      typedef scoped_move_hash_material<Controller> scoped_material_change;
+      typedef control::scoped_hash<decltype(ec.hasher)> scoped_hash;
 
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 

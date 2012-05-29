@@ -10,9 +10,9 @@ namespace cheapshot
 {
    template<typename T>
    constexpr std::size_t
-   idx(T t) // consider std::enable_if<std::is_enum<T>::value>
+   idx(T t)
    {
-      return (std::size_t)t;
+      return (std::size_t)t; // TODO: use std::underlying_type<T>::type
    }
 
    template<typename T>

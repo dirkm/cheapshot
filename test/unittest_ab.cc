@@ -106,29 +106,30 @@ prune(const tree_t& t, toy s,
 BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 {
    constexpr int branch=std::numeric_limits<int>::min();
+   typedef std::vector<toy> vt;
    static const tree_t game_tree{{
-      /*w0_0*/ {{toy::b1_0,toy::b1_1},branch},
-      /*b1_0*/ {{toy::w2_0,toy::w2_1},branch},
-      /*b1_1*/ {{toy::w2_2,toy::w2_3},branch},
-      /*w2_0*/ {{toy::b3_0,toy::b3_1},branch},
-      /*w2_1*/ {{toy::b3_2},branch},
-      /*w2_2*/ {{toy::b3_3,toy::b3_4},branch},
-      /*w2_3*/ {{toy::b3_5},branch},
-      /*b3_0*/ {{toy::w4_0,toy::w4_1},branch},
-      /*b3_1*/ {{toy::w4_2},branch},
-      /*b3_2*/ {{toy::w4_3},branch},
-      /*b3_3*/ {{toy::w4_4,toy::w4_5},branch},
-      /*b3_4*/ {{toy::w4_6},branch},
-      /*b3_5*/ {{toy::w4_7,toy::w4_8},branch},
-      /*w4_0*/ {{},10},
-      /*w4_1*/ {{},score::checkmate(side::white)},
-      /*w4_2*/ {{},5},
-      /*w4_3*/ {{},3},
-      /*w4_4*/ {{},score::checkmate(side::black)},
-      /*w4_5*/ {{},4},
-      /*w4_6*/ {{},5},
-      /*w4_7*/ {{},-7},
-      /*w4_8*/ {{},-5}
+      /*w0_0*/ {vt{toy::b1_0,toy::b1_1},branch},
+      /*b1_0*/ {vt{toy::w2_0,toy::w2_1},branch},
+      /*b1_1*/ {vt{toy::w2_2,toy::w2_3},branch},
+      /*w2_0*/ {vt{toy::b3_0,toy::b3_1},branch},
+      /*w2_1*/ {vt{toy::b3_2},branch},
+      /*w2_2*/ {vt{toy::b3_3,toy::b3_4},branch},
+      /*w2_3*/ {vt{toy::b3_5},branch},
+      /*b3_0*/ {vt{toy::w4_0,toy::w4_1},branch},
+      /*b3_1*/ {vt{toy::w4_2},branch},
+      /*b3_2*/ {vt{toy::w4_3},branch},
+      /*b3_3*/ {vt{toy::w4_4,toy::w4_5},branch},
+      /*b3_4*/ {vt{toy::w4_6},branch},
+      /*b3_5*/ {vt{toy::w4_7,toy::w4_8},branch},
+      /*w4_0*/ {vt{},10},
+      /*w4_1*/ {vt{},score::checkmate(side::white)},
+      /*w4_2*/ {vt{},5},
+      /*w4_3*/ {vt{},3},
+      /*w4_4*/ {vt{},score::checkmate(side::black)},
+      /*w4_5*/ {vt{},4},
+      /*w4_6*/ {vt{},5},
+      /*w4_7*/ {vt{},-7},
+      /*w4_8*/ {vt{},-5}
       }};
    toy state=toy::w0_0;
 

@@ -30,15 +30,15 @@ namespace
 
 BOOST_AUTO_TEST_SUITE(io_suite)
 
-BOOST_AUTO_TEST_CASE( init_board_test )
+BOOST_AUTO_TEST_CASE(init_board_test )
 {
    boost::test_tools::output_test_stream ots;
    board_t b= initial_board();
    print_board(b,ots);
-   BOOST_CHECK( ots.is_equal(initial_canvas));
+   BOOST_CHECK(ots.is_equal(initial_canvas));
 }
 
-BOOST_AUTO_TEST_CASE( canvas_test )
+BOOST_AUTO_TEST_CASE(canvas_test )
 {
    boost::test_tools::output_test_stream ots;
    static constexpr char test_canvas[]=
@@ -53,16 +53,16 @@ BOOST_AUTO_TEST_CASE( canvas_test )
    constexpr uint64_t test_val=0x123456789ABCDEFUL;
 
    print_position(test_val,ots);
-   BOOST_CHECK( ots.is_equal(test_canvas));
+   BOOST_CHECK(ots.is_equal(test_canvas));
    BOOST_CHECK_EQUAL(scan_canvas(test_canvas,'X'),test_val);
 }
 
-BOOST_AUTO_TEST_CASE( scan_board_test )
+BOOST_AUTO_TEST_CASE(scan_board_test)
 {
    BOOST_CHECK_EQUAL(initial_board(),scan_board(initial_canvas));
 }
 
-BOOST_AUTO_TEST_CASE( scan_fen_test )
+BOOST_AUTO_TEST_CASE(scan_fen_test)
 {
    {
       const char* fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
    }
    {
       // see http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
-      static const char ep_pos[]=
+      static constexpr char ep_pos[]=
          "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
       board_t b;
       side turn;
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE( scan_fen_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( input_move_test )
+BOOST_AUTO_TEST_CASE(input_move_test)
 {
    {
       board_t b=initial_board();

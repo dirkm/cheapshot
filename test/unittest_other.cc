@@ -114,7 +114,7 @@ namespace
       "r...q...\n");
 }
 
-BOOST_AUTO_TEST_CASE( moves_generator_test )
+BOOST_AUTO_TEST_CASE(moves_generator_test)
 {
    basic_moves_generator_test(
       "rnbqkbnr\n"
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( moves_generator_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( scoped_move_test )
+BOOST_AUTO_TEST_CASE(scoped_move_test)
 {
    const char c[]=
       "........\n"
@@ -276,7 +276,7 @@ is_castling_allowed(const board_t& board, const castling_t& ci)
    return ci.castling_allowed(bm.own<S>(),own_under_attack);
 }
 
-BOOST_AUTO_TEST_CASE( castle_test )
+BOOST_AUTO_TEST_CASE(castle_test)
 {
    constexpr auto sci=short_castling<side::white>();
    {
@@ -515,9 +515,9 @@ namespace
       {
          std::ostringstream oss;
          print_board(b,oss);
-         BOOST_TEST_MESSAGE( "depth " << depth << "\n" <<
+         BOOST_TEST_MESSAGE("depth " << depth << "\n" <<
                              "side " << to_char(S) << "\n"
-                             << oss.str() );
+                             << oss.str());
       }
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate(winning_side));
    }
@@ -542,7 +542,7 @@ namespace
       "RNB.K..R\n");
 }
 
-BOOST_AUTO_TEST_CASE( game_finish_test )
+BOOST_AUTO_TEST_CASE(game_finish_test)
 {
    // mate-in-one tests
    {
@@ -597,7 +597,7 @@ namespace
    const board_t en_passant_after_capture_board=scan_board(en_passant_after_capture_canvas);
 }
 
-BOOST_AUTO_TEST_CASE( analyze_en_passant_test )
+BOOST_AUTO_TEST_CASE(analyze_en_passant_test)
 {
    board_t en_passant_initial=en_passant_initial_board;
 
@@ -639,7 +639,7 @@ constexpr char multiple_promotions_initial_board[]=
    "........\n"
    ".......K\n";
 
-BOOST_AUTO_TEST_CASE( analyze_promotion_test )
+BOOST_AUTO_TEST_CASE(analyze_promotion_test)
 {
    {
       board_t promotion_initial=scan_board(
@@ -793,7 +793,7 @@ namespace
       ".R....K.\n";
 }
 
-BOOST_AUTO_TEST_CASE( find_mate_test )
+BOOST_AUTO_TEST_CASE(find_mate_test)
 {
    {
 // white to move mate in 3
@@ -913,7 +913,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ".PP.P...\n"
          "PB...PPP\n"
          "R...K..R\n"
-         );
+        );
       board_t b1=scan_board(
          "r.qk...r\n"
          "p.p.pppp\n"
@@ -923,7 +923,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-         );
+        );
       board_t b2=scan_board(
          "r..k...r\n"
          "p.pqpppp\n"
@@ -933,7 +933,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-         );
+        );
       board_t b3=scan_board(
          "r..k...r\n"
          "p.pQpppp\n"
@@ -943,7 +943,7 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-         );
+        );
       {
          board_t btemp=b;
          constexpr auto lci=short_castling<side::white>();
@@ -968,12 +968,12 @@ BOOST_AUTO_TEST_CASE( find_mate_test )
    //       "...q....\n"
    //       "......P.\n"
    //       "..B.R..K\n"
-   //       );
+   //      );
    //    scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,10,b);
    // }
 }
 
-BOOST_AUTO_TEST_CASE( time_walk_moves_test )
+BOOST_AUTO_TEST_CASE(time_walk_moves_test)
 {
    const board_t b=test_board1;
    volatile uint8_t r=0;
@@ -989,7 +989,7 @@ BOOST_AUTO_TEST_CASE( time_walk_moves_test )
    time_op.time_report("move set walk",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_mate_check )
+BOOST_AUTO_TEST_CASE(time_mate_check)
 {
    board_t mate_board=scan_board(canvas_mate_board1);
    TimeOperation time_op;
@@ -1003,7 +1003,7 @@ BOOST_AUTO_TEST_CASE( time_mate_check )
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }
 
-BOOST_AUTO_TEST_CASE( upper_bound_nps )
+BOOST_AUTO_TEST_CASE(upper_bound_nps)
 {
    // http://www.schach-computer.info/wiki/index.php/Rechentiefe
    board_t caged_kings=scan_board(
@@ -1027,7 +1027,7 @@ BOOST_AUTO_TEST_CASE( upper_bound_nps )
    time_op.time_report("caged kings at ply depth 17",ops);
 }
 
-BOOST_AUTO_TEST_CASE( score_material_test )
+BOOST_AUTO_TEST_CASE(score_material_test)
 {
    BOOST_CHECK_EQUAL(score::material(initial_board()),0);
    board_t imbalanced_board=scan_board(
@@ -1046,7 +1046,7 @@ BOOST_AUTO_TEST_CASE( score_material_test )
       weight(piece::pawn));
 }
 
-BOOST_AUTO_TEST_CASE( time_endgame_mate )
+BOOST_AUTO_TEST_CASE(time_endgame_mate)
 {
    // http://www.mychessblog.com/7-endgame-positions-with-endgame-tactics-for-quick-checkmate-part-1/
    // board_t rook_queen_mate=scan_board(
@@ -1113,7 +1113,7 @@ namespace
    }
 }
 
-BOOST_AUTO_TEST_CASE( control_timing_test )
+BOOST_AUTO_TEST_CASE(control_timing_test)
 {
    {
       // do_until_ply_cutoff<minimax> cutoff(4,f);
@@ -1195,12 +1195,12 @@ struct hash_checker: move_checker<incremental_hash>
    }
 };
 
-const std::vector<const char*> simple_start={"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"};
-const std::vector<const char*> en_passant_context={"e2-e4","e7-e5","Ng1-f3"};
-const std::vector<const char*> en_passant_capture={"e2-e4","d7-d5","e4xd5"};
-const std::vector<const char*> castling_start={"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"};
-const std::vector<const char*> multiple_promotions_cont={"c7xb8=Q","Ke8-f8"};
-const std::vector<const char*> byrne_fischer=
+const std::vector<const char*> simple_start{"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"};
+const std::vector<const char*> en_passant_context{"e2-e4","e7-e5","Ng1-f3"};
+const std::vector<const char*> en_passant_capture{"e2-e4","d7-d5","e4xd5"};
+const std::vector<const char*> castling_start{"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"};
+const std::vector<const char*> multiple_promotions_cont{"c7xb8=Q","Ke8-f8"};
+const std::vector<const char*> byrne_fischer
 {
    "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
    "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
@@ -1221,7 +1221,7 @@ const std::vector<const char*> byrne_fischer=
    "Kb1-c1","Ra2-c2"
 };
 
-BOOST_AUTO_TEST_CASE( incremental_hash_test )
+BOOST_AUTO_TEST_CASE(incremental_hash_test)
 {
    {
       // no ctx changes (castling, en passant)
@@ -1282,7 +1282,7 @@ struct material_checker: move_checker<noop_hash,incremental_material>
    }
 };
 
-BOOST_AUTO_TEST_CASE( incremental_material_test )
+BOOST_AUTO_TEST_CASE(incremental_material_test)
 {
    {
       // no ctx changes (castling, en passant)

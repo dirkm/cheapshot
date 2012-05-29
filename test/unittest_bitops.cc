@@ -12,13 +12,10 @@
 
 using namespace cheapshot;
 
-// definitions of test/unittest.hh
-const float TimeOperation::ticks_per_sec=static_cast<float>(sysconf(_SC_CLK_TCK));
-
 BOOST_AUTO_TEST_SUITE(bitops_suite)
 // testcases for piece moves and basic IO
 
-BOOST_AUTO_TEST_CASE( bit_iterator_test )
+BOOST_AUTO_TEST_CASE(bit_iterator_test)
 {
    {
       int i=0;
@@ -43,7 +40,7 @@ BOOST_AUTO_TEST_CASE( bit_iterator_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( board_iterator_test )
+BOOST_AUTO_TEST_CASE(board_iterator_test)
 {
    {
       int i=0;
@@ -70,7 +67,7 @@ BOOST_AUTO_TEST_CASE( board_iterator_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( primitive_test )
+BOOST_AUTO_TEST_CASE(primitive_test)
 {
    BOOST_CHECK_EQUAL(highest_bit_no_zero(0xF123UL),0x8000UL);
    BOOST_CHECK_EQUAL(highest_bit_no_zero(0x1UL),0x1UL);
@@ -78,7 +75,7 @@ BOOST_AUTO_TEST_CASE( primitive_test )
    BOOST_CHECK_EQUAL(strict_left_of(0x2UL),0x0101010101010101UL);
 }
 
-BOOST_AUTO_TEST_CASE( row_and_column_test )
+BOOST_AUTO_TEST_CASE(row_and_column_test)
 {
    BOOST_CHECK_EQUAL(row_number(1UL<<63),7);
    BOOST_CHECK_EQUAL(row_number(1UL<<1),0);
@@ -98,7 +95,7 @@ rook_test(const char* canvas)
                      scan_canvas(canvas,'X','r','O'));
 }
 
-BOOST_AUTO_TEST_CASE( rook_moves_test )
+BOOST_AUTO_TEST_CASE(rook_moves_test)
 {
    BOOST_CHECK_EQUAL(slide_rook(algpos('a',1),algpos('a',1)|row_with_algebraic_number(2)),
                      ((row_with_algebraic_number(1)|algpos('a',1))|algpos('a',2)));
@@ -133,7 +130,7 @@ BOOST_AUTO_TEST_CASE( rook_moves_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( bishop_moves_test )
+BOOST_AUTO_TEST_CASE(bishop_moves_test)
 {
    {
       static constexpr char canvas[]=
@@ -151,7 +148,7 @@ BOOST_AUTO_TEST_CASE( bishop_moves_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( queen_moves_test )
+BOOST_AUTO_TEST_CASE(queen_moves_test)
 {
    {
       static constexpr char canvas[]=
@@ -174,7 +171,7 @@ BOOST_AUTO_TEST_CASE( queen_moves_test )
    }
 }
 
-BOOST_AUTO_TEST_CASE( vertical_band_test )
+BOOST_AUTO_TEST_CASE(vertical_band_test)
 {
    BOOST_CHECK_EQUAL(detail::aliased_widen(column_with_number(3),1),
                      column_with_number(2)|column_with_number(3)|column_with_number(4));
@@ -184,7 +181,7 @@ BOOST_AUTO_TEST_CASE( vertical_band_test )
                      column_with_number(0)|column_with_number(1)|column_with_number(2));
 }
 
-BOOST_AUTO_TEST_CASE( jump_knight_test )
+BOOST_AUTO_TEST_CASE(jump_knight_test)
 {
    {
       static constexpr char canvas[]=
@@ -244,7 +241,7 @@ BOOST_AUTO_TEST_CASE( jump_knight_test )
 
 }
 
-BOOST_AUTO_TEST_CASE( move_king_test )
+BOOST_AUTO_TEST_CASE(move_king_test)
 {
    {
       static constexpr char canvas[]=
@@ -301,7 +298,7 @@ BOOST_AUTO_TEST_CASE( move_king_test )
 
 }
 
-BOOST_AUTO_TEST_CASE( mirror_test )
+BOOST_AUTO_TEST_CASE(mirror_test)
 {
    BOOST_CHECK_EQUAL(mirror(0UL),0UL);
    BOOST_CHECK_EQUAL(mirror(~0UL),~0UL);
@@ -384,7 +381,7 @@ slide_pawn_check(const char* canvas)
    BOOST_CHECK_EQUAL(slide_pawn<side::black>(mirror(pawns),mirror(opposing)),mirror(result));
 }
 
-BOOST_AUTO_TEST_CASE( slide_pawn_test )
+BOOST_AUTO_TEST_CASE(slide_pawn_test)
 {
    slide_pawn_check(
       "........\n"
@@ -447,7 +444,7 @@ capture_pawn_check(const char* canvas)
    BOOST_CHECK_EQUAL(capture_with_pawn<side::black>(mirror(pawns),mirror(opposing)),mirror(captures));
 }
 
-BOOST_AUTO_TEST_CASE( capture_with_pawn_test )
+BOOST_AUTO_TEST_CASE(capture_with_pawn_test)
 {
    capture_pawn_check(
       "........\n"
@@ -515,7 +512,7 @@ capture_pawn_en_passant_check(const char* canvas)
 
 }
 
-BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
+BOOST_AUTO_TEST_CASE(capture_with_pawn_en_passant_test)
 {
    capture_pawn_en_passant_check(
       "........\n"
@@ -546,147 +543,147 @@ BOOST_AUTO_TEST_CASE( capture_with_pawn_en_passant_test )
       "........\n");
 }
 
-BOOST_AUTO_TEST_CASE( diagonals_test )
+BOOST_AUTO_TEST_CASE(diagonals_test)
 {
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(1UL),ots);
-      BOOST_CHECK( ots.is_equal(
-                      ".......X\n"
-                      "......X.\n"
-                      ".....X..\n"
-                      "....X...\n"
-                      "...X....\n"
-                      "..X.....\n"
-                      ".X......\n"
-                      "X.......\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     ".......X\n"
+                     "......X.\n"
+                     ".....X..\n"
+                     "....X...\n"
+                     "...X....\n"
+                     "..X.....\n"
+                     ".X......\n"
+                     "X.......\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(smaller(1UL<<(8*(8-(1)))),ots);
-      BOOST_CHECK( ots.is_equal(
-                      "........\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      "XXXXXXXX\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     "XXXXXXXX\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(1UL)>>8,ots);
-      BOOST_CHECK( ots.is_equal(
-                      "........\n"
-                      ".......X\n"
-                      "......X.\n"
-                      ".....X..\n"
-                      "....X...\n"
-                      "...X....\n"
-                      "..X.....\n"
-                      ".X......\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     ".......X\n"
+                     "......X.\n"
+                     ".....X..\n"
+                     "....X...\n"
+                     "...X....\n"
+                     "..X.....\n"
+                     ".X......\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(1UL)<<32,ots);
-      BOOST_CHECK( ots.is_equal(
-                      "...X....\n"
-                      "..X.....\n"
-                      ".X......\n"
-                      "X.......\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "...X....\n"
+                     "..X.....\n"
+                     ".X......\n"
+                     "X.......\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(1UL<<(8*(8-(1)))),ots);
-      BOOST_CHECK( ots.is_equal(
-                      "X.......\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "X.......\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(0x80UL<<(8*(8-(1)))),ots);
-      BOOST_CHECK( ots.is_equal(
-                      ".......X\n"
-                      "......X.\n"
-                      ".....X..\n"
-                      "....X...\n"
-                      "...X....\n"
-                      "..X.....\n"
-                      ".X......\n"
-                      "X.......\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     ".......X\n"
+                     "......X.\n"
+                     ".....X..\n"
+                     "....X...\n"
+                     "...X....\n"
+                     "..X.....\n"
+                     ".X......\n"
+                     "X.......\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_delta(0x10UL<<(8*(8-(1)))),ots);
-      BOOST_CHECK( ots.is_equal(
-                      "....X...\n"
-                      "...X....\n"
-                      "..X.....\n"
-                      ".X......\n"
-                      "X.......\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "....X...\n"
+                     "...X....\n"
+                     "..X.....\n"
+                     ".X......\n"
+                     "X.......\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_sum(1UL<<7),ots);
-      BOOST_CHECK( ots.is_equal(
-                      "X.......\n"
-                      ".X......\n"
-                      "..X.....\n"
-                      "...X....\n"
-                      "....X...\n"
-                      ".....X..\n"
-                      "......X.\n"
-                      ".......X\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "X.......\n"
+                     ".X......\n"
+                     "..X.....\n"
+                     "...X....\n"
+                     "....X...\n"
+                     ".....X..\n"
+                     "......X.\n"
+                     ".......X\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_sum(1UL<<7)>>(8*6),ots);
-      BOOST_CHECK( ots.is_equal(
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "........\n"
-                      "X.......\n"
-                      ".X......\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "........\n"
+                     "X.......\n"
+                     ".X......\n"
+                     ));
    }
    {
       boost::test_tools::output_test_stream ots;
       print_position(diag_sum(1<<15),ots);
-      BOOST_CHECK( ots.is_equal(
-                      ".X......\n"
-                      "..X.....\n"
-                      "...X....\n"
-                      "....X...\n"
-                      ".....X..\n"
-                      "......X.\n"
-                      ".......X\n"
-                      "........\n"
-                      ));
+      BOOST_CHECK(ots.is_equal(
+                     ".X......\n"
+                     "..X.....\n"
+                     "...X....\n"
+                     "....X...\n"
+                     ".....X..\n"
+                     "......X.\n"
+                     ".......X\n"
+                     "........\n"
+                     ));
    }
 }
 
@@ -694,7 +691,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(timings_suite)
 
-BOOST_AUTO_TEST_CASE( time_column_and_row_test )
+BOOST_AUTO_TEST_CASE(time_column_and_row_test)
 {
    volatile uint64_t s=(1UL<<(8*(8-(1))));
    __attribute__((unused)) volatile uint8_t c;
@@ -709,7 +706,7 @@ BOOST_AUTO_TEST_CASE( time_column_and_row_test )
    time_op.time_report("column/row calculation",ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_board_pos )
+BOOST_AUTO_TEST_CASE(time_board_pos)
 {
    volatile uint64_t s=(1UL<<(8*(8-(1))));
    __attribute__((unused)) volatile uint64_t c;
@@ -735,7 +732,7 @@ void time_move(T fun, long raw_ops, const char* description)
    time_op.time_report(description,ops);
 }
 
-BOOST_AUTO_TEST_CASE( time_moves )
+BOOST_AUTO_TEST_CASE(time_moves)
 {
    // each timing takes about 1 sec on my machine
    time_move(&slide_pawn<side::white>,100000000,"slide pawn up");
@@ -749,7 +746,7 @@ BOOST_AUTO_TEST_CASE( time_moves )
    time_move(&move_king,80000000,"move king");
 }
 
-BOOST_AUTO_TEST_CASE( time_count_set_bits )
+BOOST_AUTO_TEST_CASE(time_count_set_bits)
 {
    __attribute__((unused)) volatile uint64_t r;
    volatile uint64_t in=0X100110011001F30UL;
