@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "cheapshot/board.hh"
+#include "cheapshot/control.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/loop.hh"
 
@@ -450,14 +451,14 @@ namespace cheapshot
          special_move type;
          // params below may not be initialized, depending on move type
          bool is_capture;
-         game_status status; // TODO: checks not flagged
+         game_status phase; // TODO: checks not flagged
          cheapshot::piece moving_piece;
          uint64_t origin;
          uint64_t destination;
          cheapshot::piece promoting_piece;
       };
 
-      // (?:[PNBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:\=[PNBRQK])?|O(-?O){1,2})[\+#]?(\s*[\!\?]+)?)
+      // TODO: implement as regex, gcc is currently not compliant enough.
 
       input_move
       scan_long_algebraic_move(const char* s)
@@ -492,9 +493,10 @@ namespace cheapshot
             im.type=special_move::ep_capture;
          else
          {
-            char prom_sep=*s++;
+            char prom_sep=*s;
             if(prom_sep=='=')
             {
+               ++s;
                im.type=special_move::promotion;
                im.promoting_piece=character_to_moved_piece(*s);;
             }
@@ -504,18 +506,48 @@ namespace cheapshot
          switch(*s)
          {
             default:
-               im.status=game_status::normal;
+               im.phase=game_status::normal;
                break;
             case '+':
-               im.status=game_status::check;
+               im.phase=game_status::check;
                ++s;
                break;
             case '#':
-               im.status=game_status::checkmate;
+               im.phase=game_status::checkmate;
                ++s;
                break;
          }
          return im;
+      }
+
+      template<side S>
+      void
+      check_game_state(board_t& board, const board_metrics& bm, const context& ctx, const input_move& im)
+      {
+         uint64_t other_under_attack=generate_own_under_attack<other_side(S)>(board,bm);
+         const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0ULL;
+         const bool status_check=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
+         if(other_under_check!=status_check)
+         {
+            std::ostringstream oss;
+            oss << "check-flag incorrect. input-move: " << other_under_check
+                << " analyzed: " << status_check;
+            throw io_error(oss.str());
+         }
+         bool status_checkmate=false;
+         if(status_check||other_under_check)
+         {
+            max_ply_cutoff<control::minimax,control::noop_hash,control::noop_material> ec(other_side(S),1);
+            analyze_position<other_side(S)>(board,ctx,ec);
+            status_checkmate=(ec.pruning.score==score::checkmate(S));
+         }
+         if(status_checkmate!=(im.phase==game_status::checkmate))
+         {
+            std::ostringstream oss;
+            oss << "checkmate-flag incorrect. input-move: " << (im.phase==game_status::checkmate)
+                << " analyzed: " << status_checkmate;
+            throw io_error(oss.str());
+         }
       }
 
       template<side S>
@@ -539,15 +571,11 @@ namespace cheapshot
          switch(im.type)
          {
             case special_move::long_castling:
-            {
                make_castling_move<S>(board,ctx,long_castling<S>(),bm);
                break;
-            }
             case special_move::short_castling:
-            {
                make_castling_move<S>(board,ctx,short_castling<S>(),bm);
                break;
-            }
             case special_move::ep_capture:
             {
                if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
@@ -561,6 +589,7 @@ namespace cheapshot
             }
             case special_move::normal:
             case special_move::promotion:
+            {
                if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
                   throw io_error("trying to move a missing piece");
                auto movegen=basic_move_generators<S>()[idx(im.moving_piece)];
@@ -592,28 +621,41 @@ namespace cheapshot
                      make_move(m);
                }
                break;
+            }
          }
          ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
          ctx.castling_rights|=castling_block_mask<S>(
             get_side<S>(board)[idx(piece::rook)],
             get_side<S>(board)[idx(piece::king)]);
+
+         check_game_state<S>(board,bm,ctx,im);
       }
    }
 
    extern void
    make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s)
    {
-      input_move im=scan_long_algebraic_move(s);
-      switch(c)
+      try
       {
-         case side::white:
-            return make_move<side::white>(board, ctx, im);
-         case side::black:
-            return make_move<side::black>(board, ctx, im);
+         input_move im=scan_long_algebraic_move(s);
+         switch(c)
+         {
+            case side::white:
+               make_move<side::white>(board, ctx, im);
+               return;
+            case side::black:
+               make_move<side::black>(board, ctx, im);
+               return;
+         }
+      }
+      catch(const io_error& io)
+      {
+         std::ostringstream oss;
+         oss << "move: " << s << ": " << io.what();
+         throw io_error(oss.str());
       }
    }
 
-   // TODO: templatize on container type
    extern void
    make_long_algebraic_moves(board_t& board, side c, context& ctx,
                              const std::vector<const char*>& input_moves,

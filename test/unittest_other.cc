@@ -1,5 +1,3 @@
-#include <map>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
 
@@ -8,6 +6,8 @@
 #include "cheapshot/board_io.hh"
 #include "cheapshot/control.hh"
 #include "cheapshot/loop.hh"
+
+#include <map>
 
 using namespace cheapshot;
 using namespace cheapshot::control;
@@ -29,12 +29,10 @@ namespace
          parent(c,input_moves.size()+1),
          all_analyzed(false)
       {
-         make_long_algebraic_moves(b,c,ctx,
-                                   input_moves,
-                                   [this](board_t& b, side c, context& ctx)
-                                   {
-                                      boards.push_back(b);
-                                   });
+         make_long_algebraic_moves(
+            b,c,ctx,input_moves,
+            [this](board_t& b, side c, context& ctx) mutable { boards.push_back(b); }
+            );
       }
 
       bool
@@ -1208,17 +1206,17 @@ const std::vector<const char*> byrne_fischer
    "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
    "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
    "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
-   "Be7-c5","Rf8-e8","Ke1-f1","Bg4-e6","Bc5xb6",
-   "Be6xc4","Kf1-g1","Nc3-e2","Kg1-f1","Ne2xd4",
-   "Kf1-g1","Nd4-e2","Kg1-f1","Ne2-c3","Kf1-g1",
+   "Be7-c5","Rf8-e8+","Ke1-f1","Bg4-e6","Bc5xb6",
+   "Be6xc4+","Kf1-g1","Nc3-e2+","Kg1-f1","Ne2xd4",
+   "Kf1-g1","Nd4-e2+","Kg1-f1","Ne2-c3","Kf1-g1",
    "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
    "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
-   "Re8xe1","Qb6-d8","Bg7-f8","Nf3xe1","Bc4-d5",
+   "Re8xe1","Qb6-d8+","Bg7-f8","Nf3xe1","Bc4-d5",
    "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
-   "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5",
-   "Kg1-f1","Ne4-g3","Kf1-e1","Bc5-b4","Ke1-d1",
-   "Bd5-b3","Kd1-c1","Ng3-e2","Kc1-b1","Ne2-c3",
-   "Kb1-c1","Ra2-c2"
+   "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5+",
+   "Kg1-f1","Ne4-g3+","Kf1-e1","Bc5-b4+","Ke1-d1",
+   "Bd5-b3+","Kd1-c1","Ng3-e2+","Kc1-b1","Ne2-c3+",
+   "Kb1-c1","Ra2-c2#"
 };
 
 BOOST_AUTO_TEST_CASE(incremental_hash_test)

@@ -1,13 +1,18 @@
 #ifndef CHEAPSHOT_TEST_UNITTEST__HH
 #define CHEAPSHOT_TEST_UNITTEST__HH
 
+#include "cheapshot/bitops.hh"
+#include "cheapshot/board.hh"
+#include "cheapshot/iterator.hh"
+
+#include <boost/test/unit_test.hpp>
+#include <boost/test/output_test_stream.hpp>
+
 #include <ctime>
+#include <cstring>
 #include <iostream>
 #include <sys/time.h>
 #include <sys/resource.h>
-
-#include "cheapshot/bitops.hh"
-#include "cheapshot/board.hh"
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::bit_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_iterator)

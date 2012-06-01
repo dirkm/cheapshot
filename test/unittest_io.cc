@@ -1,9 +1,7 @@
-#include <boost/test/unit_test.hpp>
-#include <boost/test/output_test_stream.hpp>
-
+#include "cheapshot/board_io.hh"
 #include "test/unittest.hh"
 
-#include "cheapshot/board_io.hh"
+// #include <regex>
 
 using namespace cheapshot;
 
@@ -183,6 +181,29 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          (b,side::black,ctx,{"d7-d5","e5xd6e.p."});
       BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
    }
+   const board_t simple_mate=scan_board(
+      "....k...\n"
+      "........\n"
+      "....K...\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      ".......R\n");
+   {
+      board_t b=simple_mate;
+      context ctx=null_context;
+      make_long_algebraic_move(b,side::white,ctx,"Rh1-h8#");
+      BOOST_CHECK_EQUAL(b,scan_board(
+                           "....k..R\n"
+                           "........\n"
+                           "....K...\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"
+                           "........\n"));
+   }
    {
       board_t b=initial_board();
       context ctx=null_context;
@@ -224,6 +245,61 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          cheapshot::io_error,
          check_io_message("indication with 'x'"));
    }
+   {
+      board_t b=simple_mate;
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,"Rh1-h8+"),
+         cheapshot::io_error,
+         check_io_message("checkmate-flag incorrect"));
+   }
+   {
+      board_t b=simple_mate;
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,"Rh1-h8"),
+         cheapshot::io_error,
+         check_io_message("check-flag incorrect"));
+   }
+   {
+      board_t b=simple_mate;
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,"Rh1-h7#"),
+         cheapshot::io_error,
+         check_io_message("check-flag incorrect"));
+   }
+   {
+      board_t b=simple_mate;
+      context ctx=null_context;
+      BOOST_CHECK_EXCEPTION(
+         make_long_algebraic_move(b,side::white,ctx,"Rh1-h7+"),
+         cheapshot::io_error,
+         check_io_message("check-flag incorrect"));
+   }
+
 }
+
+/*
+  const std::basic_regex<char> lam("(O-O-O)|(O-O)");
+
+  BOOST_AUTO_TEST_CASE(input_scan_move)
+  {
+  {
+  // std::match m;
+  std::match_results<const char*> m;
+  BOOST_CHECK(std::regex_match("O-O-O",m,lam));
+  BOOST_CHECK_EQUAL(m[0],"O-O-O");
+  BOOST_CHECK_EQUAL(m[1],"O-O-O");
+  BOOST_CHECK(!m[2].matched);
+  }
+  {
+  std::match_results<const char*> m;
+  BOOST_CHECK(std::regex_match("O-O",m,lam));
+  BOOST_CHECK(!m[1].matched);
+  BOOST_CHECK_EQUAL(m[2],"O-O");
+  }
+  }
+*/
 
 BOOST_AUTO_TEST_SUITE_END()
