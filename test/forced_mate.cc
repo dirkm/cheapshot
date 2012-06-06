@@ -29,7 +29,8 @@ main(int argc, const char* argv[])
       int nrplies=std::atoi(argv[1]);
       ++nrplies; // checkmated-position is checked as well, to determine mate/stalemate.
       namespace ct=cheapshot::control;
-      cheapshot::max_ply_cutoff<ct::minimax,ct::noop_hash,ct::noop_material> cutoff(c,nrplies);
+      cheapshot::max_ply_cutoff<ct::minimax,ct::noop_hash,
+                                ct::noop_material,ct::noop_cache> cutoff(c,nrplies);
       int s=cheapshot::score_position(b,c,ctx,cutoff);
       std::cout <<
          ((s==cheapshot::score::checkmate(cheapshot::side::white))?"true/w":

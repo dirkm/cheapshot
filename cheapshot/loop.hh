@@ -16,6 +16,7 @@ namespace cheapshot
       template<typename T, side S> class scoped_score;
       template<typename T> class scoped_hash;
       template<typename T> class scoped_material;
+      template<typename T> class lookup_and_store;
    }
 
    struct board_metrics
@@ -358,7 +359,22 @@ namespace cheapshot
    void
    analyze_position(board_t& board, const context& oldctx, Controller& ec)
    {
-      // preparations
+      int& score=ec.pruning.score;
+      control::lookup_and_store<decltype(ec.cache)> handle_transpose(ec);
+      if(handle_transpose.is_transposition())
+      {
+         if(handle_transpose.is_repeat())
+         {
+            score=score::draw(S);
+            return;
+         }
+         else
+         {
+            score=handle_transpose.last_score();
+            return;
+         }
+      }
+
       board_metrics bm(board);
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
@@ -375,8 +391,6 @@ namespace cheapshot
          pawn_moves_end=basic_moves_end;
          on_piece_moves<S>(board,bm,visit);
       }
-
-      int& score=ec.pruning.score;
 
       // check position validity
       {

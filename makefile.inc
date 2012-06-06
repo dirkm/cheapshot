@@ -14,7 +14,7 @@ LDFLAGS := -Wl,--as-needed
 
 ## non-standard compilers (gcc 4.6.1 is good enough)
 CXX := g++
-#xCXX := g++-4.7
+#CXX := g++-4.7
 #CXX := g++-trunk
 #CXX:=/usr/lib/gcc-snapshot/bin/g++
 
@@ -22,7 +22,6 @@ CXX := g++
 #CFLAGS :=  -g -I. -std=c++0x -march=native -mtune=native
 
 CPPFLAGS := ${CFLAGS}
-
 
 # performance tests
 # perf record test/unittest --run_test=basic_engine_suite/time_mate_check

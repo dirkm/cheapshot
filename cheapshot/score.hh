@@ -17,6 +17,7 @@ namespace cheapshot
          constexpr int no_valid_move=-limit;
          constexpr int checkmate=(-no_valid_move)>>1;
          constexpr int stalemate=checkmate>>1;
+         constexpr int draw=0;
       }
 
       constexpr int abs_score(side c, int sc)
@@ -31,6 +32,8 @@ namespace cheapshot
       constexpr int checkmate(side c) { return abs_score(c,val::checkmate); }
 
       constexpr int stalemate(side c) { return abs_score(c,val::stalemate); }
+
+      constexpr int draw(side c) { return abs_score(c,val::draw); }
 
       template<side S>
       constexpr bool less_equal(int l, int r);

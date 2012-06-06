@@ -15,10 +15,21 @@ using namespace cheapshot::control;
 
 namespace
 {
-   template<typename HashController=noop_hash, typename MaterialController=noop_material>
-   struct move_checker: public max_ply_cutoff<minimax,HashController,MaterialController>
+   template<typename Pruning=minimax, typename HashController=noop_hash,
+            typename MaterialController=noop_material, typename Cache=noop_cache>
+   struct max_ply_cutoff_noop: public max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
    {
-      typedef max_ply_cutoff<minimax,HashController,MaterialController> parent;
+      typedef max_ply_cutoff<Pruning,HashController,MaterialController,Cache> parent;
+      explicit constexpr max_ply_cutoff_noop(side c,int max_plies):
+         parent(c,max_plies)
+      {}
+   };
+
+   template<typename HashController=noop_hash, typename MaterialController=noop_material,
+            typename Cache=noop_cache>
+   struct move_checker: public max_ply_cutoff<minimax,HashController,MaterialController,Cache>
+   {
+      typedef max_ply_cutoff<minimax,HashController,MaterialController,Cache> parent;
       move_checker(side c,std::vector<board_t>&& boards_):
          parent(c,boards_.size()),
          all_analyzed(false),
@@ -57,10 +68,11 @@ namespace
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   template<typename Pruning, typename HashController=noop_hash, typename MaterialController=noop_material>
-   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController,MaterialController>
+   template<typename Pruning, typename HashController=noop_hash,
+            typename MaterialController=noop_material, typename Cache=noop_cache>
+   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
    {
-      typedef max_ply_cutoff<Pruning,HashController,MaterialController> parent;
+      typedef max_ply_cutoff<Pruning,HashController,MaterialController,Cache> parent;
    public:
       do_until_ply_cutoff(side c, int max_depth, const funpos& fun_):
          parent(c,max_depth),
@@ -553,11 +565,11 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::black,1,mate_board);
+      scan_mate<side::white,max_ply_cutoff_noop<> >(side::black,1,mate_board);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::black,1,mate_board);
+      scan_mate<side::white,max_ply_cutoff_noop<> >(side::black,1,mate_board);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -570,7 +582,7 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,1,mate_board);
+      scan_mate<side::black,max_ply_cutoff_noop<> >(side::white,1,mate_board);
    }
    {
       // wikipedia stalemate article
@@ -583,7 +595,7 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          "........\n"
          "........\n"
          "........\n");
-      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::black,1);
+      max_ply_cutoff_noop<> cutoff(side::black,1);
       analyze_position<side::black>(stalemate_board,null_context,cutoff);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::stalemate(side::white));
    }
@@ -757,9 +769,9 @@ namespace
       }
    };
 
-   class max_ply_cutoff_stat: public max_ply_cutoff<negamax_stat,noop_hash,noop_material>
+   class max_ply_cutoff_stat: public max_ply_cutoff_noop<negamax_stat>
    {
-      typedef max_ply_cutoff<negamax_stat,noop_hash,noop_material> parent;
+      typedef max_ply_cutoff_noop<negamax_stat> parent;
    public:
       max_ply_cutoff_stat(side c,int max_depth):
          parent(c,max_depth),
@@ -848,10 +860,10 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,5,b1,b2,b3,b4,b5);
+      scan_mate<side::black,max_ply_cutoff_noop<> >(side::white,5,b1,b2,b3,b4,b5);
       // scan_mate<side::black,max_ply_cutoff<negamax,noop_hash> >(side::white,5,b1,b2,b3,b4,b5);
       // negamax is considerably faster
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,6,b,b1,b2,b3,b4,b5);
+      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,6,b,b1,b2,b3,b4,b5);
    }
    {
       board_t b=scan_board(
@@ -895,8 +907,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(b,null_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff_noop<> >(side::white,4,b,b1,b2,b3);
+      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,4,b,b1,b2,b3);
    }
 
    {
@@ -953,8 +965,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(btemp,ctx,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,4,b);
-      scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,4,b);
+      scan_mate<side::white,max_ply_cutoff_noop<minimax> >(side::white,4,b);
+      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,4,b);
    }
    // {
    //    board_t b=scan_board(
@@ -995,7 +1007,7 @@ BOOST_AUTO_TEST_CASE(time_mate_check)
    volatile int nr_plies=1;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::white,nr_plies);
+      max_ply_cutoff_noop<minimax> cutoff(side::white,nr_plies);
       analyze_position<side::white>(mate_board,null_context,cutoff);
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
@@ -1019,7 +1031,7 @@ BOOST_AUTO_TEST_CASE(upper_bound_nps)
    volatile int nr_plies=17;
    for(long i=0;i<ops;++i)
    {
-      max_ply_cutoff<minimax,noop_hash,noop_material> cutoff(side::white,nr_plies);
+      max_ply_cutoff_noop<minimax> cutoff(side::white,nr_plies);
       analyze_position<side::white>(caged_kings,null_context,cutoff);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
@@ -1069,14 +1081,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff<minimax,noop_hash,noop_material> >(side::white,7,rook_queen_mate);
+         scan_mate<side::black,max_ply_cutoff_noop<minimax> >(side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,7,rook_queen_mate);
+         scan_mate<side::black,max_ply_cutoff_noop<negamax> >(side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
@@ -1084,7 +1096,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<side::white,max_ply_cutoff<negamax,noop_hash,noop_material> >(side::white,6,b);
+         scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,6,b);
       // minimax
       // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
       time_op.time_report("middlegame mate in 6 plies (ab)",ops);

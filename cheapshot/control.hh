@@ -6,6 +6,8 @@
 #include "cheapshot/hash.hh"
 #include "cheapshot/loop.hh"
 
+#include <unordered_map>
+
 namespace cheapshot
 {
    namespace control
@@ -62,7 +64,6 @@ namespace cheapshot
       private:
          C& ec;
       };
-
 
       template<typename T, side S> class scoped_score;
 
@@ -224,10 +225,67 @@ namespace cheapshot
          scoped_material(const scoped_material&) = delete;
          scoped_material& operator=(const scoped_material&) = delete;
       };
+
+      struct transposition_info
+      {
+         uint64_t eval;
+         // move_info best_move;
+      };
+
+      // struct identity_hash
+      // {
+      //    constexpr size_t operator()(uint64_t n) { return n; }
+      // };
+
+      struct cache
+      {
+         std::unordered_map<uint64_t,transposition_info> transposition_table;
+      };
+
+      template<typename T=cache>
+      struct lookup_and_store
+      {
+      public:
+         template<typename Controller>
+         lookup_and_store(Controller& ec)
+         {}
+
+         bool is_repeat() const
+         {
+            return true;
+         }
+
+         bool is_transposition() const
+         {
+            return true;
+         }
+      private:
+         cheapshot::scoped_hash sh;
+      };
+
+      struct noop_cache{};
+
+      template<>
+      struct lookup_and_store<noop_cache>
+      {
+      public:
+         template<typename Controller>
+         lookup_and_store(Controller& ec)
+         {}
+
+         static constexpr bool is_repeat() {return false;}
+
+         static constexpr bool is_transposition() {return false;}
+
+         static bool last_score() { __builtin_unreachable(); }
+
+         lookup_and_store(const lookup_and_store&) = delete;
+         lookup_and_store& operator=(const lookup_and_store&) = delete;
+      };
    }
 
 // different controls, to be combined in analyze_position
-   template<typename Pruning, typename HashController, typename MaterialController>
+   template<typename Pruning, typename HashController, typename MaterialController, typename Cache>
    class max_ply_cutoff
    {
    public:
@@ -255,12 +313,7 @@ namespace cheapshot
       Pruning pruning;
       HashController hasher;
       MaterialController material;
-   };
-
-   struct transposition_info
-   {
-      uint64_t eval;
-      move_info best_move;
+      Cache cache;
    };
 }
 

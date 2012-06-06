@@ -451,18 +451,17 @@ namespace cheapshot
          special_move type;
          // params below may not be initialized, depending on move type
          bool is_capture;
-         game_status phase; // TODO: checks not flagged
+         game_status phase;
          cheapshot::piece moving_piece;
          uint64_t origin;
          uint64_t destination;
          cheapshot::piece promoting_piece;
       };
 
-      // TODO: implement as regex, gcc is currently not compliant enough.
-
       input_move
       scan_long_algebraic_move(const char* s)
       {
+         // TODO: checks and castling not flagged
          if(std::strcmp(s,"O-O-O")==0)
             return {special_move::long_castling};
          if (std::strcmp(s,"O-O")==0)
@@ -472,13 +471,15 @@ namespace cheapshot
          if(im.moving_piece!=piece::pawn)
             ++s;
          im.origin=scan_algpos(s);
-         char sep=*s++;
+         char sep=*s;
          switch(sep)
          {
             case 'x':
+               ++s;
                im.is_capture=true;
                break;
             case '-':
+               ++s;
                im.is_capture=false;
                break;
             default:
@@ -537,7 +538,8 @@ namespace cheapshot
          bool status_checkmate=false;
          if(status_check||other_under_check)
          {
-            max_ply_cutoff<control::minimax,control::noop_hash,control::noop_material> ec(other_side(S),1);
+            max_ply_cutoff<control::minimax,control::noop_hash,
+                           control::noop_material,control::noop_cache> ec(other_side(S),1);
             analyze_position<other_side(S)>(board,ctx,ec);
             status_checkmate=(ec.pruning.score==score::checkmate(S));
          }
