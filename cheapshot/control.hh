@@ -228,59 +228,93 @@ namespace cheapshot
 
       struct transposition_info
       {
-         uint64_t eval;
-         // move_info best_move;
+         uint64_t score;
+         move_info principal_move;
       };
-
-      // struct identity_hash
-      // {
-      //    constexpr size_t operator()(uint64_t n) { return n; }
-      // };
 
       struct cache
       {
+      private:
          std::unordered_map<uint64_t,transposition_info> transposition_table;
-      };
-
-      template<typename T=cache>
-      struct lookup_and_store
-      {
       public:
-         template<typename Controller>
-         lookup_and_store(Controller& ec)
-         {}
+
+         struct insert_info
+         {
+            bool is_new() const
+            {
+               return insert_val.second;
+            }
+
+            transposition_info& value() { return insert_val.first->second; }
+
+            std::pair<std::unordered_map<uint64_t,transposition_info>::iterator, bool> insert_val;
+         };
+
+         template<typename EngineController>
+         insert_info insert(const EngineController& ec)
+         {
+            return insert(ec.hasher.hash);
+         }
+
+         insert_info insert(uint64_t hash)
+         {
+            return {transposition_table.insert(std::make_pair(hash,transposition_info{}))};
+         }
 
          bool is_repeat() const
          {
-            return true;
+            // TODO
+            return false;
          }
-
-         bool is_transposition() const
-         {
-            return true;
-         }
-      private:
-         cheapshot::scoped_hash sh;
       };
 
-      struct noop_cache{};
-
-      template<>
-      struct lookup_and_store<noop_cache>
+      template<typename T=cache>
+      struct cache_update
       {
       public:
          template<typename Controller>
-         lookup_and_store(Controller& ec)
+         cache_update(Controller& ec)
+         {}
+      };
+
+      struct noop_cache
+      {
+         struct insert_info
+         {
+            static constexpr bool is_new() { return false; }
+
+            transposition_info& value()
+            {
+               __builtin_unreachable();
+            }
+         };
+
+         template<typename EngineController>
+         insert_info insert(const EngineController&)
+         {
+            return insert_info{};
+         }
+
+         static constexpr bool is_repeat()
+         {
+            return false;
+         }
+      };
+
+      template<>
+      struct cache_update<noop_cache>
+      {
+      public:
+         template<typename Controller>
+         cache_update(Controller& ec)
          {}
 
          static constexpr bool is_repeat() {return false;}
 
-         static constexpr bool is_transposition() {return false;}
-
          static bool last_score() { __builtin_unreachable(); }
 
-         lookup_and_store(const lookup_and_store&) = delete;
-         lookup_and_store& operator=(const lookup_and_store&) = delete;
+         cache_update(const cache_update&) = delete;
+         cache_update& operator=(const cache_update&) = delete;
       };
    }
 

@@ -559,9 +559,9 @@ namespace cheapshot
          uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
          if(!c.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
             throw io_error("long castling not allowed");
-         move_info2 mi2=castle_info<S>(board,c);
+         move_info2 mi2=castle_info<S>(c);
          for(auto m: mi2)
-            make_move(m);
+            make_move(board,m);
       }
 
       template<side S>
@@ -584,9 +584,9 @@ namespace cheapshot
                   throw  io_error("trying to move a missing piece");
                if(im.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
-               move_info2 mi2=en_passant_info<S>(board,im.origin,im.destination);
+               move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
                for(auto m: mi2)
-                  make_move(m);
+                  make_move(board,m);
                break;
             }
             case special_move::normal:
@@ -605,22 +605,22 @@ namespace cheapshot
                      throw io_error("trying to capture a missing piece");
                   move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
                   for(auto m: mi2)
-                     make_move(m);
+                     make_move(board,m);
                }
                else
                {
                   if(destination_occupied)
                      throw io_error("capture without indication with 'x'");
-                  move_info mi=basic_move_info<S>(board,im.moving_piece,im.origin,im.destination);
-                  make_move(mi);
+                  move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
+                  make_move(board,mi);
                }
                if(im.type==special_move::promotion)
                {
                   if(!promoting_pawns<S>(im.destination))
                      throw io_error("promotion only allowed on last row");
-                  move_info2 mi2=promotion_info<S>(board,im.promoting_piece,im.destination);
+                  move_info2 mi2=promotion_info<S>(im.promoting_piece,im.destination);
                   for(auto m: mi2)
-                     make_move(m);
+                     make_move(board,m);
                }
                break;
             }

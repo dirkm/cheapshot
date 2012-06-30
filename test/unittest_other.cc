@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
    uint64_t dest=scan_canvas(c,'p');
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
-      scoped_move<move_info2> scope(basic_capture_info<side::white>(b,moved_piece,origin,dest));
+      scoped_move<move_info2> scope(b,basic_capture_info<side::white>(b,moved_piece,origin,dest));
       BOOST_CHECK_EQUAL(b,scan_board(
                            "........\n"
                            "........\n"
@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
 
-      scoped_move<move_info2> scope(castle_info<side::white>(b,sci));
+      scoped_move<move_info2> scope(b,castle_info<side::white>(sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -412,7 +412,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "R...K...\n");
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
 
-      scoped_move<move_info2> scope(castle_info<side::white>(b,lci));
+      scoped_move<move_info2> scope(b,castle_info<side::white>(lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(

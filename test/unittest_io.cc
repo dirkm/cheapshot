@@ -5,23 +5,23 @@
 
 using namespace cheapshot;
 
-struct check_io_message
-{
-   check_io_message(const char* fragment_):
-      fragment(fragment_)
-   {}
-
-   bool operator()(const cheapshot::io_error& ex)
-   {
-      return strstr(ex.what(),fragment)!=NULL;
-   }
-
-private:
-   const char* fragment;
-};
-
 namespace
 {
+   struct check_io_message
+   {
+      check_io_message(const char* fragment_):
+         fragment(fragment_)
+      {}
+
+      bool operator()(const cheapshot::io_error& ex)
+      {
+         return strstr(ex.what(),fragment)!=NULL;
+      }
+
+   private:
+      const char* fragment;
+   };
+
    const board_t en_passant_initial_board=scan_board(en_passant_initial_canvas);
    const board_t en_passant_after_capture_board=scan_board(en_passant_after_capture_canvas);
 }

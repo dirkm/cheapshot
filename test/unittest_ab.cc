@@ -48,15 +48,13 @@ const char* to_string(toy n)
    return repr[idx(n)];
 };
 
-typedef std::array<std::pair<
-      std::vector<toy>,
-      int>,
-   count<toy>()> tree_t;
+typedef std::array<std::pair<std::vector<toy>,int>,count<toy>()> tree_t;
 
 typedef std::function<void (toy,const tree_t::value_type& v)> fun_init_t;
 typedef std::function<void (toy,toy,int,int)> fun_cutoff_t;
 
 // freestanding implementation with inspection-functions
+//  base on wikipedia-article
 int
 negamax_book(const tree_t& t, toy s,
              fun_init_t finit, fun_cutoff_t fcutoff,

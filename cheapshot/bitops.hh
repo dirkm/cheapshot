@@ -4,12 +4,17 @@
 #include <cstdint>
 #include <cassert>
 
-#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if defined(__clang__)
+# error "clang not supported yet"
 
+#elif defined(__GNUC__)
+
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #if (GCC_VERSION < 40600)
 # error "gcc 4.6 required"
 #endif
 
+#endif
 
 namespace cheapshot
 {
