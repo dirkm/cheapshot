@@ -129,7 +129,8 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       /*w4_7*/ {vt{},-7},
       /*w4_8*/ {vt{},-5}
       }};
-   toy state=toy::w0_0;
+
+   constexpr toy init_state=toy::w0_0;
 
    static const std::set<toy> ignored_nodes{
       {toy::w4_8},
@@ -159,7 +160,7 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
    };
 
    {
-      int r=negamax_book(game_tree,state,finit,fcutoff);
+      int r=negamax_book(game_tree,init_state,finit,fcutoff);
       BOOST_CHECK_EQUAL(r,3);
    }
    {
@@ -172,7 +173,7 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       auto fcutoff_minimax=[](toy s,toy child, bool is_cutoff){};
 
       cheapshot::control::minimax mm(side::black);
-      prune<side::black>(game_tree,state,finit_minimax,fcutoff_minimax,mm);
+      prune<side::black>(game_tree,init_state,finit_minimax,fcutoff_minimax,mm);
       BOOST_CHECK_EQUAL(nodes.size(),count<toy>());
       BOOST_CHECK_EQUAL(mm.score,3);
    }
@@ -184,7 +185,7 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
             is_cutoff);
       };
 
-      prune<side::black>(game_tree,state,finit,fcutoff_negamax,nm);
+      prune<side::black>(game_tree,init_state,finit,fcutoff_negamax,nm);
       BOOST_CHECK_EQUAL(nm.score,3);
    }
 }

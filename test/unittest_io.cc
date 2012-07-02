@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
 {
    {
       board_t b=initial_board();
-      context ctx=null_context;
+      context ctx=start_context;
       make_long_algebraic_moves
          (b,side::white,ctx,
           {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=en_passant_initial_board;
-      context ctx=null_context;
+      context ctx=start_context;
       make_long_algebraic_moves
          (b,side::black,ctx,{"d7-d5","e5xd6e.p."});
       BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       ".......R\n");
    {
       board_t b=simple_mate;
-      context ctx=null_context;
+      context ctx=no_castle_context;
       make_long_algebraic_move(b,side::white,ctx,"Rh1-h8#");
       BOOST_CHECK_EQUAL(b,scan_board(
                            "....k..R\n"
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=initial_board();
-      context ctx=null_context;
+      context ctx=start_context;
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,{""}),
          cheapshot::io_error,
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=initial_board();
-      context ctx=null_context;
+      context ctx=start_context;
       make_long_algebraic_moves(b,side::white,ctx,{"e2-e4","d7-d5"});
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,{"e4-d5"}),
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=simple_mate;
-      context ctx=null_context;
+      context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,"Rh1-h8+"),
          cheapshot::io_error,
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=simple_mate;
-      context ctx=null_context;
+      context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,"Rh1-h8"),
          cheapshot::io_error,
@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=simple_mate;
-      context ctx=null_context;
+      context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,"Rh1-h7#"),
          cheapshot::io_error,
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    }
    {
       board_t b=simple_mate;
-      context ctx=null_context;
+      context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
          make_long_algebraic_move(b,side::white,ctx,"Rh1-h7+"),
          cheapshot::io_error,

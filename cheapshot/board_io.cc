@@ -461,7 +461,8 @@ namespace cheapshot
       input_move
       scan_long_algebraic_move(const char* s)
       {
-         // TODO: checks and castling not flagged
+         // TODO: use std::regex when useable
+         // TODO: checks mixed with castling not flagged
          if(std::strcmp(s,"O-O-O")==0)
             return {special_move::long_castling};
          if (std::strcmp(s,"O-O")==0)
@@ -539,8 +540,8 @@ namespace cheapshot
          if(status_check||other_under_check)
          {
             max_ply_cutoff<control::minimax,control::noop_hash,
-                           control::noop_material,control::noop_cache> ec(other_side(S),1);
-            analyze_position<other_side(S)>(board,ctx,ec);
+                           control::noop_material,control::noop_cache> ec(board,other_side(S),ctx,1);
+            analyze_position<other_side(S)>(ctx,ec);
             status_checkmate=(ec.pruning.score==score::checkmate(S));
          }
          if(status_checkmate!=(im.phase==game_status::checkmate))

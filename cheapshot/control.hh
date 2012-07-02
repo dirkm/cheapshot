@@ -15,6 +15,9 @@ namespace cheapshot
       // helpers to sweeten engine-configuration in the controllers below
       struct incremental_hash
       {
+         incremental_hash(const board_t& board, side t, const context& ctx):
+            hash(hhash(board,t,ctx))
+         {}
          uint64_t hash;
       };
 
@@ -30,7 +33,10 @@ namespace cheapshot
          cheapshot::scoped_hash sh;
       };
 
-      struct noop_hash{};
+      struct noop_hash
+      {
+         noop_hash(const board_t& board, side t, const context& ctx){}
+      };
 
       template<>
       struct scoped_hash<noop_hash>
@@ -176,6 +182,9 @@ namespace cheapshot
 
       struct incremental_material
       {
+         incremental_material(const board_t& b):
+            material(score::material(b))
+         {}
          int material;
       };
 
@@ -211,6 +220,7 @@ namespace cheapshot
 
       struct noop_material
       {
+         noop_material(const board_t& b){}
          static constexpr int material=0;
       };
 
@@ -228,8 +238,8 @@ namespace cheapshot
 
       struct transposition_info
       {
-         uint64_t score;
-         move_info principal_move;
+         int score;
+         move_info principal_move; // TODO
       };
 
       struct cache
@@ -240,12 +250,19 @@ namespace cheapshot
 
          struct insert_info
          {
-            bool is_new() const
+            bool is_hit() const
             {
-               return insert_val.second;
+               return !insert_val.second;
+            }
+
+            bool is_repeat() const
+            {
+               // assert(is_hit());
+               return value().score==score::repeat();
             }
 
             transposition_info& value() { return insert_val.first->second; }
+            const transposition_info& value() const { return insert_val.first->second; }
 
             std::pair<std::unordered_map<uint64_t,transposition_info>::iterator, bool> insert_val;
          };
@@ -258,13 +275,7 @@ namespace cheapshot
 
          insert_info insert(uint64_t hash)
          {
-            return {transposition_table.insert(std::make_pair(hash,transposition_info{}))};
-         }
-
-         bool is_repeat() const
-         {
-            // TODO
-            return false;
+            return {transposition_table.insert(std::make_pair(hash,transposition_info{score::repeat()}))};
          }
       };
 
@@ -273,15 +284,30 @@ namespace cheapshot
       {
       public:
          template<typename Controller>
-         cache_update(Controller& ec)
-         {}
+         cache_update(Controller& ec, typename T::insert_info& insert_val_):
+            insert_val(insert_val_),
+            score(ec.pruning.score)
+         {
+         }
+
+         ~cache_update()
+         {
+            insert_val.value().score=score;
+         }
+
+         typename T::insert_info& insert_val;
+         int& score;
+
+         cache_update(const cache_update&) = delete;
+         cache_update& operator=(const cache_update&) = delete;
       };
 
       struct noop_cache
       {
          struct insert_info
          {
-            static constexpr bool is_new() { return false; }
+            static constexpr bool is_hit() { return false; }
+            static constexpr bool is_repeat() { return false; }
 
             transposition_info& value()
             {
@@ -294,11 +320,6 @@ namespace cheapshot
          {
             return insert_info{};
          }
-
-         static constexpr bool is_repeat()
-         {
-            return false;
-         }
       };
 
       template<>
@@ -306,12 +327,8 @@ namespace cheapshot
       {
       public:
          template<typename Controller>
-         cache_update(Controller& ec)
+         cache_update(Controller& ec, noop_cache::insert_info& insert_val_)
          {}
-
-         static constexpr bool is_repeat() {return false;}
-
-         static bool last_score() { __builtin_unreachable(); }
 
          cache_update(const cache_update&) = delete;
          cache_update& operator=(const cache_update&) = delete;
@@ -323,13 +340,17 @@ namespace cheapshot
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(side c,int max_plies):
+      explicit constexpr max_ply_cutoff(board_t& board_, side c, const context& ctx, int max_plies):
+         board(board_),
          remaining_plies(max_plies),
-         pruning(c)
-      {}
+         pruning(c),
+         hasher(board,c,ctx),
+         material(board)
+      {
+      }
 
       bool
-      leaf_check(const board_t& board, side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
          bool is_leaf_node=(remaining_plies==0);
@@ -341,7 +362,8 @@ namespace cheapshot
          return is_leaf_node;
       }
 
-      typedef control::scoped_ply_count<max_ply_cutoff> scoped_ply;
+      board_t& board;
+
       int remaining_plies;
 
       Pruning pruning;

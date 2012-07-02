@@ -49,13 +49,26 @@ constexpr char en_passant_after_capture_canvas[]=
    "........\n"
    "....K...\n";
 
-constexpr cheapshot::context null_context=
+constexpr cheapshot::context start_context=
 {
    0ULL, /*ep_info*/
    0ULL, /*castling_rights*/
    1, // halfmove clock
    1 // fullmove number
 };
+
+constexpr cheapshot::context no_castle_context=
+{
+   0ULL, /*ep_info*/
+   (cheapshot::short_castling<cheapshot::side::white>().mask()|
+    cheapshot::long_castling<cheapshot::side::white>().mask()|
+    cheapshot::short_castling<cheapshot::side::black>().mask()|
+    cheapshot::long_castling<cheapshot::side::black>().mask()),
+   // 0ULL, /*castling_rights*/
+   1, // halfmove clock
+   1 // fullmove number
+};
+
 
 // TODO: constexpr
 inline long
