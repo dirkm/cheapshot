@@ -364,9 +364,9 @@ namespace cheapshot
       auto cacheval=ec.cache.insert(ec);
       if(cacheval.is_hit())
       {
-         score=cacheval.is_repeat()?
-            score::stalemate(other_side(S)): // TODO: rename
-            cacheval.value().score;
+         score=cacheval.value().score;
+         //assert(score!=score::no_valid_move(side::white));
+         //assert(score!=score::no_valid_move(side::black));
          return;
       }
 

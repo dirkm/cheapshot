@@ -13,6 +13,7 @@ namespace cheapshot
    namespace control
    {
       // helpers to sweeten engine-configuration in the controllers below
+      // prefix noop means dummy implementation of a feature (no-operation)
       struct incremental_hash
       {
          incremental_hash(const board_t& board, side t, const context& ctx):
@@ -244,27 +245,11 @@ namespace cheapshot
 
       struct cache
       {
-      private:
-         std::unordered_map<uint64_t,transposition_info> transposition_table;
-      public:
-
          struct insert_info
          {
-            bool is_hit() const
-            {
-               return !insert_val.second;
-            }
-
-            bool is_repeat() const
-            {
-               // assert(is_hit());
-               return value().score==score::repeat();
-            }
-
-            transposition_info& value() { return insert_val.first->second; }
-            const transposition_info& value() const { return insert_val.first->second; }
-
-            std::pair<std::unordered_map<uint64_t,transposition_info>::iterator, bool> insert_val;
+            transposition_info& val;
+            const transposition_info& value() const {return val;}
+            bool is_hit() const { return val.score!=score::repeat(); }
          };
 
          template<typename EngineController>
@@ -275,8 +260,14 @@ namespace cheapshot
 
          insert_info insert(uint64_t hash)
          {
-            return {transposition_table.insert(std::make_pair(hash,transposition_info{score::repeat()}))};
+            typedef decltype(transposition_table) T; // todo bug gcc 4.6
+            T::iterator v;
+            std::tie(v,std::ignore)=transposition_table.insert({hash,{score::repeat()}});
+            return insert_info{v->second};
          }
+
+      private:
+         std::unordered_map<uint64_t,transposition_info> transposition_table;
       };
 
       template<typename T=cache>
@@ -292,7 +283,7 @@ namespace cheapshot
 
          ~cache_update()
          {
-            insert_val.value().score=score;
+            insert_val.val.score=score;
          }
 
          typename T::insert_info& insert_val;
@@ -307,12 +298,7 @@ namespace cheapshot
          struct insert_info
          {
             static constexpr bool is_hit() { return false; }
-            static constexpr bool is_repeat() { return false; }
-
-            transposition_info& value()
-            {
-               __builtin_unreachable();
-            }
+            static const transposition_info& value() { __builtin_unreachable(); }
          };
 
          template<typename EngineController>

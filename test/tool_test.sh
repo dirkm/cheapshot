@@ -7,6 +7,11 @@ function forced_mate_test
     [ x$(exec $DIR/forced_mate "$1" "$2") == x"$3" ] || exit 1;
 }
 
+function print_position_test
+{
+    [ x$(exec $DIR/print_position "$1") == x"$2" ] || exit 1;
+}
+
 #http://home.earthlink.net/~jay.bennett/ChessViewer/QueenSacks.pgn
 forced_mate_test 2 "rnbqkbn1/ppppp3/7r/6pp/3P1p2/3BP1B1/PPP2PPP/RN1QK1NR w KQ - 0 1" "false"
 forced_mate_test 3 "rnbqkbn1/ppppp3/7r/6pp/3P1p2/3BP1B1/PPP2PPP/RN1QK1NR w KQ - 0 1" "true/w"
@@ -15,6 +20,24 @@ forced_mate_test 3 "2r1nr1k/pp1q1p1p/3bpp2/5P2/1P1Q4/P3P3/1B3P1P/R3K1R1 w Q - 0 
 #morphy
 forced_mate_test 2 "5Kbk/6pp/6P1/8/8/8/8/7R w - - 0 1" "false"
 forced_mate_test 3 "5Kbk/6pp/6P1/8/8/8/8/7R w - - 0 1" "true/w"
+
+function print_fen_test
+{
+    [ "x$(exec $DIR/print_fen "$1")" == "x"$2"" ] || exit 1;
+}
+
+INIT_BOARD="rnbqkbnr
+pppppppp
+........
+........
+........
+........
+PPPPPPPP
+RNBQKBNR"
+
+INIT_FEN="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+print_fen_test "$INIT_FEN" "$INIT_BOARD"
 
 # TODO
 # test print_fen

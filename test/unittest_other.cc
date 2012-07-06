@@ -36,7 +36,8 @@ namespace
          all_analyzed(false),
          boards{b}
       {
-         std::copy(std::begin(additional_boards),std::end(additional_boards),std::back_inserter(boards));
+         std::copy(std::begin(additional_boards),std::end(additional_boards),
+                   std::back_inserter(boards));
       }
 
       move_checker(board_t& b, side c, context ctx, const std::vector<const char*>& input_moves):
@@ -88,7 +89,7 @@ namespace
       {
          if(parent::leaf_check(c,ctx,bm))
             return true;
-         fun(parent::board,c,ctx,bm);
+         fun(this->board,c,ctx,bm);
          return false;
       }
    private:
@@ -526,16 +527,17 @@ namespace
    {
       Controller cutoff(b,S,no_castle_context,depth);
       analyze_position<S>(no_castle_context,cutoff);
-      // {
-      //    std::ostringstream oss;
-      //    print_board(b,oss);
-      //    BOOST_TEST_MESSAGE("depth " << depth << "\n" <<
-      //                        "side " << to_char(S) << "\n"
-      //                        << oss.str());
-      // }
+      {
+         std::ostringstream oss;
+         print_board(b,oss);
+         BOOST_TEST_MESSAGE("depth " << depth << "\n" <<
+                            "side " << to_char(S) << "\n"
+                            << oss.str());
+      }
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate(winning_side));
    }
 
+   // TODO: get rid of templates, bogs down compile times
    template<side S, typename Controller, typename... Boards>
    void
    scan_mate(side winning_side, int depth, board_t b, Boards... board_pack)
@@ -804,6 +806,16 @@ namespace
       "..P....P\n"
       "P.P...P.\n"
       ".R....K.\n";
+
+   constexpr char rook_queen_mate_canvas[]=
+      "........\n"
+      "........\n"
+      "........\n"
+      "...k....\n"
+      "..R.Q...\n"
+      "........\n"
+      "........\n"
+      "......K.\n";
 }
 
 BOOST_AUTO_TEST_CASE(find_mate_test)
@@ -870,6 +882,26 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
       scan_mate<side::white,max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >(side::white,6,b,b1,b2,b3,b4,b5);
    }
    {
+      board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
+      context ctx=no_castle_context;
+      board_t b1=b;
+      make_long_algebraic_move(b1, side::black, ctx, "Kd5-d6");
+      board_t b2=b1;
+      make_long_algebraic_move(b2, side::white, ctx, "Rc4-c6+");
+      board_t b3=b2;
+      make_long_algebraic_move(b3, side::black, ctx, "Kd6-d7");
+      board_t b4=b3;
+      make_long_algebraic_move(b4, side::white, ctx, "Qe4-e6+");
+      board_t b5=b4;
+      make_long_algebraic_move(b5, side::black, ctx, "Kd7-d8");
+      board_t b6=b5;
+      make_long_algebraic_move(b6, side::white, ctx, "Rc6-c8#");
+      scan_mate<side::black,max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
+         (side::white,7,b,b1,b2,b3,b4,b5,b6);
+      scan_mate<side::black,max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+         (side::white,7,b,b1,b2,b3,b4,b5,b6);
+   }
+   {
       board_t b=scan_board(
          "rnbqkbn.\n"
          "ppppp...\n"
@@ -928,7 +960,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          ".PP.P...\n"
          "PB...PPP\n"
          "R...K..R\n"
-        );
+         );
       const board_t b1=scan_board(
          "r.qk...r\n"
          "p.p.pppp\n"
@@ -938,7 +970,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-        );
+         );
       const board_t b2=scan_board(
          "r..k...r\n"
          "p.pqpppp\n"
@@ -948,7 +980,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-        );
+         );
       const board_t b3=scan_board(
          "r..k...r\n"
          "p.pQpppp\n"
@@ -958,7 +990,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          ".PP.P...\n"
          "PB...PPP\n"
          "..KR...R\n"
-        );
+         );
       {
          board_t btemp=b;
          constexpr auto lci=short_castling<side::white>();
@@ -1058,31 +1090,14 @@ BOOST_AUTO_TEST_CASE(score_material_test)
 
    using score::weight;
    BOOST_CHECK_EQUAL(score::material(imbalanced_board),
-      -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
-      weight(piece::pawn));
+                     -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
+                     weight(piece::pawn));
 }
 
 BOOST_AUTO_TEST_CASE(time_endgame_mate)
 {
-   // http://www.mychessblog.com/7-endgame-positions-with-endgame-tactics-for-quick-checkmate-part-1/
-   // board_t rook_queen_mate=scan_board(
-   //    "........\n"
-   //    "........\n"
-   //    "........\n"
-   //    "...k....\n"
-   //    "..R.....\n"
-   //    "........\n"
-   //    "........\n"
-   //    "....Q.K.\n");
-   board_t rook_queen_mate=scan_board(
-      "........\n"
-      "........\n"
-      "........\n"
-      "...k....\n"
-      "..R.Q...\n"
-      "........\n"
-      "........\n"
-      "......K.\n");
+
+   board_t rook_queen_mate=scan_board(rook_queen_mate_canvas);
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
@@ -1137,6 +1152,38 @@ namespace
    }
 }
 
+namespace
+{
+   std::pair<int,int>
+   compare_hashes(side t,board_t b,int depth)
+   {
+      int nodes=0;
+      int matches=0;
+      std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
+
+      auto fhash=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+         {
+            ++nodes;
+            uint64_t hash=hhash(board,t,ctx);
+            auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
+            auto lb = r.lower_bound(hash);
+            if(lb!=end(r))
+               if(!(r.key_comp()(hash,lb->first)))
+               {
+                  ++matches;
+                  BOOST_CHECK(state==lb->second);
+                  return;
+               }
+            r.insert(lb,{hash,state}); // emplace_hint?
+         };
+
+      TimeOperation time_op;
+      do_until_ply_cutoff<minimax> cutoff(b,side::white,start_context,depth,fhash);
+      score_position(t,start_context,cutoff);
+      return {nodes,matches};
+   }
+}
+
 BOOST_AUTO_TEST_CASE(control_timing_test)
 {
    {
@@ -1159,187 +1206,123 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       board_t b=initial_board();
       do_until_ply_cutoff<minimax,incremental_hash> cutoff(b,side::white,start_context,4,f);
       TimeOperation time_op;
-      uint64_t initial_hash=hhash(b,side::white,start_context);
-      // cutoff.hasher.hash=initial_hash;
       analyze_position<side::white>(start_context,cutoff);
+      uint64_t initial_hash=hhash(b,side::white,start_context);
       BOOST_CHECK_EQUAL(cutoff.hasher.hash,initial_hash);
       time_op.time_report("incremental hash nodes test",nodes);
    }
    {
-      int nodes=0;
-      int matches=0;
-      std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
-      nodes=0;
-      board_t b=initial_board();
-
-      auto fhash=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
-         {
-            ++nodes;
-            uint64_t hash=hhash(board,t,ctx);
-            auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
-            auto lb = r.lower_bound(hash);
-            if(lb!=end(r))
-               if(!(r.key_comp()(hash,lb->first)))
-               {
-                  ++matches;
-                  BOOST_CHECK(state==lb->second);
-                  return;
-               }
-            r.insert(lb,std::make_pair(hash,state)); // emplace_hint?
-         };
-
       TimeOperation time_op;
-      do_until_ply_cutoff<minimax> cutoff(b,side::white,start_context,5,fhash);
-      analyze_position<side::white>(start_context,cutoff);
-      //  cutoff: 6 // duration 50s
-      // BOOST_CHECK_EQUAL(matches,3661173);
-      // BOOST_CHECK_EQUAL(nodes,5072213);
-
-      //  cutoff: 5
-      BOOST_CHECK_EQUAL(matches,97342);
+      int nodes, matches;
+      std::tie(nodes,matches)=compare_hashes(side::white,initial_board(),5);
       BOOST_CHECK_EQUAL(nodes,206604);
+      BOOST_CHECK_EQUAL(matches,97342);
+      //  cutoff: 6 // duration 50s
+      // BOOST_CHECK_EQUAL(nodes,5072213);
+      // BOOST_CHECK_EQUAL(matches,3661173);
       time_op.time_report("all-at-once hashes from start position",nodes);
    }
+   {
+      TimeOperation time_op;
+      int nodes, matches;
+      board_t b=scan_board(rook_queen_mate_canvas);
+      std::tie(nodes,matches)=compare_hashes(side::black,b,7);
+      BOOST_CHECK_EQUAL(nodes,492621);
+      BOOST_CHECK_EQUAL(matches,436279);
+      time_op.time_report("all-at-once hashes from mating position",nodes);
+   }
+
 }
 
-struct hash_checker: move_checker<incremental_hash>
+namespace
 {
-   hash_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
-      move_checker(b,c,ctx,input_moves)
-   {}
-
-   bool
-   leaf_check(side c, const context& ctx, const board_metrics& bm)
+   struct hash_checker: move_checker<incremental_hash>
    {
-      uint64_t complete_hash=hhash(this->board,c,ctx);
-      BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
-      return move_checker::leaf_check(c,ctx,bm);
-   }
-};
+      hash_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
+         move_checker(b,c,ctx,input_moves)
+      {}
 
-const std::vector<const char*> simple_start{"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"};
-const std::vector<const char*> en_passant_context{"e2-e4","e7-e5","Ng1-f3"};
-const std::vector<const char*> normal_capture{"e2-e4","d7-d5","e4xd5"};
-const std::vector<const char*> castling_start{"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"};
-const std::vector<const char*> multiple_promotions_cont{"c7xb8=Q","Ke8-f8"};
-const std::vector<const char*> byrne_fischer
-{
-   "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
-   "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
-   "Qd1-b3","d5xc4","Qb3xc4","c7-c6","e2-e4",
-   "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
-   "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
-   "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
-   "Be7-c5","Rf8-e8+","Ke1-f1","Bg4-e6","Bc5xb6",
-   "Be6xc4+","Kf1-g1","Nc3-e2+","Kg1-f1","Ne2xd4",
-   "Kf1-g1","Nd4-e2+","Kg1-f1","Ne2-c3","Kf1-g1",
-   "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
-   "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
-   "Re8xe1","Qb6-d8+","Bg7-f8","Nf3xe1","Bc4-d5",
-   "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
-   "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5+",
-   "Kg1-f1","Ne4-g3+","Kf1-e1","Bc5-b4+","Ke1-d1",
-   "Bd5-b3+","Kd1-c1","Ng3-e2+","Kc1-b1","Ne2-c3+",
-   "Kb1-c1","Ra2-c2#"
-};
+      bool
+      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      {
+         uint64_t complete_hash=hhash(this->board,c,ctx);
+         BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
+         return move_checker::leaf_check(c,ctx,bm);
+      }
+   };
+
+   const std::vector<const char*> simple_start{"e2-e3","e7-e6","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6"};
+   const std::vector<const char*> en_passant_context{"e2-e4","e7-e5","Ng1-f3"};
+   const std::vector<const char*> normal_capture{"e2-e4","d7-d5","e4xd5"};
+   const std::vector<const char*> castling_start{"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"};
+   const std::vector<const char*> multiple_promotions_cont{"c7xb8=Q","Ke8-f8"};
+   const std::vector<const char*> byrne_fischer
+   {
+      "Ng1-f3","Ng8-f6","c2-c4","g7-g6","Nb1-c3",
+         "Bf8-g7","d2-d4","O-O","Bc1-f4","d7-d5",
+         "Qd1-b3","d5xc4","Qb3xc4","c7-c6","e2-e4",
+         "Nb8-d7","Ra1-d1","Nd7-b6","Qc4-c5","Bc8-g4",
+         "Bf4-g5","Nb6-a4","Qc5-a3","Na4xc3","b2xc3",
+         "Nf6xe4","Bg5xe7","Qd8-b6","Bf1-c4","Ne4xc3",
+         "Be7-c5","Rf8-e8+","Ke1-f1","Bg4-e6","Bc5xb6",
+         "Be6xc4+","Kf1-g1","Nc3-e2+","Kg1-f1","Ne2xd4",
+         "Kf1-g1","Nd4-e2+","Kg1-f1","Ne2-c3","Kf1-g1",
+         "a7xb6","Qa3-b4","Ra8-a4","Qb4xb6","Nc3xd1",
+         "h2-h3","Ra4xa2","Kg1-h2","Nd1xf2","Rh1-e1",
+         "Re8xe1","Qb6-d8+","Bg7-f8","Nf3xe1","Bc4-d5",
+         "Ne1-f3","Nf2-e4","Qd8-b8","b7-b5","h3-h4",
+         "h7-h5","Nf3-e5","Kg8-g7","Kh2-g1","Bf8-c5+",
+         "Kg1-f1","Ne4-g3+","Kf1-e1","Bc5-b4+","Ke1-d1",
+         "Bd5-b3+","Kd1-c1","Ng3-e2+","Kc1-b1","Ne2-c3+",
+         "Kb1-c1","Ra2-c2#"
+         };
+
+   template<typename Controller>
+   void play(const std::vector<const char*>& moves, board_t b=initial_board(), context ctx=start_context)
+   {
+      Controller ec(b,ctx,side::white,moves);
+      analyze_position<side::white>(ctx,ec);
+   }
+
+   template<typename Controller>
+   void play_tests()
+   {
+      play<Controller>(simple_start);
+      play<Controller>(en_passant_context);
+      play<Controller>(normal_capture);
+      play<Controller>(castling_start);
+      play<Controller>(multiple_promotions_cont,scan_board(multiple_promotions_initial_board),no_castle_context);
+      play<Controller>(byrne_fischer);
+   }
+}
 
 BOOST_AUTO_TEST_CASE(incremental_hash_test)
 {
-   {
-      // no ctx changes (castling, en passant)
-      board_t b=initial_board();
-      context ctx=start_context;
-      hash_checker hashcheck(b,ctx,side::white,simple_start);
-      analyze_position<side::white>(ctx,hashcheck);
-   }
-   {
-      // en passant
-      board_t b=initial_board();
-      context ctx=start_context;
-      hash_checker hashcheck(b,ctx,side::white,en_passant_context);
-      analyze_position<side::white>(ctx,hashcheck);
-   }
-   {
-      // capture
-      board_t b=initial_board();
-      context ctx=start_context;
-      hash_checker hashcheck(b,ctx,side::white,normal_capture);
-      analyze_position<side::white>(ctx,hashcheck);
-   }
-   {
-      // castling
-      board_t b=initial_board();
-      context ctx=start_context;
-      hash_checker hashcheck(b,ctx,side::white,castling_start);
-      analyze_position<side::white>(ctx,hashcheck);
-   }
-   {
-      board_t b=scan_board(multiple_promotions_initial_board);
-      context ctx=no_castle_context;
-      hash_checker hashcheck(b,ctx,side::white,multiple_promotions_cont);
-      analyze_position<side::white>(ctx,hashcheck);
-   }
-   {
-      // Byrne-Fischer game of the century
-      board_t b=initial_board();
-      hash_checker hashcheck(b,start_context,side::white,byrne_fischer);
-      analyze_position<side::white>(start_context,hashcheck);
-   }
+   play_tests<hash_checker>();
 }
 
-struct material_checker: move_checker<noop_hash,incremental_material>
+namespace
 {
-   material_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
-      move_checker(b,c,ctx,input_moves)
+   struct material_checker: move_checker<noop_hash,incremental_material>
    {
-   }
+      material_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
+         move_checker(b,c,ctx,input_moves)
+      {
+      }
 
-   bool
-   leaf_check(side c, const context& ctx, const board_metrics& bm)
-   {
-      int complete_material=score::material(board);
-      BOOST_CHECK_EQUAL(material.material,complete_material);
-      return move_checker::leaf_check(c,ctx,bm);
-   }
-};
+      bool
+      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      {
+         int complete_material=score::material(board);
+         BOOST_CHECK_EQUAL(material.material,complete_material);
+         return move_checker::leaf_check(c,ctx,bm);
+      }
+   };
+}
 
 BOOST_AUTO_TEST_CASE(incremental_material_test)
 {
-   {
-      // no ctx changes (castling, en passant)
-      board_t b=initial_board();
-      material_checker matcheck(b,start_context,side::white,simple_start);
-      analyze_position<side::white>(start_context,matcheck);
-   }
-   {
-      // en passant
-      board_t b=initial_board();
-      material_checker matcheck(b,start_context,side::white,en_passant_context);
-      analyze_position<side::white>(start_context,matcheck);
-   }
-   {
-      // capture
-      board_t b=initial_board();
-      material_checker matcheck(b,start_context,side::white,normal_capture);
-      analyze_position<side::white>(start_context,matcheck);
-   }
-   {
-      // castling
-      board_t b=initial_board();
-      material_checker matcheck(b,start_context,side::white,castling_start);
-      analyze_position<side::white>(start_context,matcheck);
-   }
-   {
-      board_t b=scan_board(multiple_promotions_initial_board);
-      material_checker matcheck(b,start_context,side::white,multiple_promotions_cont);
-      analyze_position<side::white>(start_context,matcheck);
-   }
-   {
-      // Byrne-Fischer game of the century
-      board_t b=initial_board();
-      material_checker matcheck(b,start_context,side::white,byrne_fischer);
-      analyze_position<side::white>(start_context,matcheck);
-   }
+   play_tests<material_checker>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
