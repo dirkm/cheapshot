@@ -277,18 +277,23 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
    BOOST_CHECK_EQUAL(b,scan_board(c));
 }
 
-template<side S>
-bool
-is_castling_allowed(const board_t& board, const castling_t& ci)
+namespace
 {
-   board_metrics bm(board);
-   uint64_t own_under_attack=0ULL;
-   on_basic_moves<other_side(S)>(
-      board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
-      {
-         own_under_attack|=dests;
-      });
-   return ci.castling_allowed(bm.own<S>(),own_under_attack);
+
+   template<side S>
+   bool
+   is_castling_allowed(const board_t& board, const castling_t& ci)
+   {
+      board_metrics bm(board);
+      uint64_t own_under_attack=0ULL;
+      on_basic_moves<other_side(S)>(
+         board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
+         {
+            own_under_attack|=dests;
+         });
+      return ci.castling_allowed(bm.own<S>(),own_under_attack);
+   }
+
 }
 
 BOOST_AUTO_TEST_CASE(castle_test)
@@ -520,30 +525,32 @@ BOOST_AUTO_TEST_CASE(castle_test)
 
 namespace
 {
-
-   template<side S, typename Controller>
+   template<typename Controller>
    void
-   scan_mate(side winning_side, int depth, board_t b)
+   scan_mate(side playing_side, side winning_side, int depth, board_t b)
    {
-      Controller cutoff(b,S,no_castle_context,depth);
-      analyze_position<S>(no_castle_context,cutoff);
+      Controller cutoff(b,playing_side,no_castle_context,depth);
+      score_position(playing_side,no_castle_context,cutoff);
       {
          std::ostringstream oss;
          print_board(b,oss);
          BOOST_TEST_MESSAGE("depth " << depth << "\n" <<
-                            "side " << to_char(S) << "\n"
+                            "side " << to_char(playing_side) << "\n"
                             << oss.str());
       }
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate(winning_side));
    }
 
-   // TODO: get rid of templates, bogs down compile times
-   template<side S, typename Controller, typename... Boards>
+   template<typename Controller>
    void
-   scan_mate(side winning_side, int depth, board_t b, Boards... board_pack)
+   scan_mate(side playing_side, side winning_side, int depth, const std::vector<board_t>& boards)
    {
-      scan_mate<other_side(S),Controller>(winning_side,depth-1,board_pack...);
-      scan_mate<S,Controller>(winning_side,depth,b);
+      for(auto& v: boards)
+      {
+         scan_mate<Controller>(playing_side,winning_side,depth,v);
+         --depth;
+         playing_side=other_side(playing_side);
+      };
    }
 
 // Rodzynski-Alekhine, Paris 1913
@@ -571,11 +578,11 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      scan_mate<side::white,max_ply_cutoff_noop<> >(side::black,1,mate_board);
+      scan_mate<max_ply_cutoff_noop<> >(side::white,side::black,1,mate_board);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      scan_mate<side::white,max_ply_cutoff_noop<> >(side::black,1,mate_board);
+      scan_mate<max_ply_cutoff_noop<> >(side::white,side::black,1,mate_board);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -588,7 +595,7 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      scan_mate<side::black,max_ply_cutoff_noop<> >(side::white,1,mate_board);
+      scan_mate<max_ply_cutoff_noop<> >(side::black,side::white,1,mate_board);
    }
    {
       // wikipedia stalemate article
@@ -647,14 +654,14 @@ BOOST_AUTO_TEST_CASE(analyze_en_passant_test)
 }
 
 constexpr char multiple_promotions_initial_board[]=
-   ".n.qk...\n"
-   "..P.....\n"
-   "........\n"
-   "........\n"
-   "........\n"
-   "........\n"
-   "........\n"
-   ".......K\n";
+                                       ".n.qk...\n"
+                                       "..P.....\n"
+                                       "........\n"
+                                       "........\n"
+                                       "........\n"
+                                       "........\n"
+                                       "........\n"
+                                       ".......K\n";
 
 BOOST_AUTO_TEST_CASE(analyze_promotion_test)
 {
@@ -816,6 +823,9 @@ namespace
       "........\n"
       "........\n"
       "......K.\n";
+
+   const std::vector<const char*> rook_queen_mate_moves{
+      "Kd5-d6","Rc4-c6+","Kd6-d7","Qe4-e6+","Kd7-d8","Rc6-c8#"};
 }
 
 BOOST_AUTO_TEST_CASE(find_mate_test)
@@ -875,31 +885,24 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(no_castle_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::black,max_ply_cutoff_noop<> >(side::white,5,b1,b2,b3,b4,b5);
-      // scan_mate<side::black,max_ply_cutoff<negamax,noop_hash> >(side::white,5,b1,b2,b3,b4,b5);
+      scan_mate<max_ply_cutoff_noop<> >(side::black,side::white,5,{b1,b2,b3,b4,b5});
+      // scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,5,{b1,b2,b3,b4,b5});
       // negamax is considerably faster
-      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,6,b,b1,b2,b3,b4,b5);
-      scan_mate<side::white,max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >(side::white,6,b,b1,b2,b3,b4,b5);
+      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,6,{b,b1,b2,b3,b4,b5});
+      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+         (side::white,side::white,6,{b,b1,b2,b3,b4,b5});
    }
    {
       board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
+      std::vector<board_t> boards;
       context ctx=no_castle_context;
-      board_t b1=b;
-      make_long_algebraic_move(b1, side::black, ctx, "Kd5-d6");
-      board_t b2=b1;
-      make_long_algebraic_move(b2, side::white, ctx, "Rc4-c6+");
-      board_t b3=b2;
-      make_long_algebraic_move(b3, side::black, ctx, "Kd6-d7");
-      board_t b4=b3;
-      make_long_algebraic_move(b4, side::white, ctx, "Qe4-e6+");
-      board_t b5=b4;
-      make_long_algebraic_move(b5, side::black, ctx, "Kd7-d8");
-      board_t b6=b5;
-      make_long_algebraic_move(b6, side::white, ctx, "Rc6-c8#");
-      scan_mate<side::black,max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
-         (side::white,7,b,b1,b2,b3,b4,b5,b6);
-      scan_mate<side::black,max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
-         (side::white,7,b,b1,b2,b3,b4,b5,b6);
+      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
+                                [&boards](board_t& b2, side c, context& ctx) { boards.push_back(b2); }
+         );
+      scan_mate<max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
+         (side::black,side::white,7,boards);
+      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+         (side::black,side::white,7,boards);
    }
    {
       board_t b=scan_board(
@@ -943,9 +946,10 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(start_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff_noop<> >(side::white,4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,4,b,b1,b2,b3);
-      scan_mate<side::white,max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >(side::white,4,b,b1,b2,b3);
+      scan_mate<max_ply_cutoff_noop<> >(side::white,side::white,4,{b,b1,b2,b3});
+      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,4,{b,b1,b2,b3});
+      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+         (side::white,side::white,4,{b,b1,b2,b3});
    }
 
    {
@@ -1002,9 +1006,10 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(ctx,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<side::white,max_ply_cutoff_noop<minimax> >(side::white,4,b);
-      scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,4,b);
-      scan_mate<side::white,max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >(side::white,4,b);
+      scan_mate<max_ply_cutoff_noop<minimax> >(side::white,side::white,4,b);
+      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,4,b);
+      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+         (side::white,side::white,4,b);
    }
    // {
    //    board_t b=scan_board(
@@ -1102,22 +1107,22 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff_noop<minimax> >(side::white,7,rook_queen_mate);
+         scan_mate<max_ply_cutoff_noop<minimax> >(side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
-            (side::white,7,rook_queen_mate);
+         scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+            (side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies (cache)",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
-         scan_mate<side::black,max_ply_cutoff_noop<negamax> >(side::white,7,rook_queen_mate);
+         scan_mate<max_ply_cutoff_noop<negamax> >(side::black,side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
@@ -1125,7 +1130,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<side::white,max_ply_cutoff_noop<negamax> >(side::white,6,b);
+         scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,6,b);
       // minimax
       // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
       time_op.time_report("middlegame mate in 6 plies (ab)",ops);
