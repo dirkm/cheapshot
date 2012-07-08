@@ -77,6 +77,13 @@ namespace cheapshot
                              const std::vector<const char*>& input_moves,
                              const std::function<void (board_t& board, side c, context& ctx)>& fun=
                              [](board_t& board, side c, context& ctx){});
+
+   extern std::ostream&
+   print_score(int score, std::ostream& os);
+
+   // debugging aid
+   extern void
+   dump_board(const char* heading, const board_t& board, int score, side t);
 }
 
 #endif

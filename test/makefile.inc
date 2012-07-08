@@ -31,12 +31,16 @@ $~print_fen: $(call depend, $~print_fen.cc)
 unittest: $~unittest
 	$^ --catch_system_errors=0
 
+currenttest: $~unittest
+	$^ --run_test=basic_engine_suite/rook_queen_test --log_level=all --catch_system_errors=0
+
+# $^ --run_test=basic_engine_suite/rook_queen_test --log_level=all --catch_system_errors=0
 # $^ --catch_system_errors=0
 # $^ --log_level=all --catch_system_errors=0
 
 ct_test: $(call depend, $~ct_test.cc) $~ct_test.o
 
-tool_test: $~forced_mate
+tool_test: $(EXEC)
 	test/tool_test.sh
 
 test_report: $~unittest

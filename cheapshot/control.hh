@@ -240,7 +240,8 @@ namespace cheapshot
       struct transposition_info
       {
          int score;
-         move_info principal_move; // TODO
+         int remaining_plies;
+         // move_info principal_move; // TODO
       };
 
       struct cache
@@ -249,25 +250,34 @@ namespace cheapshot
          {
             transposition_info& val;
             const transposition_info& value() const {return val;}
-            bool is_hit() const { return val.score!=score::repeat(); }
+
+            template<typename Controller>
+            bool is_hit(const Controller& ec) const
+            {
+               return
+                  (val.score!=score::repeat()) &&
+                  (ec.remaining_plies<=val.remaining_plies);
+            }
          };
 
-         template<typename EngineController>
-         insert_info insert(const EngineController& ec)
+         template<typename Controller>
+         insert_info insert(const Controller& ec)
          {
-            return insert(ec.hasher.hash);
+            return insert(ec.hasher.hash,ec.remaining_plies);
          }
 
-         insert_info insert(uint64_t hash)
+         insert_info insert(uint64_t hash,int remaining_plies)
          {
             typedef decltype(transposition_table) T; // todo bug gcc 4.6
             T::iterator v;
-            std::tie(v,std::ignore)=transposition_table.insert({hash,{score::repeat()}});
+            std::tie(v,std::ignore)=transposition_table.insert({hash,{score::repeat(),remaining_plies}});
             return insert_info{v->second};
          }
 
       private:
+         //  TODO: unordered_map might cause problems with invalidated iterators after insert.
          std::unordered_map<uint64_t,transposition_info> transposition_table;
+         // std::map<uint64_t,transposition_info> transposition_table;
       };
 
       template<typename T=cache>
@@ -277,17 +287,20 @@ namespace cheapshot
          template<typename Controller>
          cache_update(Controller& ec, typename T::insert_info& insert_val_):
             insert_val(insert_val_),
-            score(ec.pruning.score)
+            score(ec.pruning.score),
+            remaining_plies(ec.remaining_plies) // TODO: temp test
          {
          }
 
          ~cache_update()
          {
-            insert_val.val.score=score;
+            if(remaining_plies>=insert_val.val.remaining_plies)
+               insert_val.val.score=score;
          }
 
          typename T::insert_info& insert_val;
          int& score;
+         int& remaining_plies;
 
          cache_update(const cache_update&) = delete;
          cache_update& operator=(const cache_update&) = delete;
@@ -297,7 +310,8 @@ namespace cheapshot
       {
          struct insert_info
          {
-            static constexpr bool is_hit() { return false; }
+            template<typename Controller>
+            static constexpr bool is_hit(const Controller&) { return false; }
             static const transposition_info& value() { __builtin_unreachable(); }
          };
 

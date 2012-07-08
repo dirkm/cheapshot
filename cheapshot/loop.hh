@@ -1,13 +1,13 @@
 #ifndef CHEAPSHOT_LOOP_HH
 #define CHEAPSHOT_LOOP_HH
 
-#include <limits>
-
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 #include "cheapshot/score.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/hash.hh"
+
+#include "cheapshot/board_io.hh"
 
 namespace cheapshot
 {
@@ -362,11 +362,11 @@ namespace cheapshot
       board_t& board=ec.board;
 
       auto cacheval=ec.cache.insert(ec);
-      if(cacheval.is_hit())
+      if(cacheval.is_hit(ec))
       {
          score=cacheval.value().score;
-         //assert(score!=score::no_valid_move(side::white));
-         //assert(score!=score::no_valid_move(side::black));
+         // TODO: remove debug info
+         // dump_board("cache hit ", board, score, S);
          return;
       }
 
@@ -378,6 +378,7 @@ namespace cheapshot
       std::array<move_set,16>::iterator basic_moves_end=begin(basic_moves);
       std::array<move_set,16>::const_iterator pawn_moves_end;
       uint64_t opponent_under_attack=0ULL;
+
       {
          auto visit=[&basic_moves_end,&opponent_under_attack](piece p, uint64_t orig, uint64_t dests){
             *basic_moves_end++=move_set{p,orig,dests};

@@ -672,4 +672,59 @@ namespace cheapshot
       }
       fun(board,c,ctx);
    }
+
+
+   namespace
+   {
+      const char* sign_to_sidearg(int score)
+      {
+         return (score>0)?"(side::white)":"(side::black)";
+      }
+   }
+
+   extern std::ostream&
+   print_score(int score, std::ostream& os)
+   {
+      const char* color_arg=sign_to_sidearg(score);
+      const char* name;
+      switch (std::abs(score))
+      {
+         case score::val::limit:
+            name="::limit";
+            break;
+         case -score::val::no_valid_move:
+            name="::no_valid_move";
+            color_arg=sign_to_sidearg(-score);
+            break;
+         case score::val::repeat:
+            color_arg="()";
+            name="::repeat";
+            break;
+         case score::val::checkmate:
+            name="::checkmate";
+            break;
+         case score::val::stalemate:
+            name="::stalemate";
+            break;
+         case 0:
+            name=" 0 ";
+            color_arg="";
+            break;
+      }
+      os << "score" << name << color_arg;
+      return os;
+   }
+
+   // debugging aid
+   void
+   dump_board(const char* heading, const board_t& board, int score, side t)
+   {
+      std::cerr << heading;
+      print_score(score, std::cerr);
+      std::cerr << std::endl;
+      std::cerr << to_char(t) << " to move" << std::endl;
+      print_board(board,std::cerr);
+      std::cerr  << std::endl;
+   }
+
 }

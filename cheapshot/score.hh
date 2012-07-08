@@ -1,6 +1,8 @@
 #ifndef CHEAPSHOT_SCORE_HH
 #define CHEAPSHOT_SCORE_HH
 
+#include <limits>
+
 namespace cheapshot
 {
    namespace score
@@ -13,7 +15,7 @@ namespace cheapshot
       namespace val
       {
          constexpr int limit=(std::numeric_limits<int>::max()/2)+1;
-         constexpr int no_valid_move=-limit;
+         constexpr int no_valid_move=-(limit>>1); // TODO: can be set to -limit
          constexpr int repeat=(-no_valid_move)>>1;
          constexpr int checkmate=repeat>>1;
          constexpr int stalemate=checkmate>>1;

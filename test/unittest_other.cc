@@ -527,24 +527,27 @@ namespace
 {
    template<typename Controller>
    void
-   scan_mate(side playing_side, side winning_side, int depth, board_t b)
+   scan_mate(side playing_side, side winning_side, std::size_t depth, board_t b)
    {
       Controller cutoff(b,playing_side,no_castle_context,depth);
       score_position(playing_side,no_castle_context,cutoff);
       {
          std::ostringstream oss;
          print_board(b,oss);
+         std::ostringstream oss2;
+         print_score(cutoff.pruning.score,oss2);
          BOOST_TEST_MESSAGE("depth " << depth << "\n" <<
                             "side " << to_char(playing_side) << "\n"
-                            << oss.str());
+                            << oss.str() << "\n" << oss2.str());
       }
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate(winning_side));
    }
 
    template<typename Controller>
    void
-   scan_mate(side playing_side, side winning_side, int depth, const std::vector<board_t>& boards)
+   scan_mate(side playing_side, side winning_side, std::size_t depth, const std::vector<board_t>& boards)
    {
+      assert(depth>=boards.size());
       for(auto& v: boards)
       {
          scan_mate<Controller>(playing_side,winning_side,depth,v);
@@ -893,18 +896,6 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          (side::white,side::white,6,{b,b1,b2,b3,b4,b5});
    }
    {
-      board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
-      std::vector<board_t> boards;
-      context ctx=no_castle_context;
-      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
-                                [&boards](board_t& b2, side c, context& ctx) { boards.push_back(b2); }
-         );
-      scan_mate<max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
-         (side::black,side::white,7,boards);
-      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
-         (side::black,side::white,7,boards);
-   }
-   {
       board_t b=scan_board(
          "rnbqkbn.\n"
          "ppppp...\n"
@@ -1024,6 +1015,35 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
    //      );
    //    scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,10,b);
    // }
+}
+
+// mostly used for simple cache-testing
+BOOST_AUTO_TEST_CASE(rook_queen_test)
+{
+   {
+      board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
+      std::vector<board_t> boards;
+      context ctx=no_castle_context;
+      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
+                                [&boards,b](board_t& b2, side c, context& ctx) {
+                                   if(b!=b2)
+                                      boards.push_back(b2); }
+         );
+      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+         (side::white,side::white,6,boards[0]);
+   }
+   {
+      board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
+      std::vector<board_t> boards;
+      context ctx=no_castle_context;
+      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
+                                [&boards](board_t& b2, side c, context& ctx) { boards.push_back(b2); }
+         );
+      scan_mate<max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
+         (side::black,side::white,7,boards);
+      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+         (side::black,side::white,7,boards);
+   }
 }
 
 BOOST_AUTO_TEST_CASE(time_walk_moves_test)
@@ -1234,7 +1254,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       std::tie(nodes,matches)=compare_hashes(side::black,b,7);
       BOOST_CHECK_EQUAL(nodes,492621);
       BOOST_CHECK_EQUAL(matches,436279);
-      time_op.time_report("all-at-once hashes from mating position",nodes);
+      time_op.time_report("all-at-once hashes in endgame mating position",nodes);
    }
 
 }
@@ -1283,21 +1303,23 @@ namespace
          };
 
    template<typename Controller>
-   void play(const std::vector<const char*>& moves, board_t b=initial_board(), context ctx=start_context)
+   void play(side t, const std::vector<const char*>& moves, board_t b=initial_board(), context ctx=start_context)
    {
-      Controller ec(b,ctx,side::white,moves);
-      analyze_position<side::white>(ctx,ec);
+      Controller ec(b,ctx,t,moves);
+      score_position(t,ctx,ec);
    }
 
    template<typename Controller>
    void play_tests()
    {
-      play<Controller>(simple_start);
-      play<Controller>(en_passant_context);
-      play<Controller>(normal_capture);
-      play<Controller>(castling_start);
-      play<Controller>(multiple_promotions_cont,scan_board(multiple_promotions_initial_board),no_castle_context);
-      play<Controller>(byrne_fischer);
+      play<Controller>(side::white,simple_start);
+      play<Controller>(side::white,en_passant_context);
+      play<Controller>(side::white,normal_capture);
+      play<Controller>(side::white,castling_start);
+      play<Controller>(side::white,multiple_promotions_cont,
+                       scan_board(multiple_promotions_initial_board),no_castle_context);
+      play<Controller>(side::white,byrne_fischer);
+      play<Controller>(side::black,rook_queen_mate_moves,scan_board(rook_queen_mate_canvas),no_castle_context);
    }
 }
 

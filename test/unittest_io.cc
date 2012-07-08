@@ -1,4 +1,5 @@
 #include "cheapshot/board_io.hh"
+#include "cheapshot/score.hh"
 #include "test/unittest.hh"
 
 // #include <regex>
@@ -278,6 +279,40 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          check_io_message("check-flag incorrect"));
    }
 
+}
+
+BOOST_AUTO_TEST_CASE(score_io_test)
+{
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::checkmate(side::white),ots);
+      BOOST_CHECK(ots.is_equal("score::checkmate(side::white)"));
+   }
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::checkmate(side::black),ots);
+      BOOST_CHECK(ots.is_equal("score::checkmate(side::black)"));
+   }
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::no_valid_move(side::black),ots);
+      BOOST_CHECK(ots.is_equal("score::no_valid_move(side::black)"));
+   }
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::repeat(),ots);
+      BOOST_CHECK(ots.is_equal("score::repeat()"));
+   }
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::checkmate(side::white),ots);
+      BOOST_CHECK(ots.is_equal("score::checkmate(side::white)"));
+   }
+   {
+      boost::test_tools::output_test_stream ots;
+      print_score(score::stalemate(side::black),ots);
+      BOOST_CHECK(ots.is_equal("score::stalemate(side::black)"));
+   }
 }
 
 /*
