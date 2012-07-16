@@ -362,13 +362,8 @@ namespace cheapshot
       board_t& board=ec.board;
 
       auto cacheval=ec.cache.insert(ec);
-      if(cacheval.is_hit(ec))
-      {
-         score=cacheval.value().score;
-         // TODO: remove debug info
-         // dump_board("cache hit ", board, score, S);
+      if(cacheval.template hit_check<S>(ec))
          return;
-      }
 
       control::cache_update<decltype(ec.cache)> scoped_caching(ec,cacheval);
 

@@ -764,49 +764,6 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
 
 namespace
 {
-   // TODO: try to measure branching factor
-   struct negamax_stat: negamax
-   {
-      negamax_stat(side c):
-         negamax(c),
-         negamax_cutoffs(0)
-      {}
-
-      int negamax_cutoffs;
-
-      template<typename S>
-      bool cutoff()
-      {
-         bool r=negamax::cutoff<S>();
-         if(r)
-            ++negamax_cutoffs;
-         return r;
-      }
-   };
-
-   class max_ply_cutoff_stat: public max_ply_cutoff_noop<negamax_stat>
-   {
-      typedef max_ply_cutoff_noop<negamax_stat> parent;
-   public:
-      max_ply_cutoff_stat(board_t& board, side c, const context& ctx,int max_depth):
-         parent(board,c,ctx,max_depth),
-         positions_tried(0)
-      {}
-
-      bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
-      {
-         if(!parent::leaf_check(c,ctx,bm))
-            return false;
-         ++positions_tried;
-         return true;
-      }
-      int positions_tried;
-   };
-}
-
-namespace
-{
    constexpr char mate_in_3_canvas[]=
       "rn.q.r..\n"
       "p....pk.\n"
@@ -1144,6 +1101,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       for(long i=0;i<ops;++i)
          scan_mate<max_ply_cutoff_noop<negamax> >(side::black,side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
+   }
+   {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(10);
+      for(long i=0;i<ops;++i)
+         scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+            (side::black,side::white,7,{rook_queen_mate});
+      time_op.time_report("endgame mate in 7 plies (ab,cache)",ops);
    }
    {
       board_t b=cheapshot::scan_board(mate_in_3_canvas);

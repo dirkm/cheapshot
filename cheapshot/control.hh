@@ -246,17 +246,32 @@ namespace cheapshot
 
       struct cache
       {
+         cache()
+         {
+            transposition_table.reserve(100000); // TODO
+         }
+
          struct insert_info
          {
             transposition_info& val;
-            const transposition_info& value() const {return val;}
+            bool is_new;
+
+            template<side S, typename Controller>
+            bool hit_check(Controller& ec)
+            {
+               if(is_new||is_shallow(ec))
+                  return false;
+               int& score=ec.pruning.score;
+               score=(val.score!=score::repeat())?
+                  val.score:
+                  score::stalemate(S);
+               return true;
+            }
 
             template<typename Controller>
-            bool is_hit(const Controller& ec) const
+            bool is_shallow(const Controller& ec) const
             {
-               return
-                  (val.score!=score::repeat()) &&
-                  (ec.remaining_plies<=val.remaining_plies);
+               return (ec.remaining_plies>val.remaining_plies);
             }
          };
 
@@ -270,12 +285,12 @@ namespace cheapshot
          {
             typedef decltype(transposition_table) T; // todo bug gcc 4.6
             T::iterator v;
-            std::tie(v,std::ignore)=transposition_table.insert({hash,{score::repeat(),remaining_plies}});
-            return insert_info{v->second};
+            bool is_new;
+            std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),remaining_plies}});
+            return insert_info{v->second,is_new};
          }
 
       private:
-         //  TODO: unordered_map might cause problems with invalidated iterators after insert.
          std::unordered_map<uint64_t,transposition_info> transposition_table;
          // std::map<uint64_t,transposition_info> transposition_table;
       };
@@ -310,9 +325,8 @@ namespace cheapshot
       {
          struct insert_info
          {
-            template<typename Controller>
-            static constexpr bool is_hit(const Controller&) { return false; }
-            static const transposition_info& value() { __builtin_unreachable(); }
+            template<side S, typename Controller>
+            static constexpr bool hit_check(Controller& ec) { return false; }
          };
 
          template<typename EngineController>

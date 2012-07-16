@@ -1,0 +1,71 @@
+Date: Sat Jul 14 13:15:36 CEST 2012
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/4.6/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu/Linaro 4.6.3-1ubuntu5' --with-bugurl=file:///usr/share/doc/gcc-4.6/README.Bugs --enable-languages=c,c++,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-4.6 --enable-shared --enable-linker-build-id --with-system-zlib --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --with-gxx-include-dir=/usr/include/c++/4.6 --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-objc-gc --disable-werror --with-arch-32=i686 --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5) 
+CFlags: -g -fstack-usage -O3  -I. -std=c++0x -march=native -mtune=native -Wall
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit 5db5476f3569ffca56f315774df2b3360a4ec07e
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Sun Jul 8 20:15:35 2012 +0200
+
+    simplistic but working cache
+Tests
+Running 42 test cases...
+column/row calculation
+ real time:0.252015 user time:0.248015 system time:0.004 ops/sec:9.92004e+07
+board pos
+ real time:0.224014 user time:0.224014 system time:0 ops/sec:6.69601e+08
+slide pawn up
+ real time:0.100006 user time:0.100006 system time:0 ops/sec:2.49985e+08
+slide pawn down
+ real time:0.104007 user time:0.104007 system time:0 ops/sec:2.40368e+08
+capture with pawn up
+ real time:0.100006 user time:0.100006 system time:0 ops/sec:2.49985e+08
+capture with pawn down
+ real time:0.100006 user time:0.100006 system time:0 ops/sec:2.49985e+08
+knight jump
+ real time:0.228015 user time:0.228015 system time:0 ops/sec:1.09642e+08
+slide bishop
+ real time:0.208013 user time:0.208013 system time:0 ops/sec:4.80739e+07
+slide rook
+ real time:0.17201 user time:0.17201 system time:0 ops/sec:5.81362e+07
+slide queen
+ real time:0.172011 user time:0.172011 system time:0 ops/sec:2.90679e+07
+move king
+ real time:0.092006 user time:0.088006 system time:0.004 ops/sec:2.17377e+08
+count set bits
+ real time:0.304019 user time:0.300018 system time:0.004001 ops/sec:6.57854e+07
+move set walk
+ real time:0.176011 user time:0.176011 system time:0 ops/sec:8.5222e+06
+mate check (value is significantly less than nps)
+ real time:0.148009 user time:0.148009 system time:0 ops/sec:168909
+caged kings at ply depth 17
+ real time:0.184012 user time:0.184012 system time:0 ops/sec:5.43443
+endgame mate in 7 plies
+ real time:0.544034 user time:0.544034 system time:0 ops/sec:1.83812
+endgame mate in 7 plies (cache)
+ real time:0.280018 user time:0.280018 system time:0 ops/sec:3.5712
+endgame mate in 7 plies (ab)
+ real time:0.132008 user time:0.132008 system time:0 ops/sec:37.8765
+endgame mate in 7 plies (ab,cache)
+ real time:0.076005 user time:0.072005 system time:0.004 ops/sec:26.3141
+middlegame mate in 6 plies (ab)
+ real time:0.136008 user time:0.136008 system time:0 ops/sec:14.705
+minimax nodes test
+ real time:0.060004 user time:0.060004 system time:0 ops/sec:155373
+negamax nodes test
+ real time:0.376023 user time:0.376023 system time:0 ops/sec:883917
+incremental hash nodes test
+ real time:0.068005 user time:0.068005 system time:0 ops/sec:137093
+all-at-once hashes from start position
+ real time:1.84811 user time:1.82811 system time:0.020001 ops/sec:111792
+all-at-once hashes in endgame mating position
+ real time:1.12807 user time:1.11607 system time:0.012001 ops/sec:436693
