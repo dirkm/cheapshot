@@ -786,6 +786,16 @@ namespace
 
    const std::vector<const char*> rook_queen_mate_moves{
       "Kd5-d6","Rc4-c6+","Kd6-d7","Qe4-e6+","Kd7-d8","Rc6-c8#"};
+
+   constexpr char rook_queen_mate_canvas8[]=
+      "........\n"
+      "........\n"
+      "........\n"
+      "...k....\n"
+      "..R.....\n"
+      "........\n"
+      "........\n"
+      "....Q.K.\n";
 }
 
 BOOST_AUTO_TEST_CASE(find_mate_test)
@@ -1080,6 +1090,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
 {
 
    board_t rook_queen_mate=scan_board(rook_queen_mate_canvas);
+   board_t rook_queen_mate8=scan_board(rook_queen_mate_canvas8);
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
@@ -1109,6 +1120,21 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
          scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
             (side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies (ab,cache)",ops);
+   }
+   {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(2);
+      for(long i=0;i<ops;++i)
+         scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,8,{rook_queen_mate8});
+      time_op.time_report("endgame mate in 8 plies (ab)",ops);
+   }
+   {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(2);
+      for(long i=0;i<ops;++i)
+         scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+            (side::white,side::white,8,{rook_queen_mate8});
+      time_op.time_report("endgame mate in 8 plies (ab,cache)",ops);
    }
    {
       board_t b=cheapshot::scan_board(mate_in_3_canvas);
