@@ -38,8 +38,6 @@ namespace cheapshot
 
 // piece moves can include the null-move. They have to be filtered out by the caller
 
-
-   // wait for gcc 4.7
    constexpr uint64_t
    operator "" _U64(unsigned long long c)
    {
@@ -490,7 +488,7 @@ namespace cheapshot
    en_passant_mask(uint64_t pawns_before_move, uint64_t pawns) noexcept
    {
       return shift_backward<S>(
-         (pawns_before_move^pawns)&(shift_forward<S>(pawns_before_move^pawns,16)),
+         (pawns_before_move^pawns)&shift_forward<S>(pawns_before_move^pawns,16),
          8);
    }
 
@@ -549,8 +547,7 @@ namespace cheapshot
    constexpr castling_t
    short_castling() noexcept
    {
-      return
-      {
+      return {
          position(5,bottom_index<S>()),position(7,bottom_index<S>()),
          position(4,bottom_index<S>()),position(6,bottom_index<S>())
       };
@@ -560,8 +557,7 @@ namespace cheapshot
    constexpr castling_t
    long_castling() noexcept
    {
-      return
-      {
+      return{
          position(0,bottom_index<S>()),position(3,bottom_index<S>()),
          position(2,bottom_index<S>()),position(4,bottom_index<S>())
       };
@@ -578,8 +574,8 @@ namespace cheapshot
    {
       return
          detail::aliased_split(
-             detail::aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
-             2)&
+            detail::aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
+            2)&
          (position(3,bottom_index<S>())|position(5,bottom_index<S>()));
    }
 

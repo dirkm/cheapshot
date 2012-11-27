@@ -5,7 +5,7 @@
 Cheapshot is in early construction phase, and has been for some time.
 
 It is meant to be a simple chess-engine and a playground for C++11-features.
-It is not playable yet.
+The engine is not playable yet.
 
 "test/forced_mate" is usable as a brute force mate-detector at a given ply-depth. The output is a simple true/false.
 
@@ -14,9 +14,9 @@ It is not playable yet.
 
 calling "make" in the root-dir will build everything.
 
-Cheapshot is developed against the latest [gcc](http://gcc.gnu.org) in C++11-mode ( gcc 4.8 prerelease at the time of writing ) on a 64 bit Linux.
+Cheapshot is developed against the latest [gcc](http://gcc.gnu.org) in C++11-mode (gcc 4.8 prerelease at the time of writing) on a 64 bit Linux.
 
-[clang](http://clang.llvm.org/) is sadly not supported due to constexpr gcc-intrinsics.
+[clang](http://clang.llvm.org/) is sadly not supported due to missing constexpr gcc-intrinsics.
 
 gcc 4.7 binaries are 30% slower than gcc 4.6 and gcc 4.8, because of less inlining in the low-level functions.
 
