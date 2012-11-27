@@ -16,21 +16,21 @@ namespace cheapshot
          (highest_bit_portable(v)==h);
    }
 
-   static_assert(test_highest_bit(0xF123UL,0x8000UL),"");
-   static_assert(test_highest_bit(0x812300UL,0x800000UL),"");
-   static_assert(count_set_bits(0x0UL)==0,"");
-   static_assert(count_set_bits(0x10000001UL)==2,"");
-   static_assert(count_set_bits(0x11FFUL)==10,"");
-   static_assert(count_set_bits(0x3FFF00UL)==14,"");
-   static_assert(count_set_bits(0x11F7000UL)==9,"");
-   static_assert(count_set_bits(0xFFF0000UL)==12,"");
-   static_assert(count_set_bits(0xFFF0000FFF0000UL)==24,"");
+   static_assert(test_highest_bit(0xF123_U64,0x8000_U64),"");
+   static_assert(test_highest_bit(0x812300_U64,0x800000_U64),"");
+   static_assert(count_set_bits(0x0_U64)==0,"");
+   static_assert(count_set_bits(0x10000001_U64)==2,"");
+   static_assert(count_set_bits(0x11FF_U64)==10,"");
+   static_assert(count_set_bits(0x3FFF00_U64)==14,"");
+   static_assert(count_set_bits(0x11F7000_U64)==9,"");
+   static_assert(count_set_bits(0xFFF0000_U64)==12,"");
+   static_assert(count_set_bits(0xFFF0000FFF0000_U64)==24,"");
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
-   // static_assert(__builtin_constant_p(bit_mixer(0ULL))==1,"should be constant for performance reasons");
+   // static_assert(__builtin_constant_p(bit_mixer(0_U64))==1,"should be constant for performance reasons");
 
    constexpr castling_t ci=cheapshot::long_castling<side::white>();
-   // constexpr uint64_t bm=bit_mixer(0ULL);
+   // constexpr uint64_t bm=bit_mixer(0_U64);
 
    static_assert(count_set_bits(score::limit(side::white))==1,"");
 }

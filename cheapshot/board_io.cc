@@ -15,8 +15,8 @@ namespace cheapshot
    {
       typedef std::array<char,count<piece>()> piece_to_character_t;
 
-      constexpr piece_to_character_t repr_pieces_white{{'P','N','B','R','Q','K'}};
-      constexpr piece_to_character_t repr_pieces_black{{'p','n','b','r','q','k'}};
+      constexpr piece_to_character_t repr_pieces_white{'P','N','B','R','Q','K'};
+      constexpr piece_to_character_t repr_pieces_black{'p','n','b','r','q','k'};
 
       std::pair<side,piece>
       character_to_piece(char p)
@@ -162,7 +162,7 @@ namespace cheapshot
       constexpr uint64_t
       canvaspos_to_bitmask(uint8_t row, uint8_t column) noexcept
       {
-         return 1UL<<(((row^'\x7')*8)|column); // rows reverse order
+         return 1_U64<<(((row^'\x7')*8)|column); // rows reverse order
       }
    }
 
@@ -184,7 +184,7 @@ namespace cheapshot
    extern board_t
    scan_board(const char* canvas) noexcept
    {
-      board_t b{{{{0ULL}}}};
+      board_t b{0_U64};
       for(uint8_t i=0;i<8;++i)
       {
          for(uint8_t j=0;j<8;++j,++canvas)
@@ -209,7 +209,7 @@ namespace cheapshot
       extern board_t
       scan_position(char const *& rs)
       {
-         board_t b{{{{0ULL}}}};
+         board_t b{0_U64};
          for(uint8_t i=0;;++i)
          {
             for(uint8_t j=0;j<8;++rs)
@@ -306,7 +306,7 @@ namespace cheapshot
          {
             char ch1=*rs++;
             if(ch1=='-')
-               return 0ULL;
+               return 0_U64;
             check_column_char(ch1);
             char ch2=*rs++;
             if((ch2!='3') && (ch2!='6'))
@@ -377,7 +377,7 @@ namespace cheapshot
          {
             bool f=false;
             for(auto cr: castling_representations)
-               if(cr.type.castling_allowed(castling_rights,0ULL))
+               if(cr.type.castling_allowed(castling_rights,0_U64))
                {
                   f=true;
                   os << cr.repr;
@@ -389,7 +389,7 @@ namespace cheapshot
          void
          print_ep_info(uint64_t ep_info, std::ostream& os)
          {
-            if(ep_info==0ULL)
+            if(ep_info==0_U64)
                os << "-";
             else
                print_algpos(ep_info, os);
@@ -527,7 +527,7 @@ namespace cheapshot
       check_game_state(board_t& board, const board_metrics& bm, const context& ctx, const input_move& im)
       {
          uint64_t other_under_attack=generate_own_under_attack<other_side(S)>(board,bm);
-         const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0ULL;
+         const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0_U64;
          const bool status_check=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
          if(other_under_check!=status_check)
          {
@@ -726,5 +726,4 @@ namespace cheapshot
       print_board(board,std::cerr);
       std::cerr  << std::endl;
    }
-
 }

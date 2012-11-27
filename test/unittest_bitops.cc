@@ -19,9 +19,9 @@ BOOST_AUTO_TEST_CASE(bit_iterator_test)
 {
    {
       int i=0;
-      for(bit_iterator it(~0ULL);it!=bit_iterator();++it,++i)
+      for(bit_iterator it(~0_U64);it!=bit_iterator();++it,++i)
       {
-         BOOST_CHECK_EQUAL(*it,1UL<<i);
+         BOOST_CHECK_EQUAL(*it,1_U64<<i);
       }
    }
    BOOST_CHECK_EQUAL(*bit_iterator(0x7),1);
@@ -44,17 +44,17 @@ BOOST_AUTO_TEST_CASE(board_iterator_test)
 {
    {
       int i=0;
-      for(board_iterator it=make_board_iterator(~0ULL);it!=board_iterator();++it,++i)
+      for(board_iterator it=make_board_iterator(~0_U64);it!=board_iterator();++it,++i)
       {
          BOOST_CHECK_EQUAL(*it,i);
       }
       BOOST_CHECK_EQUAL(i,64);
    }
 
-   BOOST_CHECK_EQUAL(*make_board_iterator(0x7),0);
-   BOOST_CHECK_EQUAL(*make_board_iterator(32),5);
+   BOOST_CHECK_EQUAL(*make_board_iterator(0x7_U64),0);
+   BOOST_CHECK_EQUAL(*make_board_iterator(32_U64),5);
    {
-      board_iterator it=make_board_iterator(34);
+      board_iterator it=make_board_iterator(34_U64);
       BOOST_CHECK_EQUAL(*it,1);
       BOOST_CHECK_NE(it,board_iterator());
       ++it;
@@ -69,19 +69,19 @@ BOOST_AUTO_TEST_CASE(board_iterator_test)
 
 BOOST_AUTO_TEST_CASE(primitive_test)
 {
-   BOOST_CHECK_EQUAL(highest_bit_no_zero(0xF123UL),0x8000UL);
-   BOOST_CHECK_EQUAL(highest_bit_no_zero(0x1UL),0x1UL);
-   BOOST_CHECK_EQUAL(strict_left_of(0x1UL),0x0UL);
-   BOOST_CHECK_EQUAL(strict_left_of(0x2UL),0x0101010101010101UL);
+   BOOST_CHECK_EQUAL(highest_bit_no_zero(0xF123_U64),0x8000_U64);
+   BOOST_CHECK_EQUAL(highest_bit_no_zero(0x1_U64),0x1_U64);
+   BOOST_CHECK_EQUAL(strict_left_of(0x1_U64),0x0_U64);
+   BOOST_CHECK_EQUAL(strict_left_of(0x2_U64),0x0101010101010101_U64);
 }
 
 BOOST_AUTO_TEST_CASE(row_and_column_test)
 {
-   BOOST_CHECK_EQUAL(row_number(1UL<<63),7);
-   BOOST_CHECK_EQUAL(row_number(1UL<<1),0);
+   BOOST_CHECK_EQUAL(row_number(1_U64<<63),7);
+   BOOST_CHECK_EQUAL(row_number(1_U64<<1),0);
    BOOST_CHECK_EQUAL(smaller(8),7);
-   BOOST_CHECK_EQUAL(column_number(1UL<<1),1);
-   BOOST_CHECK_EQUAL(column_number(1UL<<63),7);
+   BOOST_CHECK_EQUAL(column_number(1_U64<<1),1);
+   BOOST_CHECK_EQUAL(column_number(1_U64<<63),7);
 }
 
 void
@@ -175,9 +175,9 @@ BOOST_AUTO_TEST_CASE(vertical_band_test)
 {
    BOOST_CHECK_EQUAL(detail::aliased_widen(column_with_number(3),1),
                      column_with_number(2)|column_with_number(3)|column_with_number(4));
-   BOOST_CHECK_EQUAL(vertical_band(4UL,1),
+   BOOST_CHECK_EQUAL(vertical_band(4_U64,1),
                      column_with_number(1)|column_with_number(2)|column_with_number(3));
-   BOOST_CHECK_EQUAL(vertical_band(1UL,2),
+   BOOST_CHECK_EQUAL(vertical_band(1_U64,2),
                      column_with_number(0)|column_with_number(1)|column_with_number(2));
 }
 
@@ -300,8 +300,8 @@ BOOST_AUTO_TEST_CASE(move_king_test)
 
 BOOST_AUTO_TEST_CASE(mirror_test)
 {
-   BOOST_CHECK_EQUAL(mirror(0UL),0UL);
-   BOOST_CHECK_EQUAL(mirror(~0UL),~0UL);
+   BOOST_CHECK_EQUAL(mirror(0_U64),0_U64);
+   BOOST_CHECK_EQUAL(mirror(~0_U64),~0_U64);
    {
       static constexpr char canvas[]=
          "......X.\n"
@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
 {
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(1UL),ots);
+      print_position(diag_delta(1_U64),ots);
       BOOST_CHECK(ots.is_equal(
                      ".......X\n"
                      "......X.\n"
@@ -561,7 +561,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(smaller(1UL<<(8*(8-(1)))),ots);
+      print_position(smaller(1_U64<<(8*(8-(1)))),ots);
       BOOST_CHECK(ots.is_equal(
                      "........\n"
                      "XXXXXXXX\n"
@@ -575,7 +575,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(1UL)>>8,ots);
+      print_position(diag_delta(1_U64)>>8,ots);
       BOOST_CHECK(ots.is_equal(
                      "........\n"
                      ".......X\n"
@@ -589,7 +589,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(1UL)<<32,ots);
+      print_position(diag_delta(1_U64)<<32,ots);
       BOOST_CHECK(ots.is_equal(
                      "...X....\n"
                      "..X.....\n"
@@ -603,7 +603,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(1UL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(1_U64<<(8*(8-(1)))),ots);
       BOOST_CHECK(ots.is_equal(
                      "X.......\n"
                      "........\n"
@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(0x80UL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(0x80_U64<<(8*(8-(1)))),ots);
       BOOST_CHECK(ots.is_equal(
                      ".......X\n"
                      "......X.\n"
@@ -631,7 +631,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_delta(0x10UL<<(8*(8-(1)))),ots);
+      print_position(diag_delta(0x10_U64<<(8*(8-(1)))),ots);
       BOOST_CHECK(ots.is_equal(
                      "....X...\n"
                      "...X....\n"
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_sum(1UL<<7),ots);
+      print_position(diag_sum(1_U64<<7),ots);
       BOOST_CHECK(ots.is_equal(
                      "X.......\n"
                      ".X......\n"
@@ -659,7 +659,7 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
    }
    {
       boost::test_tools::output_test_stream ots;
-      print_position(diag_sum(1UL<<7)>>(8*6),ots);
+      print_position(diag_sum(1_U64<<7)>>(8*6),ots);
       BOOST_CHECK(ots.is_equal(
                      "........\n"
                      "........\n"
@@ -693,7 +693,7 @@ BOOST_AUTO_TEST_SUITE(timings_suite)
 
 BOOST_AUTO_TEST_CASE(time_column_and_row_test)
 {
-   volatile uint64_t s=(1UL<<(8*(8-(1))));
+   volatile uint64_t s=(1_U64<<(8*(8-(1))));
    __attribute__((unused)) volatile uint8_t c;
    __attribute__((unused)) volatile uint8_t r;
    TimeOperation time_op;
@@ -708,7 +708,7 @@ BOOST_AUTO_TEST_CASE(time_column_and_row_test)
 
 BOOST_AUTO_TEST_CASE(time_board_pos)
 {
-   volatile uint64_t s=(1UL<<(8*(8-(1))));
+   volatile uint64_t s=(1_U64<<(8*(8-(1))));
    __attribute__((unused)) volatile uint64_t c;
    TimeOperation time_op;
    const long ops=runtime_adjusted_ops(600000000);
@@ -723,7 +723,7 @@ template<typename T>
 void time_move(T fun, long raw_ops, const char* description)
 {
    long ops=runtime_adjusted_ops(raw_ops);
-   volatile uint64_t s=(1UL<<(4*(8-(4))));
+   volatile uint64_t s=(1_U64<<(4*(8-(4))));
    __attribute__((unused)) volatile uint64_t r;
    TimeOperation time_op;
    volatile uint64_t obstacles=random()&~s;
@@ -749,7 +749,7 @@ BOOST_AUTO_TEST_CASE(time_moves)
 BOOST_AUTO_TEST_CASE(time_count_set_bits)
 {
    __attribute__((unused)) volatile uint64_t r;
-   volatile uint64_t in=0X100110011001F30UL;
+   volatile uint64_t in=0X100110011001F30_U64;
    TimeOperation time_op;
    const long ops=runtime_adjusted_ops(80000000);
    for(long i=0;i<ops;++i)

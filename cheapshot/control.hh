@@ -111,9 +111,9 @@ namespace cheapshot
          int old_score;
       };
 
-      struct negamax
+      struct alphabeta
       {
-         explicit constexpr negamax(side c):
+         explicit constexpr alphabeta(side c):
             alpha(-score::limit(side::white)),
             score(-score::limit(c)),
             beta(-score::limit(side::black))
@@ -131,31 +131,31 @@ namespace cheapshot
          template<side S>
          bool cutoff() const { return score::less_equal<S>(treshold<other_side(S)>(),score); }
 
-         negamax(const negamax&) = delete;
-         negamax& operator=(const negamax&) = delete;
+         alphabeta(const alphabeta&) = delete;
+         alphabeta& operator=(const alphabeta&) = delete;
       };
 
       template<>
       inline int
-      negamax::treshold<side::white>() const { return alpha; }
+      alphabeta::treshold<side::white>() const { return alpha; }
 
       template<>
       inline int
-      negamax::treshold<side::black>() const { return beta; }
+      alphabeta::treshold<side::black>() const { return beta; }
 
       template<>
       inline int&
-      negamax::treshold<side::white>() { return alpha; }
+      alphabeta::treshold<side::white>() { return alpha; }
 
       template<>
       inline int&
-      negamax::treshold<side::black>() { return beta; }
+      alphabeta::treshold<side::black>() { return beta; }
 
       template<side S>
-      class scoped_score<negamax,S>
+      class scoped_score<alphabeta,S>
       {
       public:
-         scoped_score(negamax& m_):
+         scoped_score(alphabeta& m_):
             m(m_),
             old_treshold(m.template treshold<S>()),
             old_score(m.score),
@@ -175,7 +175,7 @@ namespace cheapshot
          scoped_score& operator=(const scoped_score&) = delete;
       private:
 
-         negamax& m;
+         alphabeta& m;
          int old_treshold;
          int old_score;
          int old_treshold_other;

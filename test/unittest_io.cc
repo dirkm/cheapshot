@@ -16,7 +16,7 @@ namespace
 
       bool operator()(const cheapshot::io_error& ex)
       {
-         return strstr(ex.what(),fragment)!=NULL;
+         return strstr(ex.what(),fragment)!=nullptr;
       }
 
    private:
@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       BOOST_CHECK_EQUAL(b,initial_board());
       BOOST_CHECK_EQUAL(turn,side::white);
-      BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
-      BOOST_CHECK_EQUAL(ctx.castling_rights,0ULL);
+      BOOST_CHECK_EQUAL(ctx.ep_info,0_U64);
+      BOOST_CHECK_EQUAL(ctx.castling_rights,0_U64);
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
 
       boost::test_tools::output_test_stream ots;
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
       std::tie(b,turn,ctx)=scan_fen(initial_pos);
       // BOOST_CHECK(b==initial_board());
       BOOST_CHECK_EQUAL(turn,side::white);
-      BOOST_CHECK_EQUAL(ctx.ep_info,0ULL);
+      BOOST_CHECK_EQUAL(ctx.ep_info,0_U64);
       BOOST_CHECK_EQUAL(ctx.castling_rights,
                         scan_canvas(
                            "...B.B..\n"

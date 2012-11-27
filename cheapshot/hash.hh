@@ -19,9 +19,9 @@ namespace cheapshot
       {
          // finalizer of Murmurhash 3
          p^=p>>33;
-         p*=0xFF51AFD7ED558CCDULL;
+         p*=0xFF51AFD7ED558CCD_U64;
          p^=p>>33;
-         p*=0xC4CEB9FE1A85EC53ULL;
+         p*=0xC4CEB9FE1A85EC53_U64;
          p^=p>>33;
          return p;
       }
@@ -51,7 +51,7 @@ namespace cheapshot
    inline uint64_t
    hhash(side c,const board_side& bs)
    {
-      uint64_t r=0ULL;
+      uint64_t r=0_U64;
       for(piece pc=piece::pawn;pc<piece::count;++pc)
       {
          uint64_t p=bs[idx(pc)];
@@ -100,8 +100,8 @@ namespace cheapshot
    inline uint64_t
    hhash_ep_change0(uint64_t ep_info)
    {
-      if(ep_info) return hhash_ep(ep_info)^hhash_ep(0ULL);
-      else return 0ULL;
+      if(ep_info) return hhash_ep(ep_info)^hhash_ep(0_U64);
+      else return 0_U64;
    }
 
    inline uint64_t
@@ -112,7 +112,7 @@ namespace cheapshot
             (hhash_castling(cm1)^
              hhash_castling(cm2));
       else
-         return 0ULL;
+         return 0_U64;
    }
 
    class scoped_hash

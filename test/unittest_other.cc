@@ -15,6 +15,7 @@ using namespace cheapshot::control;
 
 namespace
 {
+   // TODO: use argument packs
    template<typename Pruning=minimax, typename HashController=noop_hash,
             typename MaterialController=noop_material, typename Cache=noop_cache>
    struct max_ply_cutoff_noop: public max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
@@ -285,7 +286,7 @@ namespace
    is_castling_allowed(const board_t& board, const castling_t& ci)
    {
       board_metrics bm(board);
-      uint64_t own_under_attack=0ULL;
+      uint64_t own_under_attack=0_U64;
       on_basic_moves<other_side(S)>(
          board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
          {
@@ -473,7 +474,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
    }
    {
-      BOOST_CHECK(lci.castling_allowed(0ULL,0ULL));
+      BOOST_CHECK(lci.castling_allowed(0_U64,0_U64));
 
       const char cvs[]=
          "...xk..r\n"
@@ -486,7 +487,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
          ".R.XK..R\n";
       uint64_t m=castling_block_mask<side::white>(scan_canvas(cvs,'R'),scan_canvas(cvs,'K'));
       BOOST_CHECK_EQUAL(m,scan_canvas(cvs,'X'));
-      BOOST_CHECK(!lci.castling_allowed(m,0ULL));
+      BOOST_CHECK(!lci.castling_allowed(m,0_U64));
       BOOST_CHECK_EQUAL(castling_block_mask<side::black>(scan_canvas(cvs,'r'),scan_canvas(cvs,'k')),
                         scan_canvas(cvs,'x'));
    }
@@ -502,7 +503,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "R...KX..\n";
       uint64_t m=castling_block_mask<side::white>(scan_canvas(cvs,'R'),scan_canvas(cvs,'K'));
       BOOST_CHECK_EQUAL(m,scan_canvas(cvs,'X'));
-      BOOST_CHECK(!sci.castling_allowed(m,0ULL));
+      BOOST_CHECK(!sci.castling_allowed(m,0_U64));
       BOOST_CHECK_EQUAL(castling_block_mask<side::black>(scan_canvas(cvs,'r'),scan_canvas(cvs,'k')),
                         scan_canvas(cvs,'x'));
    }
@@ -856,10 +857,10 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<max_ply_cutoff_noop<> >(side::black,side::white,5,{b1,b2,b3,b4,b5});
-      // scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,5,{b1,b2,b3,b4,b5});
-      // negamax is considerably faster
-      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,6,{b,b1,b2,b3,b4,b5});
-      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+      // scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,5,{b1,b2,b3,b4,b5});
+      // alphabeta is considerably faster
+      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,6,{b,b1,b2,b3,b4,b5});
+      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
          (side::white,side::white,6,{b,b1,b2,b3,b4,b5});
    }
    {
@@ -905,8 +906,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<max_ply_cutoff_noop<> >(side::white,side::white,4,{b,b1,b2,b3});
-      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,4,{b,b1,b2,b3});
-      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,4,{b,b1,b2,b3});
+      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
          (side::white,side::white,4,{b,b1,b2,b3});
    }
 
@@ -965,8 +966,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<max_ply_cutoff_noop<minimax> >(side::white,side::white,4,b);
-      scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,4,b);
-      scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,4,b);
+      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
          (side::white,side::white,4,b);
    }
    // {
@@ -980,7 +981,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
    //       "......P.\n"
    //       "..B.R..K\n"
    //      );
-   //    scan_mate<side::white,max_ply_cutoff<negamax,noop_hash> >(side::white,10,b);
+   //    scan_mate<side::white,max_ply_cutoff<alphabeta,noop_hash> >(side::white,10,b);
    // }
 }
 
@@ -1110,14 +1111,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<negamax> >(side::black,side::white,7,rook_queen_mate);
+         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::black,side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+         scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
             (side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies (ab,cache)",ops);
    }
@@ -1125,14 +1126,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(2);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,8,{rook_queen_mate8});
+         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,8,{rook_queen_mate8});
       time_op.time_report("endgame mate in 8 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(2);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<negamax,incremental_hash,noop_material,cache> >
+         scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
             (side::white,side::white,8,{rook_queen_mate8});
       time_op.time_report("endgame mate in 8 plies (ab,cache)",ops);
    }
@@ -1141,7 +1142,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<negamax> >(side::white,side::white,6,b);
+         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,6,b);
       // minimax
       // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
       time_op.time_report("middlegame mate in 6 plies (ab)",ops);
@@ -1212,7 +1213,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       //  cutoff: 4
       BOOST_CHECK_EQUAL(nodes,9323);
    }
-   time_control<negamax>(8,"negamax nodes test");
+   time_control<alphabeta>(8,"alphabeta nodes test");
    {
       int nodes=0;
       auto f=[&nodes](const board_t& board, side t, const context& ctx, const board_metrics& bm)

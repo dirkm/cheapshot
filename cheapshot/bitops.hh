@@ -10,8 +10,8 @@
 #elif defined(__GNUC__)
 
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if (GCC_VERSION < 40600)
-# error "gcc 4.6 required"
+#if (GCC_VERSION < 40800)
+# error "gcc 4.8 required"
 #endif
 
 #endif
@@ -38,13 +38,14 @@ namespace cheapshot
 
 // piece moves can include the null-move. They have to be filtered out by the caller
 
-/*
+
    // wait for gcc 4.7
-  uint64_t operator "" u64(uint64_t c)
-  {
-  return c;
-  }
-*/
+   constexpr uint64_t
+   operator "" _U64(unsigned long long c)
+   {
+      return c;
+   }
+
    enum class side: uint8_t { white, black };
 
    constexpr side
@@ -79,10 +80,12 @@ namespace cheapshot
    }
 
    template<side S=side::white>
-   uint64_t shift_forward(uint64_t l, uint8_t r) noexcept;
+   constexpr uint64_t
+   shift_forward(uint64_t l, uint8_t r) noexcept;
 
    template<side S=side::white>
-   uint64_t shift_backward(uint64_t l, uint8_t r) noexcept;
+   constexpr uint64_t
+   shift_backward(uint64_t l, uint8_t r) noexcept;
 
    template<>
    constexpr uint64_t
@@ -125,7 +128,7 @@ namespace cheapshot
          // performance-trick: multiply by precomputed value (+10%)
          // limitation: this only works when multiplying without carry
          // TODO: limitation should be made explicit by interface-change
-         return p*aliased_move_helper<shift_forward>(1ULL,n,step,i);
+         return p*aliased_move_helper<shift_forward>(1_U64,n,step,i);
       }
 
       constexpr uint64_t
@@ -153,7 +156,7 @@ namespace cheapshot
    highest_bit_no_zero(uint64_t p) noexcept
    {
       // zero not allowed as input of clzll
-      return (1ULL<<63)>>__builtin_clzll(p);
+      return (1_U64<<63)>>__builtin_clzll(p);
    }
 
    // get all bits from the lower left (row-wise) to the point where the piece is placed
@@ -188,7 +191,7 @@ namespace cheapshot
    }
 
    // s2 is allowed to be 0 (means one bigger than last bit)
-   // s1: single bit (min. 1ULL)
+   // s1: single bit (min. 1_U64)
    // s1 is in result, s2 not
    constexpr uint64_t
    in_between(uint64_t s1,uint64_t s2) noexcept
@@ -240,7 +243,7 @@ namespace cheapshot
    constexpr uint64_t
    position(uint8_t column, uint8_t row) noexcept
    {
-      return 1ULL<<((row)*8+(column));
+      return 1_U64<<((row)*8+(column));
    }
 
    constexpr uint64_t
@@ -253,7 +256,7 @@ namespace cheapshot
    constexpr uint64_t
    column_with_number(uint8_t column_number) noexcept
    {
-      return column(1ULL)<<column_number;
+      return column(1_U64)<<column_number;
    }
 
    constexpr uint64_t
@@ -267,7 +270,7 @@ namespace cheapshot
    constexpr uint64_t
    row_with_number(uint8_t row_number) noexcept
    {
-      return row(1ULL)<<(row_number*8);
+      return row(1_U64)<<(row_number*8);
    }
 
    // helpers to get patterns based on column-row coordinates in algebraic notation
@@ -363,8 +366,8 @@ namespace cheapshot
    jump_knight_simple(uint64_t s) noexcept
    {
       return
-         (detail::aliased_split(detail::aliased_split(s,2)&row(s),8)|
-          detail::aliased_split(detail::aliased_split(s,1)&row(s),16));
+         detail::aliased_split(detail::aliased_split(s,2)&row(s),8)|
+         detail::aliased_split(detail::aliased_split(s,1)&row(s),16);
    }
 
 // with obstacles to get uniform interface
@@ -398,7 +401,7 @@ namespace cheapshot
          // assert(is_single_bit(s));
          return
             in_between(
-               highest_bit_no_zero(1ULL|(smaller(s)&(obstacles&movement))), // bottom left obstacle
+               highest_bit_no_zero(1_U64|(smaller(s)&(obstacles&movement))), // bottom left obstacle
                (lowest_bit(bigger(s)&(obstacles&movement))<<1)) // top right obstacle + offset
             &movement; // originally allowed
       }

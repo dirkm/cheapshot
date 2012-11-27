@@ -16,7 +16,7 @@ namespace cheapshot
    row_number(uint64_t s)
    {
       assert(is_single_bit(s));
-      const uint64_t rowmask[] = {0xFF00FF00FF00FF00ULL, 0xFFFF0000FFFF0000ULL,0xFFFFFFFF00000000ULL};
+      const uint64_t rowmask[] = {0xFF00FF00FF00FF00_U64, 0xFFFF0000FFFF0000_U64,0xFFFFFFFF00000000_U64};
       uint_fast8_t r =0;
       for (int i=0; i < 3; ++i)
          r|=((s & rowmask[i])!= 0)<<i;
@@ -50,7 +50,7 @@ namespace cheapshot
    bigger_special_0(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
-      return bigger(highest_bit_no_zero(s|1ULL)); // TODO: improvable?
+      return bigger(highest_bit_no_zero(s|1_U64)); // TODO: improvable?
    }
 
    namespace detail
@@ -130,8 +130,8 @@ namespace cheapshot
          bit_mix_step
          (bit_mix_step
           (bit_mix_step
-           (p,33,0xC4CEB9FE1A85EC53ULL),
-           33,0xFF51AFD7ED558CCDULL),
+           (p,33,0xC4CEB9FE1A85EC53_U64),
+           33,0xFF51AFD7ED558CCD_U64),
           33);
    }
 }

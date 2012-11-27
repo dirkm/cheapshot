@@ -45,12 +45,9 @@ namespace cheapshot
    extern board_t
    scan_board(const char* canvas) noexcept;
 
-   struct io_error: public std::runtime_error
+   class io_error: public std::runtime_error
    {
-      // using std::runtime_error::runtime_error; // gcc 4.7
-      io_error(const std::string& s):
-         std::runtime_error(s)
-      {}
+      using std::runtime_error::runtime_error;
    };
 
    namespace fen

@@ -39,12 +39,12 @@ enum class toy{
 
 const char* to_string(toy n)
 {
-   static const char* repr[count<toy>()]=
-      {"w0_0",
-       "b1_0","b1_1",
-       "w2_0","w2_1","w2_2","w2_3",
-       "b3_0","b3_1","b3_2","b3_3","b3_4","b3_5",
-       "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8"};
+   static const char* repr[count<toy>()]={
+      "w0_0",
+      "b1_0","b1_1",
+      "w2_0","w2_1","w2_2","w2_3",
+      "b3_0","b3_1","b3_2","b3_3","b3_4","b3_5",
+      "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8"};
    return repr[idx(n)];
 };
 
@@ -56,7 +56,7 @@ typedef std::function<void (toy,toy,int,int)> fun_cutoff_t;
 // freestanding implementation with inspection-functions
 //  base on wikipedia-article
 int
-negamax_book(const tree_t& t, toy s,
+ab_book(const tree_t& t, toy s,
              fun_init_t finit, fun_cutoff_t fcutoff,
              int alpha=-score::limit(side::white),
              int beta=-score::limit(side::black))
@@ -67,13 +67,13 @@ negamax_book(const tree_t& t, toy s,
       alpha=v.second;
    else
       for(toy child: v.first)
-        {
-           // int local_alpha=-negamax(t,child,finit,fcutoff,-beta,-alpha);
-           alpha=std::max(alpha,-negamax_book(t,child,finit,fcutoff,-beta,-alpha));
-           fcutoff(s,child,alpha,beta);
-           if(alpha>=beta)
-              break;
-        }
+      {
+         // int local_alpha=-ab(t,child,finit,fcutoff,-beta,-alpha);
+         alpha=std::max(alpha,-ab_book(t,child,finit,fcutoff,-beta,-alpha));
+         fcutoff(s,child,alpha,beta);
+         if(alpha>=beta)
+            break;
+      }
    return alpha;
 }
 
@@ -82,8 +82,8 @@ typedef std::function<void (toy,toy,bool)> fun_cutoff_prune_t;
 template<side S,typename Algo>
 inline void
 prune(const tree_t& t, toy s,
-        fun_init_t finit, fun_cutoff_prune_t fcutoff,
-        Algo& algo_data)
+      fun_init_t finit, fun_cutoff_prune_t fcutoff,
+      Algo& algo_data)
 {
    const auto& v=t[idx(s)];
    finit(s,v);
@@ -104,7 +104,9 @@ prune(const tree_t& t, toy s,
 BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 {
    constexpr int branch=std::numeric_limits<int>::min();
+
    typedef std::vector<toy> vt;
+
    static const tree_t game_tree{{
       /*w0_0*/ {vt{toy::b1_0,toy::b1_1},branch},
       /*b1_0*/ {vt{toy::w2_0,toy::w2_1},branch},
@@ -128,7 +130,7 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       /*w4_6*/ {vt{},5},
       /*w4_7*/ {vt{},-7},
       /*w4_8*/ {vt{},-5}
-      }};
+   }};
 
    constexpr toy init_state=toy::w0_0;
 
@@ -160,7 +162,7 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
    };
 
    {
-      int r=negamax_book(game_tree,init_state,finit,fcutoff);
+      int r=ab_book(game_tree,init_state,finit,fcutoff);
       BOOST_CHECK_EQUAL(r,3);
    }
    {
@@ -178,15 +180,15 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       BOOST_CHECK_EQUAL(mm.score,3);
    }
    {
-      cheapshot::control::negamax nm(side::black);
-      auto fcutoff_negamax=[&fcutoff,&nm](toy s,toy child, bool is_cutoff){
+      cheapshot::control::alphabeta ab(side::black);
+      auto fcutoff_ab=[&fcutoff,&ab](toy s,toy child, bool is_cutoff){
          BOOST_CHECK_EQUAL(
             beta_cutoffs.find({s,child})!=end(beta_cutoffs),
             is_cutoff);
       };
 
-      prune<side::black>(game_tree,init_state,finit,fcutoff_negamax,nm);
-      BOOST_CHECK_EQUAL(nm.score,3);
+      prune<side::black>(game_tree,init_state,finit,fcutoff_ab,ab);
+      BOOST_CHECK_EQUAL(ab.score,3);
    }
 }
 

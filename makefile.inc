@@ -13,10 +13,11 @@ LDFLAGS := -Wl,--as-needed
 #CFLAGS := -O3 -g -I. -std=c++0x -Wsuggest-attribute=const -Wsuggest-attribute=pure -march=native -mtune=native
 
 ## non-standard compilers (gcc 4.6.1 is good enough)
-CXX := g++
+#CXX := g++
 #CXX := clang++
 #CXX := g++-4.7.1
-#CXX := g++-trunk
+#CXX := g++-4.6
+CXX := g++-trunk
 #CXX:=/usr/lib/gcc-snapshot/bin/g++
 
 ## no optimisations to make gdb more intuitive

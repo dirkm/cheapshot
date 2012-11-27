@@ -54,22 +54,22 @@ namespace cheapshot
       int fullmove_number;
    };
 
-   constexpr board_side init_white_side={{
+   constexpr board_side init_white_side={
          row_with_algebraic_number(2), // p
          algpos('b',1)|algpos('g',1), // n
          algpos('c',1)|algpos('f',1), // b
          algpos('a',1)|algpos('h',1), // r
          algpos('d',1), // q
          algpos('e',1) // k
-      }};
+      };
 
    inline void
    mirror_inplace(uint64_t& v) noexcept
    {
       //std::cout << std::hex << std::setw(16) << v << std::endl;
-      v = ((v >> 8) & 0x00FF00FF00FF00FFUL) | ((v & 0x00FF00FF00FF00FFUL) << 8);
+      v = ((v >> 8) & 0x00FF00FF00FF00FF_U64) | ((v & 0x00FF00FF00FF00FF_U64) << 8);
       // swap 2-byte long pairs
-      v = ((v >> 16) & 0x0000FFFF0000FFFFUL) | ((v & 0x0000FFFF0000FFFFUL) << 16);
+      v = ((v >> 16) & 0x0000FFFF0000FFFF_U64) | ((v & 0x0000FFFF0000FFFF_U64) << 16);
       // swap 4-byte long pairs
       v = (v >> 32) | (v << 32);
    }
@@ -100,7 +100,7 @@ namespace cheapshot
    inline board_t
    initial_board()
    {
-      board_t b{{init_white_side,init_white_side}};
+      board_t b{init_white_side,init_white_side};
       mirror_inplace(b[idx(side::black)]);
       return b;
    }
@@ -123,7 +123,7 @@ namespace cheapshot
          uint64_t bsmap=r;
          for(uint64_t p: bs)
          {
-            assert((r&p)==0ULL);
+            assert((r&p)==0_U64);
             r|=p;
          }
          bsmap^=r;
