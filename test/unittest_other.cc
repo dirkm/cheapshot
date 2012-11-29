@@ -5,6 +5,7 @@
 
 #include "cheapshot/board_io.hh"
 #include "cheapshot/control.hh"
+#include "cheapshot/hash.hh"
 #include "cheapshot/loop.hh"
 
 #include <map>
@@ -244,6 +245,27 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
                         "......XX\n"));
       }
    }
+}
+
+namespace
+{
+   uint64_t
+   bit_mixer_runtime(uint64_t p)
+   {
+      // finalizer of Murmurhash 3
+      p^=p>>33;
+      p*=0xFF51AFD7ED558CCD_U64;
+      p^=p>>33;
+      p*=0xC4CEB9FE1A85EC53_U64;
+      p^=p>>33;
+      return p;
+   }
+}
+
+
+BOOST_AUTO_TEST_CASE(hash_test)
+{
+   BOOST_CHECK_EQUAL(bit_mixer_runtime(0x12345678_U64),detail::bit_mixer(0x12345678_U64));
 }
 
 BOOST_AUTO_TEST_CASE(scoped_move_test)

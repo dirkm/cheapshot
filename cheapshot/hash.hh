@@ -13,17 +13,24 @@ namespace cheapshot
 {
    namespace detail
    {
+      constexpr uint64_t
+      xor_rshift(uint64_t p, int r)
+      {
+         return p^(p>>r);
+      }
+
       // a bitmixer is used instead of a PRNG-table
-      inline uint64_t
+      constexpr uint64_t
       bit_mixer(uint64_t p)
       {
          // finalizer of Murmurhash 3
-         p^=p>>33;
-         p*=0xFF51AFD7ED558CCD_U64;
-         p^=p>>33;
-         p*=0xC4CEB9FE1A85EC53_U64;
-         p^=p>>33;
-         return p;
+         return
+            xor_rshift(
+               xor_rshift(
+                  xor_rshift(p,33)*0xFF51AFD7ED558CCD_U64,
+                  33)
+               *0xC4CEB9FE1A85EC53_U64,
+               33);
       }
 
       constexpr uint64_t
@@ -41,7 +48,7 @@ namespace cheapshot
       }
    }
 
-   inline uint64_t
+   constexpr uint64_t
    hhash(side c, piece pc, uint64_t p)
    {
       using namespace detail;
@@ -68,21 +75,21 @@ namespace cheapshot
          hhash(side::black,board[idx(side::black)]);
    }
 
-   inline uint64_t
+   constexpr uint64_t
    hhash_castling(uint64_t castling_mask)
    {
       using namespace detail;
       return bit_mixer(premix(6)^castling_mask); // magic number
    }
 
-   inline uint64_t
+   constexpr uint64_t
    hhash_ep(uint64_t ep_info)
    {
       using namespace detail;
       return bit_mixer(premix(7)^ep_info); // magic number
    }
 
-   inline uint64_t
+   constexpr uint64_t
    hhash_turn(side t)
    {
       using namespace detail;
@@ -90,7 +97,7 @@ namespace cheapshot
    }
 
    // as used in analyze_position
-   inline uint64_t
+   constexpr uint64_t
    hhash_make_turn()
    {
       return (hhash_turn(side::white)^

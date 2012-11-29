@@ -55,7 +55,7 @@ namespace cheapshot
    constexpr bool
    is_max_single_bit(uint64_t p) noexcept
    {
-      return !(p & (p - 1));
+      return !(p & (p - 1_U64));
    }
 
    constexpr bool
@@ -117,7 +117,7 @@ namespace cheapshot
       constexpr uint64_t
       aliased_move_helper(uint64_t p, int n, int step, int i) noexcept
       {
-         return (i<n)?aliased_move_helper<Shift>(p|Shift(p,(step*(1<<i))),n,step,i+1):p;
+         return (i<n)?aliased_move_helper<Shift>(p|Shift(p,(step*(1_U64<<i))),n,step,i+1):p;
       }
 
       constexpr uint64_t
@@ -163,7 +163,7 @@ namespace cheapshot
    smaller(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
-      return s-1;
+      return s-1_U64;
    }
 
    // function accepts 0 and returns "all bits set"
@@ -171,7 +171,7 @@ namespace cheapshot
    smaller_equal(uint64_t s) noexcept
    {
       // assert(is_max_single_bit(s));
-      return (s-1)|s;
+      return (s-1_U64)|s;
    }
 
    constexpr uint64_t
@@ -298,7 +298,7 @@ namespace cheapshot
    {
       // assert(is_single_bit(s));
       return aliased_move<top>(
-         (aliased_move<bottom>(s)-1)&row_with_number(0));
+         (aliased_move<bottom>(s)-1_U64)&row_with_number(0));
    }
 
    namespace detail
@@ -363,9 +363,10 @@ namespace cheapshot
    constexpr uint64_t
    jump_knight_simple(uint64_t s) noexcept
    {
+      using namespace detail;
       return
-         detail::aliased_split(detail::aliased_split(s,2)&row(s),8)|
-         detail::aliased_split(detail::aliased_split(s,1)&row(s),16);
+         aliased_split(aliased_split(s,2)&row(s),8)|
+         aliased_split(aliased_split(s,1)&row(s),16);
    }
 
 // with obstacles to get uniform interface
@@ -378,8 +379,9 @@ namespace cheapshot
    constexpr uint64_t
    move_king_simple(uint64_t s) noexcept
    {
+      using namespace detail;
       return
-         detail::aliased_widen(detail::widen_with_unalias(s),8);
+         aliased_widen(widen_with_unalias(s),8);
    }
 
 // with obstacles to get uniform interface
@@ -572,9 +574,10 @@ namespace cheapshot
                                                 position(7,bottom_index<S>())),
                        uint64_t king_init_pos=position(4,bottom_index<S>()))
    {
+      using namespace detail;
       return
-         detail::aliased_split(
-            detail::aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
+         aliased_split(
+            aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
             2)&
          (position(3,bottom_index<S>())|position(5,bottom_index<S>()));
    }

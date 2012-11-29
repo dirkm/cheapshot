@@ -110,30 +110,6 @@ namespace cheapshot
          aliased_move<bottom>(p)|
          aliased_move<top>(p);
    }
-
-   constexpr uint64_t
-   bit_mix_step(uint64_t p, uint8_t shift, uint64_t product)
-   {
-      return (p^(p>>shift))*product;
-   }
-
-   constexpr uint64_t
-   bit_mix_step(uint64_t p, uint8_t shift)
-   {
-      return p^(p>>shift);
-   }
-
-   constexpr uint64_t
-   bit_mixer_constexpr(uint64_t p)
-   {
-      return
-         bit_mix_step
-         (bit_mix_step
-          (bit_mix_step
-           (p,33,0xC4CEB9FE1A85EC53_U64),
-           33,0xFF51AFD7ED558CCD_U64),
-          33);
-   }
 }
 
 #endif

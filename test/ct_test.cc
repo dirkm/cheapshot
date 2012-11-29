@@ -1,7 +1,7 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/extra_bitops.hh"
-#include "cheapshot/hash.hh"
 #include "cheapshot/iterator.hh"
+#include "cheapshot/hash.hh"
 #include "cheapshot/loop.hh"
 
 // file with compile-time tests
@@ -27,6 +27,7 @@ namespace cheapshot
    static_assert(count_set_bits(0xFFF0000FFF0000_U64)==24,"");
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
+   static_assert(hhash_make_turn()!=0_U64,"should be static constant for performance reasons");
    // static_assert(__builtin_constant_p(bit_mixer(0_U64))==1,"should be constant for performance reasons");
 
    constexpr castling_t ci=cheapshot::long_castling<side::white>();

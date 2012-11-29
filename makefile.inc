@@ -12,7 +12,7 @@ LDFLAGS := -Wl,--as-needed
 ## some flags for suggestions from the compiler which have proven not that useful
 #CFLAGS := -O3 -g -I. -std=c++0x -Wsuggest-attribute=const -Wsuggest-attribute=pure -march=native -mtune=native
 
-## non-standard compilers (gcc 4.6.1 is good enough)
+## non-standard compilers (gcc 4.8 is the minimum)
 #CXX := g++
 #CXX := clang++
 #CXX := g++-4.7.1
