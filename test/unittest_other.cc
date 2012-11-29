@@ -16,22 +16,17 @@ using namespace cheapshot::control;
 
 namespace
 {
-   // TODO: use argument packs
    template<typename Pruning=minimax, typename HashController=noop_hash,
             typename MaterialController=noop_material, typename Cache=noop_cache>
-   struct max_ply_cutoff_noop: public max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
+   struct max_ply_cutoff_noop: max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
    {
-      typedef max_ply_cutoff<Pruning,HashController,MaterialController,Cache> parent;
-      constexpr max_ply_cutoff_noop(board_t& board, side c, const context& ctx,int max_plies):
-         parent(board,c,ctx,max_plies)
-      {}
+      using max_ply_cutoff<Pruning,HashController,MaterialController,Cache>::max_ply_cutoff;
    };
 
-   template<typename HashController=noop_hash, typename MaterialController=noop_material,
-            typename Cache=noop_cache>
-   struct move_checker: public max_ply_cutoff<minimax,HashController,MaterialController,Cache>
+   template<typename... ControlsTail>
+   struct move_checker: public max_ply_cutoff_noop<minimax,ControlsTail...>
    {
-      typedef max_ply_cutoff<minimax,HashController,MaterialController,Cache> parent;
+      typedef max_ply_cutoff_noop<minimax,ControlsTail...> parent;
 
       move_checker(side c, const context& ctx, board_t& b, const std::vector<board_t>& additional_boards):
          parent(b,c,ctx,additional_boards.size()+1),
@@ -75,11 +70,10 @@ namespace
 
    typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
 
-   template<typename Pruning, typename HashController=noop_hash,
-            typename MaterialController=noop_material, typename Cache=noop_cache>
-   class do_until_ply_cutoff: public max_ply_cutoff<Pruning,HashController,MaterialController,Cache>
+   template<typename... Controls>
+   class do_until_ply_cutoff: public max_ply_cutoff_noop<Controls...>
    {
-      typedef max_ply_cutoff<Pruning,HashController,MaterialController,Cache> parent;
+      typedef max_ply_cutoff_noop<Controls...> parent;
    public:
       do_until_ply_cutoff(board_t& board, side c, const context& ctx, int max_depth, const funpos& fun_):
          parent(board,c,ctx,max_depth),
@@ -548,11 +542,11 @@ BOOST_AUTO_TEST_CASE(castle_test)
 
 namespace
 {
-   template<typename Controller>
+   template<typename... Controls>
    void
    scan_mate(side playing_side, side winning_side, std::size_t depth, board_t b)
    {
-      Controller cutoff(b,playing_side,no_castle_context,depth);
+      max_ply_cutoff_noop<Controls...> cutoff(b,playing_side,no_castle_context,depth);
       score_position(playing_side,no_castle_context,cutoff);
       {
          std::ostringstream oss;
@@ -566,14 +560,14 @@ namespace
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::checkmate(winning_side));
    }
 
-   template<typename Controller>
+   template<typename... Controls>
    void
    scan_mate(side playing_side, side winning_side, std::size_t depth, const std::vector<board_t>& boards)
    {
       assert(depth>=boards.size());
       for(auto& v: boards)
       {
-         scan_mate<Controller>(playing_side,winning_side,depth,v);
+         scan_mate<Controls...>(playing_side,winning_side,depth,v);
          --depth;
          playing_side=other_side(playing_side);
       };
@@ -604,11 +598,11 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          ".......q\n"
          "........\n"
          ".....k.K\n");
-      scan_mate<max_ply_cutoff_noop<> >(side::white,side::black,1,mate_board);
+      scan_mate<>(side::white,side::black,1,mate_board);
    }
    {
       board_t mate_board=scan_board(canvas_mate_board1);
-      scan_mate<max_ply_cutoff_noop<> >(side::white,side::black,1,mate_board);
+      scan_mate<>(side::white,side::black,1,mate_board);
    }
    {
       // Carlsen-Harestad Politiken Cup 2003
@@ -621,7 +615,7 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
          "..P.....\n"
          ".PB...P.\n"
          "..B...K.\n");
-      scan_mate<max_ply_cutoff_noop<> >(side::black,side::white,1,mate_board);
+      scan_mate<>(side::black,side::white,1,mate_board);
    }
    {
       // wikipedia stalemate article
@@ -878,11 +872,11 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(no_castle_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<max_ply_cutoff_noop<> >(side::black,side::white,5,{b1,b2,b3,b4,b5});
+      scan_mate<>(side::black,side::white,5,{b1,b2,b3,b4,b5});
       // scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,5,{b1,b2,b3,b4,b5});
       // alphabeta is considerably faster
-      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,6,{b,b1,b2,b3,b4,b5});
-      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
+      scan_mate<alphabeta>(side::white,side::white,6,{b,b1,b2,b3,b4,b5});
+      scan_mate<alphabeta,incremental_hash,noop_material,cache>
          (side::white,side::white,6,{b,b1,b2,b3,b4,b5});
    }
    {
@@ -927,9 +921,9 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(start_context,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<max_ply_cutoff_noop<> >(side::white,side::white,4,{b,b1,b2,b3});
-      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,4,{b,b1,b2,b3});
-      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
+      scan_mate<>(side::white,side::white,4,{b,b1,b2,b3});
+      scan_mate<alphabeta>(side::white,side::white,4,{b,b1,b2,b3});
+      scan_mate<alphabeta,incremental_hash,noop_material,cache>
          (side::white,side::white,4,{b,b1,b2,b3});
    }
 
@@ -987,9 +981,9 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          analyze_position<side::white>(ctx,check);
          BOOST_CHECK(check.all_analyzed);
       }
-      scan_mate<max_ply_cutoff_noop<minimax> >(side::white,side::white,4,b);
-      scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,4,b);
-      scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
+      scan_mate<minimax>(side::white,side::white,4,b);
+      scan_mate<alphabeta>(side::white,side::white,4,b);
+      scan_mate<alphabeta,incremental_hash,noop_material,cache>
          (side::white,side::white,4,b);
    }
    // {
@@ -1008,7 +1002,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
 }
 
 // mostly used for simple cache-testing
-BOOST_AUTO_TEST_CASE(rook_queen_test)
+BOOST_AUTO_TEST_CASE(rook_queen_cache_test)
 {
    {
       board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
@@ -1017,22 +1011,20 @@ BOOST_AUTO_TEST_CASE(rook_queen_test)
       make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
                                 [&boards,b](board_t& b2, side c, context& ctx) {
                                    if(b!=b2)
-                                      boards.push_back(b2); }
-         );
-      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
-         (side::white,side::white,6,boards[0]);
+                                      boards.push_back(b2);
+                                });
+      scan_mate<minimax,incremental_hash,noop_material,cache>(side::white,side::white,6,boards[0]);
    }
    {
       board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
       std::vector<board_t> boards;
       context ctx=no_castle_context;
       make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
-                                [&boards](board_t& b2, side c, context& ctx) { boards.push_back(b2); }
-         );
-      scan_mate<max_ply_cutoff_noop<minimax,noop_hash,noop_material,noop_cache> >
-         (side::black,side::white,7,boards);
-      scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
-         (side::black,side::white,7,boards);
+                                [&boards](board_t& b2, side c, context& ctx) {
+                                   boards.push_back(b2);
+                                });
+      scan_mate<minimax,noop_hash,noop_material,noop_cache>(side::black,side::white,7,boards);
+      scan_mate<minimax,incremental_hash,noop_material,cache>(side::black,side::white,7,boards);
    }
 }
 
@@ -1118,14 +1110,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<minimax> >(side::black,side::white,7,{rook_queen_mate});
+         scan_mate<minimax>(side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(1);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<minimax,incremental_hash,noop_material,cache> >
+         scan_mate<minimax,incremental_hash,noop_material,cache>
             (side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies (cache)",ops);
    }
@@ -1133,14 +1125,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(20);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::black,side::white,7,rook_queen_mate);
+         scan_mate<alphabeta>(side::black,side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
+         scan_mate<alphabeta,incremental_hash,noop_material,cache>
             (side::black,side::white,7,{rook_queen_mate});
       time_op.time_report("endgame mate in 7 plies (ab,cache)",ops);
    }
@@ -1148,14 +1140,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(2);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,8,{rook_queen_mate8});
+         scan_mate<alphabeta>(side::white,side::white,8,{rook_queen_mate8});
       time_op.time_report("endgame mate in 8 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(2);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<alphabeta,incremental_hash,noop_material,cache> >
+         scan_mate<alphabeta,incremental_hash,noop_material,cache>
             (side::white,side::white,8,{rook_queen_mate8});
       time_op.time_report("endgame mate in 8 plies (ab,cache)",ops);
    }
@@ -1164,7 +1156,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
       for(long i=0;i<ops;++i)
-         scan_mate<max_ply_cutoff_noop<alphabeta> >(side::white,side::white,6,b);
+         scan_mate<alphabeta>(side::white,side::white,6,b);
       // minimax
       // real time: 219.01 user time: 217.63 system time: 0.47 ops/sec: 0.004566
       time_op.time_report("middlegame mate in 6 plies (ab)",ops);
@@ -1277,9 +1269,7 @@ namespace
 {
    struct hash_checker: move_checker<incremental_hash>
    {
-      hash_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
-         move_checker(b,c,ctx,input_moves)
-      {}
+      using move_checker<incremental_hash>::move_checker;
 
       bool
       leaf_check(side c, const context& ctx, const board_metrics& bm)
@@ -1319,7 +1309,7 @@ namespace
    template<typename Controller>
    void play(side t, const std::vector<const char*>& moves, board_t b=initial_board(), context ctx=start_context)
    {
-      Controller ec(b,ctx,t,moves);
+      Controller ec(b,t,ctx,moves);
       score_position(t,ctx,ec);
    }
 
@@ -1346,10 +1336,7 @@ namespace
 {
    struct material_checker: move_checker<noop_hash,incremental_material>
    {
-      material_checker(board_t& b, const context& ctx, side c, const std::vector<const char*>& input_moves):
-         move_checker(b,c,ctx,input_moves)
-      {
-      }
+      using move_checker<noop_hash,incremental_material>::move_checker;
 
       bool
       leaf_check(side c, const context& ctx, const board_metrics& bm)
