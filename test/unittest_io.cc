@@ -2,8 +2,6 @@
 #include "cheapshot/score.hh"
 #include "test/unittest.hh"
 
-// #include <regex>
-
 using namespace cheapshot;
 
 namespace
@@ -16,7 +14,8 @@ namespace
 
       bool operator()(const cheapshot::io_error& ex)
       {
-         return strstr(ex.what(),fragment)!=nullptr;
+         bool r=strstr(ex.what(),fragment)!=nullptr;
+         return r;
       }
 
    private:
@@ -278,7 +277,6 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          cheapshot::io_error,
          check_io_message("check-flag incorrect"));
    }
-
 }
 
 BOOST_AUTO_TEST_CASE(score_io_test)
@@ -314,27 +312,5 @@ BOOST_AUTO_TEST_CASE(score_io_test)
       BOOST_CHECK(ots.is_equal("score::stalemate(side::black)"));
    }
 }
-
-/*
-  const std::basic_regex<char> lam("(O-O-O)|(O-O)");
-
-  BOOST_AUTO_TEST_CASE(input_scan_move)
-  {
-  {
-  // std::match m;
-  std::match_results<const char*> m;
-  BOOST_CHECK(std::regex_match("O-O-O",m,lam));
-  BOOST_CHECK_EQUAL(m[0],"O-O-O");
-  BOOST_CHECK_EQUAL(m[1],"O-O-O");
-  BOOST_CHECK(!m[2].matched);
-  }
-  {
-  std::match_results<const char*> m;
-  BOOST_CHECK(std::regex_match("O-O",m,lam));
-  BOOST_CHECK(!m[1].matched);
-  BOOST_CHECK_EQUAL(m[2],"O-O");
-  }
-  }
-*/
 
 BOOST_AUTO_TEST_SUITE_END()

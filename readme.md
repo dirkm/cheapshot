@@ -52,7 +52,7 @@ The excellent [makefiles](http://locklessinc.com/articles/makefile_tricks/) from
 1. incremental material
 1. simple transposition table
 1. read moves in long algebraic notation
-1. read fen
+1. io in fen-format
 1. minimax/alpha-beta
 1. tests
 
