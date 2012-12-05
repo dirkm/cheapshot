@@ -448,9 +448,10 @@ namespace cheapshot
    constexpr uint64_t
    capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
+      using namespace detail;
       return
-         (shift_forward<S>(detail::unalias_backward<S>(s),7)|
-          shift_forward<S>(detail::unalias_forward<S>(s),9))&
+         (shift_forward<S>(unalias_backward<S>(s),7)|
+          shift_forward<S>(unalias_forward<S>(s),9))&
          obstacles;
    }
 
@@ -466,6 +467,18 @@ namespace cheapshot
             (shift_forward<S>(single_pawn_move&third_row,8)&~obstacles)|
             single_pawn_move;
       }
+
+      template<side S>
+      constexpr uint64_t
+      reverse_slide_2_squares(
+         uint64_t single_pawn_move, uint64_t obstacles, uint64_t third_row
+         =shift_forward<S>(row_with_number(bottom_index<S>()),2*8)) noexcept
+      {
+         return
+            (shift_backward<S>(single_pawn_move&(~obstacles)&third_row,8))|
+            single_pawn_move;
+      }
+
    }
 
    template<side S>
@@ -483,6 +496,18 @@ namespace cheapshot
    slide_and_capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
       return slide_pawn<S>(s,obstacles)|capture_with_pawn<S>(s,obstacles);
+   }
+
+   // TODO is_capture is often known
+   template<side S>
+   constexpr uint64_t
+   reverse_move_capture_pawn(uint64_t s, uint64_t obstacles)
+   {
+      using namespace detail;
+      return
+         shift_backward<S>(unalias_forward<S>(s),7)|
+         shift_backward<S>(unalias_backward<S>(s),9)|
+         reverse_slide_2_squares<S>(shift_backward<S>(s,8),obstacles);
    }
 
    template<side S>

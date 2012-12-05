@@ -502,39 +502,29 @@ namespace cheapshot
          return r;
       }
 
-      bool
+      void
       scan_move_suffix(input_move& im, const char*& s)
       {
-         const char* const sstart=s;
-         if(im.moving_piece==piece::pawn)
+         if(*s=='=')
          {
-            if(find_skip(s,"e.p."))
-               im.type=special_move::ep_capture;
-            else
-            {
-               char prom_sep=*s;
-               if(prom_sep=='=')
-               {
-                  im.type=special_move::promotion;
-                  im.promoting_piece=character_to_moved_piece(*s);;
-               }
-            }
+            im.type=special_move::promotion;
+            im.promoting_piece=character_to_moved_piece(*s);;
+            ++s;
          }
          switch(*s)
          {
-            default:
-               im.phase=game_status::normal;
-               break;
             case '+':
-               ++s;
                im.phase=game_status::check;
+               ++s;
                break;
             case '#':
                im.phase=game_status::checkmate;
                ++s;
                break;
+            default:
+               im.phase=game_status::normal;
+               break;
          }
-         return s==sstart;
       }
    }
 
@@ -556,15 +546,18 @@ namespace cheapshot
          if(f!=move_format::long_algebraic)
          {
             uint64_t pos1=scan_partial_algpos(s);
-            if(is_single_bit(pos1)&&
-               scan_move_suffix(im,s))
+            if(is_single_bit(pos1))
             {
-               im.origin=~0_U64;
-               im.destination=pos1;
-               return im;
+               const char* const sstart=s;
+               scan_move_suffix(im,s);
+               if((s!=sstart)||(*s=='\x00'))
+               {
+                  im.origin=~0_U64;
+                  im.destination=pos1;
+                  return im;
+               }
             }
-            else
-               im.origin=pos1;
+            im.origin=pos1;
          }
          else
          {
@@ -594,14 +587,38 @@ namespace cheapshot
          }
          im.destination=scan_algpos(s);
       }
+
+      if((im.moving_piece==piece::pawn) && (im.is_capture==true) && find_skip(s,"e.p."))
+         im.type=special_move::ep_capture;
+
       scan_move_suffix(im,s);
       return im;
    }
 
-   input_move
-   scan_long_algebraic_move(const char* s)
+   typedef uint64_t (*reverse_move_generator_t)(uint64_t p);
+
+   // all possible reverse moves are calculated to disambiguate moves in short notation
+   // this is most likely faster than iterating over pieces and all their possible moves
+   template<side S>
+   constexpr std::array<reverse_move_generator_t,count<piece>()-1>
+   reverse_move_generators()
    {
-      return scan_algebraic_move(s,move_format::long_algebraic);
+      return {reverse_move_capture_pawn<S>,
+            jump_knight,
+            slide_bishop,
+            slide_rook,
+            slide_queen,
+            move_king
+            };
+   }
+
+   template<side S>
+   void
+   specify_origin(board_t& board, input_move& im, uint64_t obstacles)
+   {
+      uint64_t possible_origins=reverse_move_generators<S>()[idx(im.moving_piece)](im.destination,obstacles);
+      im.origin&=possible_origins;
+      im.origin&=board[idx(im.moving_piece)];
    }
 
    template<side S>
@@ -721,7 +738,7 @@ namespace cheapshot
    {
       try
       {
-         input_move im=scan_long_algebraic_move(s);
+         input_move im=scan_algebraic_move(s,move_format::long_algebraic);
          switch(c)
          {
             case side::white:

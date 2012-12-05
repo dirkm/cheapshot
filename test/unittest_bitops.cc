@@ -376,7 +376,6 @@ slide_pawn_check(const char* canvas)
    uint64_t pawns=scan_canvas(canvas,'P');
    uint64_t opposing=scan_canvas(canvas,'o','P');
    uint64_t result=scan_canvas(canvas,'X');
-   // print_position(slide_pawn<up>(pawns,opposing,std::cout));
    BOOST_CHECK_EQUAL(slide_pawn<side::white>(pawns,opposing),result);
    BOOST_CHECK_EQUAL(slide_pawn<side::black>(mirror(pawns),mirror(opposing)),mirror(result));
 }
@@ -539,6 +538,78 @@ BOOST_AUTO_TEST_CASE(capture_with_pawn_en_passant_test)
       "..2X....\n"
       "........\n"
       "........\n"
+      "........\n"
+      "........\n");
+}
+
+inline void
+reverse_move_capture_pawn_check(const char* canvas)
+{
+   uint64_t pawn=scan_canvas(canvas,'P');
+   uint64_t origins=scan_canvas(canvas,'O');
+   uint64_t obstacles=scan_canvas(canvas,'x');
+   uint64_t obstacles_origins=scan_canvas(canvas,'X');
+   obstacles|=obstacles_origins;
+   origins|=obstacles_origins;
+   BOOST_CHECK_EQUAL(reverse_move_capture_pawn<side::white>(pawn,obstacles),origins);
+   BOOST_CHECK_EQUAL(reverse_move_capture_pawn<side::black>(mirror(pawn),mirror(obstacles)),mirror(origins));
+}
+
+
+BOOST_AUTO_TEST_CASE(reverse_move_capture_pawn_test)
+{
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "..P.....\n"
+      ".OOO....\n"
+      "........\n"
+      "........\n"
+      "........\n");
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..P.....\n"
+      ".OOO....\n"
+      "..O.....\n"
+      "........\n");
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "P.......\n"
+      "OO......\n"
+      "O.......\n"
+      "........\n");
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      ".......P\n"
+      "......OO\n"
+      "........\n");
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      ".......P\n"
+      "......OO\n"
+      ".......X\n"
+      "........\n");
+   reverse_move_capture_pawn_check(
+      "........\n"
+      "........\n"
+      "........\n"
+      "........\n"
+      "..P.....\n"
+      ".OXO....\n"
       "........\n"
       "........\n");
 }
