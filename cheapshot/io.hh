@@ -1,5 +1,5 @@
-#ifndef CHEAPSHOT_BOARD_IO_HH
-#define CHEAPSHOT_BOARD_IO_HH
+#ifndef CHEAPSHOT_IO_HH
+#define CHEAPSHOT_IO_HH
 
 #include <array>
 #include <functional>
