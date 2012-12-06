@@ -66,14 +66,16 @@ namespace cheapshot
    extern void
    print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
 
-   extern void // return piece as well
-   make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s);
+   enum class move_format { long_algebraic, short_algebraic, flexible};
 
    extern void
-   make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::vector<const char*>& input_moves,
-                             const std::function<void (board_t& board, side c, context& ctx)>& fun=
-                             [](board_t& board, side c, context& ctx){});
+   make_algebraic_move(board_t& board, side c, context& ctx, const char* s, move_format fmt);
+
+   extern void
+   make_algebraic_moves(board_t& board, side c, context& ctx,
+                        const std::vector<const char*>& input_moves, move_format fmt,
+                        const std::function<void (board_t& board, side c, context& ctx)>& fun=
+                        [](board_t& board, side c, context& ctx){});
 
    extern std::ostream&
    print_score(int score, std::ostream& os);

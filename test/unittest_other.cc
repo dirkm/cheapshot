@@ -3,9 +3,9 @@
 
 #include "test/unittest.hh"
 
-#include "cheapshot/board_io.hh"
 #include "cheapshot/control.hh"
 #include "cheapshot/hash.hh"
+#include "cheapshot/io.hh"
 #include "cheapshot/loop.hh"
 
 #include <map>
@@ -42,8 +42,8 @@ namespace
          all_analyzed(false)
       {
          board_t btmp=b;
-         make_long_algebraic_moves(
-            btmp,c,ctx,input_moves,
+         make_algebraic_moves(
+            btmp,c,ctx,input_moves,move_format::long_algebraic,
             [this](board_t& b2, side c, context& ctx) mutable { boards.push_back(b2); }
             );
       }
@@ -1008,21 +1008,23 @@ BOOST_AUTO_TEST_CASE(rook_queen_cache_test)
       board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
       std::vector<board_t> boards;
       context ctx=no_castle_context;
-      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
-                                [&boards,b](board_t& b2, side c, context& ctx) {
-                                   if(b!=b2)
-                                      boards.push_back(b2);
-                                });
+      make_algebraic_moves(b, side::black, ctx,
+                           rook_queen_mate_moves,move_format::long_algebraic,
+                           [&boards,b](board_t& b2, side c, context& ctx) {
+                              if(b!=b2)
+                                 boards.push_back(b2);
+                           });
       scan_mate<minimax,incremental_hash,noop_material,cache>(side::white,side::white,6,boards[0]);
    }
    {
       board_t b=cheapshot::scan_board(rook_queen_mate_canvas);
       std::vector<board_t> boards;
       context ctx=no_castle_context;
-      make_long_algebraic_moves(b, side::black, ctx, rook_queen_mate_moves,
-                                [&boards](board_t& b2, side c, context& ctx) {
-                                   boards.push_back(b2);
-                                });
+      make_algebraic_moves(b, side::black, ctx,
+                           rook_queen_mate_moves,move_format::long_algebraic,
+                           [&boards](board_t& b2, side c, context& ctx) {
+                              boards.push_back(b2);
+                           });
       scan_mate<minimax,noop_hash,noop_material,noop_cache>(side::black,side::white,7,boards);
       scan_mate<minimax,incremental_hash,noop_material,cache>(side::black,side::white,7,boards);
    }

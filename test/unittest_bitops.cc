@@ -6,7 +6,7 @@
 
 #include "test/unittest.hh"
 
-#include "cheapshot/board_io.hh"
+#include "cheapshot/io.hh"
 #include "cheapshot/extra_bitops.hh"
 #include "cheapshot/iterator.hh"
 

@@ -3,8 +3,8 @@
 #include <tuple>
 
 #include "cheapshot/board.hh"
-#include "cheapshot/board_io.hh"
 #include "cheapshot/control.hh"
+#include "cheapshot/io.hh"
 
 int
 main(int argc, const char* argv[])

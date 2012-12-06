@@ -1,4 +1,4 @@
-#include "cheapshot/board_io.hh"
+#include "cheapshot/io.hh"
 #include "cheapshot/score.hh"
 #include "test/unittest.hh"
 
@@ -160,9 +160,9 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    {
       board_t b=initial_board();
       context ctx=start_context;
-      make_long_algebraic_moves
+      make_algebraic_moves
          (b,side::white,ctx,
-          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"});
+          {"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"},move_format::long_algebraic);
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal("r.bqkb.r\n"
@@ -177,8 +177,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    {
       board_t b=en_passant_initial_board;
       context ctx=start_context;
-      make_long_algebraic_moves
-         (b,side::black,ctx,{"d7-d5","e5xd6e.p."});
+      make_algebraic_moves(b,side::black,ctx,{"d7-d5","e5xd6e.p."},move_format::long_algebraic);
       BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
    }
    const board_t simple_mate=scan_board(
@@ -193,7 +192,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    {
       board_t b=simple_mate;
       context ctx=no_castle_context;
-      make_long_algebraic_move(b,side::white,ctx,"Rh1-h8#");
+      make_algebraic_move(b,side::white,ctx,"Rh1-h8#",move_format::long_algebraic);
       BOOST_CHECK_EQUAL(b,scan_board(
                            "....k..R\n"
                            "........\n"
@@ -208,40 +207,40 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       board_t b=initial_board();
       context ctx=start_context;
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{""}),
+         make_algebraic_move(b,side::white,ctx,{""},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("invalid character"));
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2-e5"}),
+         make_algebraic_move(b,side::white,ctx,{"e2-e5"},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("invalid destination"));
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e3-e4"}),
+         make_algebraic_move(b,side::white,ctx,{"e3-e4"},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("missing piece"));
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xd3"}),
-         cheapshot::io_error,
-         check_io_message("invalid destination"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xd3e.p."}),
-         cheapshot::io_error,
-         check_io_message("en passant"));
-      BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2xe4"}),
+         make_algebraic_move(b,side::white,ctx,{"e2xd3"},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("capture"));
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e2@e4"}),
+         make_algebraic_move(b,side::white,ctx,{"e2xd3e.p."},move_format::long_algebraic),
+         cheapshot::io_error,
+         check_io_message("en passant"));
+      BOOST_CHECK_EXCEPTION(
+         make_algebraic_move(b,side::white,ctx,{"e2xe4"},move_format::long_algebraic),
+         cheapshot::io_error,
+         check_io_message("capture"));
+      BOOST_CHECK_EXCEPTION(
+         make_algebraic_move(b,side::white,ctx,{"e2@e4"},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("separator"));
    }
    {
       board_t b=initial_board();
       context ctx=start_context;
-      make_long_algebraic_moves(b,side::white,ctx,{"e2-e4","d7-d5"});
+      make_algebraic_moves(b,side::white,ctx,{"e2-e4","d7-d5"},move_format::long_algebraic);
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,{"e4-d5"}),
+         make_algebraic_move(b,side::white,ctx,{"e4-d5"},move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("indication with 'x'"));
    }
@@ -249,7 +248,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       board_t b=simple_mate;
       context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,"Rh1-h8+"),
+         make_algebraic_move(b,side::white,ctx,"Rh1-h8+",move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("checkmate-flag incorrect"));
    }
@@ -257,7 +256,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       board_t b=simple_mate;
       context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,"Rh1-h8"),
+         make_algebraic_move(b,side::white,ctx,"Rh1-h8",move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("check-flag incorrect"));
    }
@@ -265,7 +264,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       board_t b=simple_mate;
       context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,"Rh1-h7#"),
+         make_algebraic_move(b,side::white,ctx,"Rh1-h7#",move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("check-flag incorrect"));
    }
@@ -273,7 +272,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       board_t b=simple_mate;
       context ctx=no_castle_context;
       BOOST_CHECK_EXCEPTION(
-         make_long_algebraic_move(b,side::white,ctx,"Rh1-h7+"),
+         make_algebraic_move(b,side::white,ctx,"Rh1-h7+",move_format::long_algebraic),
          cheapshot::io_error,
          check_io_message("check-flag incorrect"));
    }

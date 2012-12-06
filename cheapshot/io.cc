@@ -1,4 +1,4 @@
-#include "cheapshot/board_io.hh"
+#include "cheapshot/io.hh"
 
 #include <cstring>
 #include <iostream>
@@ -491,8 +491,6 @@ namespace cheapshot
          cheapshot::piece promoting_piece;
       };
 
-      enum class move_format { long_algebraic, short_algebraic, flexible};
-
       bool
       find_skip(const char*& s, const char* s2)
       {
@@ -529,7 +527,7 @@ namespace cheapshot
    }
 
    input_move
-   scan_algebraic_move(const char* s, move_format f)
+   scan_algebraic_move(const char* s, move_format fmt)
    {
       input_move im;
       im.type=special_move::normal; // for now
@@ -543,7 +541,7 @@ namespace cheapshot
          im.moving_piece=character_to_moved_piece(*s);
          if(im.moving_piece!=piece::pawn)
             ++s;
-         if(f!=move_format::long_algebraic)
+         if(fmt!=move_format::long_algebraic)
          {
             uint64_t pos1=scan_partial_algpos(s);
             if(is_single_bit(pos1))
@@ -571,13 +569,13 @@ namespace cheapshot
                im.is_capture=true;
                break;
             case '-':
-               if(f!=move_format::short_algebraic)
+               if(fmt!=move_format::short_algebraic)
                   ++s;
                else
                   throw io_error("'-' as separator not allowed in short algebraic format");
                break;
             default:
-               if(f==move_format::long_algebraic)
+               if(fmt==move_format::long_algebraic)
                {
                   std::stringstream oss;
                   oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
@@ -595,12 +593,10 @@ namespace cheapshot
       return im;
    }
 
-   typedef uint64_t (*reverse_move_generator_t)(uint64_t p);
-
    // all possible reverse moves are calculated to disambiguate moves in short notation
    // this is most likely faster than iterating over pieces and all their possible moves
    template<side S>
-   constexpr std::array<reverse_move_generator_t,count<piece>()-1>
+   constexpr std::array<move_generator_t,count<piece>()>
    reverse_move_generators()
    {
       return {reverse_move_capture_pawn<S>,
@@ -614,11 +610,17 @@ namespace cheapshot
 
    template<side S>
    void
-   specify_origin(board_t& board, input_move& im, uint64_t obstacles)
+   determine_origin(board_t& board, input_move& im, uint64_t obstacles)
    {
+      im.origin&=get_side<S>(board)[idx(im.moving_piece)];
+      if(im.origin==0_U64)
+         throw io_error("trying to move a missing piece");
       uint64_t possible_origins=reverse_move_generators<S>()[idx(im.moving_piece)](im.destination,obstacles);
       im.origin&=possible_origins;
-      im.origin&=board[idx(im.moving_piece)];
+      if(im.origin==0_U64)
+         throw io_error("trying to move to an invalid destination");
+      if(!is_single_bit(im.origin))
+         throw io_error("piece origin not uniquely defined");
    }
 
    template<side S>
@@ -666,7 +668,7 @@ namespace cheapshot
 
    template<side S>
    void
-   make_move(board_t& board, context& ctx, const input_move& im)
+   make_move(board_t& board, context& ctx, input_move& im)
    {
       board_metrics bm(board);
       uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
@@ -680,8 +682,7 @@ namespace cheapshot
             break;
          case special_move::ep_capture:
          {
-            if(!(im.origin&get_side<S>(board)[idx(piece::pawn)]))
-               throw  io_error("trying to move a missing piece");
+            determine_origin<S>(board, im, bm.all_pieces());
             if(im.destination!=ctx.ep_info)
                throw io_error("en passant capture not allowed");
             move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
@@ -692,12 +693,7 @@ namespace cheapshot
          case special_move::normal:
          case special_move::promotion:
          {
-            if(!(im.origin&get_side<S>(board)[idx(im.moving_piece)]))
-               throw io_error("trying to move a missing piece");
-            auto movegen=basic_move_generators<S>()[idx(im.moving_piece)];
-            uint64_t dests=movegen(im.origin,bm.all_pieces());
-            if(!(dests&im.destination))
-               throw io_error("trying to move to an invalid destination");
+            determine_origin<S>(board, im, bm.all_pieces());
             bool destination_occupied=im.destination&bm.opposing<S>();
             if(im.is_capture)
             {
@@ -734,11 +730,11 @@ namespace cheapshot
    }
 
    extern void
-   make_long_algebraic_move(board_t& board, side c, context& ctx, const char* s)
+   make_algebraic_move(board_t& board, side c, context& ctx, const char* s, move_format fmt)
    {
       try
       {
-         input_move im=scan_algebraic_move(s,move_format::long_algebraic);
+         input_move im=scan_algebraic_move(s,fmt);
          switch(c)
          {
             case side::white:
@@ -758,14 +754,14 @@ namespace cheapshot
    }
 
    extern void
-   make_long_algebraic_moves(board_t& board, side c, context& ctx,
-                             const std::vector<const char*>& input_moves,
-                             const std::function<void (board_t& board, side c, context& ctx)>& fun)
+   make_algebraic_moves(board_t& board, side c, context& ctx,
+                        const std::vector<const char*>& input_moves, move_format fmt,
+                        const std::function<void (board_t& board, side c, context& ctx)>& fun)
    {
       for(const char* input_move: input_moves)
       {
          fun(board,c,ctx);
-         make_long_algebraic_move(board,c,ctx,input_move);
+         make_algebraic_move(board,c,ctx,input_move,fmt);
          c=other_side(c);
       }
       fun(board,c,ctx);
@@ -780,6 +776,7 @@ namespace cheapshot
       }
    }
 
+   // TODO: cleanup
    extern std::ostream&
    print_score(int score, std::ostream& os)
    {
