@@ -360,11 +360,12 @@ namespace cheapshot
             return n;
          }
 
+         template<typename It>
          void
-         skip_whitespace(const char*& rs)
+         skip_whitespace(It& it)
          {
-            while(std::isspace(*rs))
-               ++rs;
+            while(std::isspace(*it))
+               ++it;
          }
       }
 
@@ -524,217 +525,217 @@ namespace cheapshot
                break;
          }
       }
-   }
 
-   input_move
-   scan_algebraic_move(const char* s, move_format fmt)
-   {
-      input_move im;
-      im.type=special_move::normal; // for now
-      im.is_capture=false; // for now
-      if(find_skip(s,"O-O-O"))
-         im={special_move::long_castling};
-      else if (find_skip(s,"O-O"))
-         im={special_move::short_castling};
-      else
+      input_move
+      scan_input_move(const char* s, move_format fmt)
       {
-         im.moving_piece=character_to_moved_piece(*s);
-         if(im.moving_piece!=piece::pawn)
-            ++s;
-         if(fmt!=move_format::long_algebraic)
-         {
-            uint64_t pos1=scan_partial_algpos(s);
-            if(is_single_bit(pos1))
-            {
-               const char* const sstart=s;
-               scan_move_suffix(im,s);
-               if((s!=sstart)||(*s=='\x00'))
-               {
-                  im.origin=~0_U64;
-                  im.destination=pos1;
-                  return im;
-               }
-            }
-            im.origin=pos1;
-         }
+         input_move im;
+         im.type=special_move::normal; // for now
+         im.is_capture=false; // for now
+         if(find_skip(s,"O-O-O"))
+            im={special_move::long_castling};
+         else if (find_skip(s,"O-O"))
+            im={special_move::short_castling};
          else
          {
-            im.origin=scan_algpos(s);
-         }
-         char sep=*s;
-         switch(sep)
-         {
-            case 'x':
+            im.moving_piece=character_to_moved_piece(*s);
+            if(im.moving_piece!=piece::pawn)
                ++s;
-               im.is_capture=true;
-               break;
-            case '-':
-               if(fmt!=move_format::short_algebraic)
-                  ++s;
-               else
-                  throw io_error("'-' as separator not allowed in short algebraic format");
-               break;
-            default:
-               if(fmt==move_format::long_algebraic)
-               {
-                  std::stringstream oss;
-                  oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
-                  throw io_error(oss.str());
-               }
-               break;
-         }
-         im.destination=scan_algpos(s);
-      }
-
-      if((im.moving_piece==piece::pawn) && (im.is_capture==true) && find_skip(s,"e.p."))
-         im.type=special_move::ep_capture;
-
-      scan_move_suffix(im,s);
-      return im;
-   }
-
-   // all possible reverse moves are calculated to disambiguate moves in short notation
-   // this is most likely faster than iterating over pieces and all their possible moves
-   template<side S>
-   constexpr std::array<move_generator_t,count<piece>()>
-   reverse_move_generators()
-   {
-      return {reverse_move_capture_pawn<S>,
-            jump_knight,
-            slide_bishop,
-            slide_rook,
-            slide_queen,
-            move_king
-            };
-   }
-
-   template<side S>
-   void
-   determine_origin(board_t& board, input_move& im, uint64_t obstacles)
-   {
-      im.origin&=get_side<S>(board)[idx(im.moving_piece)];
-      if(im.origin==0_U64)
-         throw io_error("trying to move a missing piece");
-      uint64_t possible_origins=reverse_move_generators<S>()[idx(im.moving_piece)](im.destination,obstacles);
-      im.origin&=possible_origins;
-      if(im.origin==0_U64)
-         throw io_error("trying to move to an invalid destination");
-      if(!is_single_bit(im.origin))
-         throw io_error("piece origin not uniquely defined");
-   }
-
-   template<side S>
-   void
-   check_game_state(board_t& board, const board_metrics& bm, const context& ctx, const input_move& im)
-   {
-      uint64_t other_under_attack=generate_own_under_attack<other_side(S)>(board,bm);
-      const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0_U64;
-      const bool status_check=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
-      if(other_under_check!=status_check)
-      {
-         std::ostringstream oss;
-         oss << "check-flag incorrect. input-move: " << other_under_check
-             << " analyzed: " << status_check;
-         throw io_error(oss.str());
-      }
-      bool status_checkmate=false;
-      if(status_check||other_under_check)
-      {
-         max_ply_cutoff<control::minimax,control::noop_hash,
-                        control::noop_material,control::noop_cache> ec(board,other_side(S),ctx,1);
-         analyze_position<other_side(S)>(ctx,ec);
-         status_checkmate=(ec.pruning.score==score::checkmate(S));
-      }
-      if(status_checkmate!=(im.phase==game_status::checkmate))
-      {
-         std::ostringstream oss;
-         oss << "checkmate-flag incorrect. input-move: " << (im.phase==game_status::checkmate)
-             << " analyzed: " << status_checkmate;
-         throw io_error(oss.str());
-      }
-   }
-
-   template<side S>
-   void
-   make_castling_move(board_t& board, context& ctx, const castling_t& c, const board_metrics& bm)
-   {
-      uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
-      if(!c.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
-         throw io_error("long castling not allowed");
-      move_info2 mi2=castle_info<S>(c);
-      for(auto m: mi2)
-         make_move(board,m);
-   }
-
-   template<side S>
-   void
-   make_move(board_t& board, context& ctx, input_move& im)
-   {
-      board_metrics bm(board);
-      uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-      switch(im.type)
-      {
-         case special_move::long_castling:
-            make_castling_move<S>(board,ctx,long_castling<S>(),bm);
-            break;
-         case special_move::short_castling:
-            make_castling_move<S>(board,ctx,short_castling<S>(),bm);
-            break;
-         case special_move::ep_capture:
-         {
-            determine_origin<S>(board, im, bm.all_pieces());
-            if(im.destination!=ctx.ep_info)
-               throw io_error("en passant capture not allowed");
-            move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
-            for(auto m: mi2)
-               make_move(board,m);
-            break;
-         }
-         case special_move::normal:
-         case special_move::promotion:
-         {
-            determine_origin<S>(board, im, bm.all_pieces());
-            bool destination_occupied=im.destination&bm.opposing<S>();
-            if(im.is_capture)
+            if(fmt!=move_format::long_algebraic)
             {
-               if(!destination_occupied)
-                  throw io_error("trying to capture a missing piece");
-               move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
-               for(auto m: mi2)
-                  make_move(board,m);
+               uint64_t pos1=scan_partial_algpos(s);
+               if(is_single_bit(pos1))
+               {
+                  const char* const sstart=s;
+                  scan_move_suffix(im,s);
+                  if((s!=sstart)||(*s=='\x00'))
+                  {
+                     im.origin=~0_U64;
+                     im.destination=pos1;
+                     return im;
+                  }
+               }
+               im.origin=pos1;
             }
             else
             {
-               if(destination_occupied)
-                  throw io_error("capture without indication with 'x'");
-               move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
-               make_move(board,mi);
+               im.origin=scan_algpos(s);
             }
-            if(im.type==special_move::promotion)
+            char sep=*s;
+            switch(sep)
             {
-               if(!promoting_pawns<S>(im.destination))
-                  throw io_error("promotion only allowed on last row");
-               move_info2 mi2=promotion_info<S>(im.promoting_piece,im.destination);
-               for(auto m: mi2)
-                  make_move(board,m);
+               case 'x':
+                  ++s;
+                  im.is_capture=true;
+                  break;
+               case '-':
+                  if(fmt!=move_format::short_algebraic)
+                     ++s;
+                  else
+                     throw io_error("'-' as separator not allowed in short algebraic format");
+                  break;
+               default:
+                  if(fmt==move_format::long_algebraic)
+                  {
+                     std::stringstream oss;
+                     oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
+                     throw io_error(oss.str());
+                  }
+                  break;
             }
-            break;
+            im.destination=scan_algpos(s);
+         }
+
+         if((im.moving_piece==piece::pawn) && (im.is_capture==true) && find_skip(s,"e.p."))
+            im.type=special_move::ep_capture;
+
+         scan_move_suffix(im,s);
+         return im;
+      }
+
+      // all possible reverse moves are calculated to disambiguate moves in short notation
+      // this is most likely faster than iterating over pieces and all their possible moves
+      template<side S>
+      constexpr std::array<move_generator_t,count<piece>()>
+      reverse_move_generators()
+      {
+         return {reverse_move_capture_pawn<S>,
+               jump_knight,
+               slide_bishop,
+               slide_rook,
+               slide_queen,
+               move_king
+               };
+      }
+
+      template<side S>
+      void
+      determine_origin(board_t& board, input_move& im, uint64_t obstacles)
+      {
+         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
+         if(im.origin==0_U64)
+            throw io_error("trying to move a missing piece");
+         uint64_t possible_origins=reverse_move_generators<S>()[idx(im.moving_piece)](im.destination,obstacles);
+         im.origin&=possible_origins;
+         if(im.origin==0_U64)
+            throw io_error("trying to move to an invalid destination");
+         if(!is_single_bit(im.origin))
+            throw io_error("piece origin not uniquely defined");
+      }
+
+      template<side S>
+      void
+      check_game_state(board_t& board, const board_metrics& bm, const context& ctx, const input_move& im)
+      {
+         uint64_t other_under_attack=generate_own_under_attack<other_side(S)>(board,bm);
+         const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0_U64;
+         const bool status_check=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
+         if(other_under_check!=status_check)
+         {
+            std::ostringstream oss;
+            oss << "check-flag incorrect. input-move: " << other_under_check
+                << " analyzed: " << status_check;
+            throw io_error(oss.str());
+         }
+         bool status_checkmate=false;
+         if(status_check||other_under_check)
+         {
+            max_ply_cutoff<control::minimax,control::noop_hash,
+                           control::noop_material,control::noop_cache> ec(board,other_side(S),ctx,1);
+            analyze_position<other_side(S)>(ctx,ec);
+            status_checkmate=(ec.pruning.score==score::checkmate(S));
+         }
+         if(status_checkmate!=(im.phase==game_status::checkmate))
+         {
+            std::ostringstream oss;
+            oss << "checkmate-flag incorrect. input-move: " << (im.phase==game_status::checkmate)
+                << " analyzed: " << status_checkmate;
+            throw io_error(oss.str());
          }
       }
-      ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
-      ctx.castling_rights|=castling_block_mask<S>(
-         get_side<S>(board)[idx(piece::rook)],
-         get_side<S>(board)[idx(piece::king)]);
 
-      check_game_state<S>(board,bm,ctx,im);
+      template<side S>
+      void
+      make_castling_move(board_t& board, context& ctx, const castling_t& c, const board_metrics& bm)
+      {
+         uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
+         if(!c.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
+            throw io_error("long castling not allowed");
+         move_info2 mi2=castle_info<S>(c);
+         for(auto m: mi2)
+            make_move(board,m);
+      }
+
+      template<side S>
+      void
+      make_move(board_t& board, context& ctx, input_move& im)
+      {
+         board_metrics bm(board);
+         uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+         switch(im.type)
+         {
+            case special_move::long_castling:
+               make_castling_move<S>(board,ctx,long_castling<S>(),bm);
+               break;
+            case special_move::short_castling:
+               make_castling_move<S>(board,ctx,short_castling<S>(),bm);
+               break;
+            case special_move::ep_capture:
+            {
+               determine_origin<S>(board, im, bm.all_pieces());
+               if(im.destination!=ctx.ep_info)
+                  throw io_error("en passant capture not allowed");
+               move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
+               for(auto m: mi2)
+                  make_move(board,m);
+               break;
+            }
+            case special_move::normal:
+            case special_move::promotion:
+            {
+               determine_origin<S>(board, im, bm.all_pieces());
+               bool destination_occupied=im.destination&bm.opposing<S>();
+               if(im.is_capture)
+               {
+                  if(!destination_occupied)
+                     throw io_error("trying to capture a missing piece");
+                  move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
+                  for(auto m: mi2)
+                     make_move(board,m);
+               }
+               else
+               {
+                  if(destination_occupied)
+                     throw io_error("capture without indication with 'x'");
+                  move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
+                  make_move(board,mi);
+               }
+               if(im.type==special_move::promotion)
+               {
+                  if(!promoting_pawns<S>(im.destination))
+                     throw io_error("promotion only allowed on last row");
+                  move_info2 mi2=promotion_info<S>(im.promoting_piece,im.destination);
+                  for(auto m: mi2)
+                     make_move(board,m);
+               }
+               break;
+            }
+         }
+         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+         ctx.castling_rights|=castling_block_mask<S>(
+            get_side<S>(board)[idx(piece::rook)],
+            get_side<S>(board)[idx(piece::king)]);
+
+         check_game_state<S>(board,bm,ctx,im);
+      }
    }
 
    extern void
-   make_algebraic_move(board_t& board, side c, context& ctx, const char* s, move_format fmt)
+   make_input_move(board_t& board, side c, context& ctx, const char* s, move_format fmt)
    {
       try
       {
-         input_move im=scan_algebraic_move(s,fmt);
+         input_move im=scan_input_move(s,fmt);
          switch(c)
          {
             case side::white:
@@ -754,19 +755,63 @@ namespace cheapshot
    }
 
    extern void
-   make_algebraic_moves(board_t& board, side c, context& ctx,
-                        const std::vector<const char*>& input_moves, move_format fmt,
-                        const std::function<void (board_t& board, side c, context& ctx)>& fun)
+   make_input_moves(board_t& board, side c, context& ctx,
+                    const std::vector<const char*>& input_moves, move_format fmt,
+                    const std::function<void (board_t& board, side c, context& ctx)>& fun)
    {
       for(const char* input_move: input_moves)
       {
          fun(board,c,ctx);
-         make_algebraic_move(board,c,ctx,input_move,fmt);
+         make_input_move(board,c,ctx,input_move,fmt);
          c=other_side(c);
       }
       fun(board,c,ctx);
    }
 
+   namespace
+   {
+      // TODO: prototype only
+      template<typename It, typename Cond>
+      void
+      skip_until(It& it, const Cond& cond)
+      {
+         while(!cond(*it))
+            ++it;
+      }
+
+      static const std::istream::streamoff max_line_length=255;
+
+      // boost::optional<std::pair<std::string,std::string> >
+      void
+      parse_pgn_attribute(std::istream& is)
+      {
+         std::istream::streamoff start = is.tellg();
+         std::istreambuf_iterator<char> it(is);
+         skip_until(it,[](char ch)
+                    {
+                       return
+                          !std::isspace(ch)&&
+                          (ch!=std::char_traits<char>::eof())&&
+                          (ch!='\n');
+                    });
+         is.seekg(start, std::ios::beg);
+         std::string attribute_name;
+         is >> attribute_name;
+         std::string attribute_value;
+         is >> attribute_value;
+      }
+   }
+
+   extern std::tuple<board_t,pgn_attributes>
+   make_pgn_moves(std::istream& is,
+                  const std::function<void (board_t& board, side c, context& ctx)>& fun)
+   {
+      std::string current_line;
+      std::getline(is,current_line);
+      board_t b=initial_board();
+      pgn_attributes attributes;
+      return std::make_tuple(b,attributes);
+   }
 
    namespace
    {
