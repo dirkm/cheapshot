@@ -136,18 +136,24 @@ namespace cheapshot
       }
 
       constexpr uint64_t
-      aliased_split(uint64_t p, int s) noexcept
+      aliased_split(uint64_t p, int n) noexcept
       {
-         return (p<<s)|(p>>s);
+         return (p<<n)|(p>>n);
       }
 
       constexpr uint64_t
-      aliased_widen(uint64_t p, int s) noexcept
+      aliased_widen(uint64_t p, int n) noexcept
       {
          return aliased_move_decreasing(
-            aliased_move_increasing(p,1,s),
-            1,s);
+            aliased_move_increasing(p,1,n),
+            1,n);
       }
+   }
+
+   constexpr uint64_t
+   map_0_to_1(uint64_t p) noexcept
+   {
+      return p|(p==0);
    }
 
    constexpr uint64_t
@@ -225,9 +231,46 @@ namespace cheapshot
 
    template<direction_down D>
    constexpr uint64_t
-   aliased_move(uint64_t p) noexcept
+   aliased_move(uint64_t p) noexcept;
+
+   namespace detail
    {
-      return detail::aliased_move_decreasing(p,3,D);
+      constexpr uint64_t
+      downmove_quotient(uint64_t p)
+      {
+         return highest_bit_no_zero(p)/(p&~highest_bit_no_zero(p));
+      }
+   }
+
+   template<>
+   constexpr uint64_t
+   aliased_move<bottom>(uint64_t s) noexcept
+   {
+      return
+         s|(s/detail::downmove_quotient(aliased_move<top>(1_U64)));
+   }
+
+   template<>
+   constexpr uint64_t
+   aliased_move<bottom_left>(uint64_t s) noexcept
+   {
+      return
+         s|(s/detail::downmove_quotient(aliased_move<top_right>(1_U64)));
+   }
+
+   // dividing towards bottom_right gives pattern with 9 bits set. This does not fit easily
+   template<>
+   constexpr uint64_t
+   aliased_move<bottom_right>(uint64_t p) noexcept
+   {
+      return detail::aliased_move_decreasing(p,3,bottom_right);
+   }
+
+   template<>
+   constexpr uint64_t
+   aliased_move<left>(uint64_t s) noexcept
+   {
+      return s|(s-map_0_to_1(s>>7));
    }
 
    constexpr uint64_t
@@ -235,8 +278,6 @@ namespace cheapshot
    {
       return in_between(s,s<<n);
    }
-
-   // helpers to get patterns based on column-row coordinates
 
    constexpr uint64_t
    position(uint8_t column, uint8_t row) noexcept
@@ -248,7 +289,7 @@ namespace cheapshot
    column(uint64_t s) noexcept
    {
       return
-         aliased_move<bottom>(aliased_move<top>(s));
+         aliased_move<bottom>(s)|aliased_move<top>(s);
    }
 
    constexpr uint64_t
@@ -410,8 +451,6 @@ namespace cheapshot
    constexpr uint64_t
    slide_rook(uint64_t s, uint64_t obstacles) noexcept
    {
-      // assert(is_single_bit(s));
-      // vertical change
       return
          detail::slide(s,column(s),obstacles)| // vertical
          detail::slide(s,row(s),obstacles); // horizontal

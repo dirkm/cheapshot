@@ -12,8 +12,8 @@
 
 using namespace cheapshot;
 
+// testcases for piece moves
 BOOST_AUTO_TEST_SUITE(bitops_suite)
-// testcases for piece moves and basic IO
 
 BOOST_AUTO_TEST_CASE(bit_iterator_test)
 {
@@ -87,9 +87,6 @@ BOOST_AUTO_TEST_CASE(row_and_column_test)
 void
 rook_test(const char* canvas)
 {
-   // print_position(slide_rook(
-   //                 scan_canvas(canvas,'r'),
-   //                 scan_canvas(canvas,'o')|scan_canvas(canvas,'O')),std::cout);
    BOOST_CHECK_EQUAL(slide_rook(scan_canvas(canvas,'r'),
                                 scan_canvas(canvas,'o','O','r')),
                      scan_canvas(canvas,'X','r','O'));
@@ -132,6 +129,20 @@ BOOST_AUTO_TEST_CASE(rook_moves_test)
 
 BOOST_AUTO_TEST_CASE(bishop_moves_test)
 {
+   {
+      static constexpr char canvas[]=
+         "b.......\n"
+         ".X......\n"
+         "..X.....\n"
+         "...X....\n"
+         "....X...\n"
+         ".....X..\n"
+         "......X.\n"
+         ".......X\n";
+      BOOST_CHECK_EQUAL(slide_bishop(scan_canvas(canvas,'b'),
+                                     scan_canvas(canvas,'o','O','b')),
+                        scan_canvas(canvas,'X','b','o'));
+   }
    {
       static constexpr char canvas[]=
          "X...X...\n"
