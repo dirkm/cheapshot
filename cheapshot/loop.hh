@@ -243,7 +243,6 @@ namespace cheapshot
       uint64_t mask;
    };
 
-   // TODO: unhappy with this, gcc 4.7 allows array-member initialization
    template<>
    class scoped_move<move_info2>
    {

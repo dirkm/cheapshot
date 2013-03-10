@@ -74,10 +74,17 @@ namespace cheapshot
    extern void
    make_input_moves(board_t& board, side c, context& ctx,
                     const std::vector<const char*>& input_moves, move_format fmt,
-                    const std::function<void (board_t& board, side c, context& ctx)>& fun=
+                    const std::function<void (board_t& board, side c, context& ctx)>& on_each_position=
                     [](board_t& board, side c, context& ctx){});
 
    using pgn_attributes=std::vector<std::pair<std::string,std::string> >;
+
+   namespace pgn
+   {
+      bool
+      parse_pgn_attribute(const std::string& current_line,
+                          const std::function<void (const std::string& attrname, const std::string& attrval)>& fun);
+   }
 
    extern std::tuple<board_t,pgn_attributes>
    make_pgn_moves(std::istream& is,

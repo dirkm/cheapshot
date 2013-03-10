@@ -757,59 +757,115 @@ namespace cheapshot
    extern void
    make_input_moves(board_t& board, side c, context& ctx,
                     const std::vector<const char*>& input_moves, move_format fmt,
-                    const std::function<void (board_t& board, side c, context& ctx)>& fun)
+                    const std::function<void (board_t& board, side c, context& ctx)>& on_each_position)
    {
       for(const char* input_move: input_moves)
       {
-         fun(board,c,ctx);
+         on_each_position(board,c,ctx);
          make_input_move(board,c,ctx,input_move,fmt);
          c=other_side(c);
       }
-      fun(board,c,ctx);
+      on_each_position(board,c,ctx);
    }
 
-   namespace
+   namespace pgn
    {
-      // TODO: prototype only
-      template<typename It, typename Cond>
-      void
-      skip_until(It& it, const Cond& cond)
+      namespace
       {
-         while(!cond(*it))
-            ++it;
+         void
+         skip_whitespace(std::string::const_iterator& kit, std::string::const_iterator kitend)
+         {
+            while((kit!=kitend) && std::isspace(*kit))
+               ++kit;
+         }
+
+         void
+         skip_whitespace_with_semicolon_comments(std::string::const_iterator& kit, std::string::const_iterator kitend)
+         {
+            skip_whitespace(kit,kitend);
+            if(*kit==';')
+               kit=kitend;
+         }
+
+         bool
+         skip_token(std::string::const_iterator& kit, char t)
+         {
+            return *(kit++)==t;
+         }
+
+         bool
+         skip_token_with_whitespace(std::string::const_iterator& kit, std::string::const_iterator kitend, char t)
+         {
+            skip_whitespace(kit,kitend);
+            bool r=skip_token(kit,t);
+            skip_whitespace(kit,kitend);
+            return r;
+         }
+
+         void
+         skip_until_token(std::string::const_iterator& kit, std::string::const_iterator kitend, char t)
+         {
+            while(kit!=kitend)
+            {
+               if(*kit==t) return;
+               ++kit;
+            }
+         }
+
+         void
+         skip_alnum_string(std::string::const_iterator& kit, std::string::const_iterator kitend)
+         {
+            while((kit!=kitend) && std::isalnum(*kit))
+               ++kit;
+         }
       }
 
-      static const std::istream::streamoff max_line_length=255;
-
-      // boost::optional<std::pair<std::string,std::string> >
-      void
-      parse_pgn_attribute(std::istream& is)
+      bool
+      parse_pgn_attribute(const std::string& current_line,
+                          const std::function<void (const std::string& attrname, const std::string& attrval)>& fun)
       {
-         std::istream::streamoff start = is.tellg();
-         std::istreambuf_iterator<char> it(is);
-         skip_until(it,[](char ch)
-                    {
-                       return
-                          !std::isspace(ch)&&
-                          (ch!=std::char_traits<char>::eof())&&
-                          (ch!='\n');
-                    });
-         is.seekg(start, std::ios::beg);
-         std::string attribute_name;
-         is >> attribute_name;
-         std::string attribute_value;
-         is >> attribute_value;
+         auto kit=current_line.begin();
+         const auto kitend=current_line.end();
+         if(!skip_token_with_whitespace(kit,kitend,'[')) return false;
+         if(kit==kitend) return false;
+         const auto attrnameit=kit;
+         skip_alnum_string(kit,kitend);
+         if(kit==kitend) return false;
+         std::string attrname=std::string(attrnameit,kit);
+         skip_whitespace(kit,kitend);
+         if(kit==kitend) return false;
+         if(!skip_token(kit,'"')) return false;
+         const auto attrvalit=kit;
+         skip_until_token(kit,kitend,'"');
+         if(kit==kitend) return false;
+         std::string attrval=std::string(attrvalit,kit);
+         skip_token(kit,'"');
+         if(kit==kitend) return false;
+         skip_whitespace(kit,kitend);
+         if(kit==kitend) return false;
+         if(!skip_token(kit,']')) return false;
+         skip_whitespace_with_semicolon_comments(kit,kitend);
+         if(kit!=kitend) return false;
+         fun(attrname,attrval);
+         return true;
       }
    }
 
+   // uncomplete
    extern std::tuple<board_t,pgn_attributes>
    make_pgn_moves(std::istream& is,
                   const std::function<void (board_t& board, side c, context& ctx)>& fun)
    {
       std::string current_line;
       std::getline(is,current_line);
-      board_t b=initial_board();
       pgn_attributes attributes;
+      pgn::parse_pgn_attribute(current_line,
+                               [&attributes](const std::string& argname, const std::string& argval)
+                               {
+                                  attributes.push_back({argname,argval});
+                               }
+         );
+      board_t b=initial_board();
       return std::make_tuple(b,attributes);
    }
 
