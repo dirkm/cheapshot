@@ -327,11 +327,41 @@ BOOST_AUTO_TEST_CASE(pgn_test)
             BOOST_CHECK_EQUAL(attrname,"Event");
             BOOST_CHECK_EQUAL(attrval,"F/S Return Match");
          };
+      auto noattr=[](const std::string& attrname, const std::string& attrval)
+         {
+            BOOST_FAIL("should not be called");
+         };
+
       BOOST_CHECK(pgn::parse_pgn_attribute("[Event \"F/S Return Match\"]",attrcheck));
       BOOST_CHECK(pgn::parse_pgn_attribute("  [Event \"F/S Return Match\"]",attrcheck));
       BOOST_CHECK(pgn::parse_pgn_attribute("[Event \"F/S Return Match\"]",attrcheck));
       BOOST_CHECK(pgn::parse_pgn_attribute("[Event \"F/S Return Match\"]  ; comment",attrcheck));
       BOOST_CHECK(pgn::parse_pgn_attribute("[\tEvent \"F/S Return Match\"]",attrcheck));
+      BOOST_CHECK(pgn::parse_pgn_attribute(";",noattr));
+      BOOST_CHECK(pgn::parse_pgn_attribute("   ; comment",noattr));
+      BOOST_CHECK(pgn::parse_pgn_attribute("",noattr));
+   }
+   {
+      std::pair<side,std::string> expected_moves[]={
+         {side::white,"e4"},
+         {side::black,"e5"},
+         {side::white,"Nf3"},
+         {side::black,"Nc6"},
+         {side::white,"Bb5"},
+         {side::black,"a6"}
+      };
+      auto it_expected_moves=std::begin(expected_moves);
+      auto check_moves=[&it_expected_moves](side c, const std::string& move) -> bool
+         {
+            // std::cout << move << std::endl;
+            BOOST_CHECK(*it_expected_moves==std::make_pair(c,move));
+            ++it_expected_moves;
+            return true;
+         };
+
+      std::istringstream test_stream("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6\n");
+      pgn::parse_pgn_moves(test_stream,check_moves);
+      BOOST_CHECK_EQUAL(it_expected_moves,std::end(expected_moves));
    }
    {
       const char* __attribute__((unused)) example_game=

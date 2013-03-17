@@ -3,6 +3,7 @@
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
+#include "cheapshot/io.hh"
 #include "cheapshot/iterator.hh"
 
 #include <boost/test/unit_test.hpp>
@@ -18,6 +19,7 @@ BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::bit_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_t)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::side);
+BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::pgn::parse_state);
 
 namespace cheapshot
 {

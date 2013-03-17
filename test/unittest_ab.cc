@@ -57,9 +57,9 @@ typedef std::function<void (toy,toy,int,int)> fun_cutoff_t;
 //  base on wikipedia-article
 int
 ab_book(const tree_t& t, toy s,
-             fun_init_t finit, fun_cutoff_t fcutoff,
-             int alpha=-score::limit(side::white),
-             int beta=-score::limit(side::black))
+        fun_init_t finit, fun_cutoff_t fcutoff,
+        int alpha=-score::limit(side::white),
+        int beta=-score::limit(side::black))
 {
    const auto& v=t[idx(s)];
    finit(s,v);

@@ -772,100 +772,311 @@ namespace cheapshot
    {
       namespace
       {
-         void
-         skip_whitespace(std::string::const_iterator& kit, std::string::const_iterator kitend)
+         struct string_range
          {
-            while((kit!=kitend) && std::isspace(*kit))
-               ++kit;
-         }
+            string_range(const std::string& s):
+               istart(std::begin(s)),
+               iend(std::end(s))
+            {}
 
-         void
-         skip_whitespace_with_semicolon_comments(std::string::const_iterator& kit, std::string::const_iterator kitend)
-         {
-            skip_whitespace(kit,kitend);
-            if(*kit==';')
-               kit=kitend;
-         }
+            string_range() = default;
 
-         bool
-         skip_token(std::string::const_iterator& kit, char t)
-         {
-            return *(kit++)==t;
-         }
+            bool is_empty() const { return istart==iend; }
 
-         bool
-         skip_token_with_whitespace(std::string::const_iterator& kit, std::string::const_iterator kitend, char t)
-         {
-            skip_whitespace(kit,kitend);
-            bool r=skip_token(kit,t);
-            skip_whitespace(kit,kitend);
-            return r;
-         }
+            std::string::const_iterator istart;
+            std::string::const_iterator iend;
+         };
 
-         void
-         skip_until_token(std::string::const_iterator& kit, std::string::const_iterator kitend, char t)
+         class line_scanner
          {
-            while(kit!=kitend)
+         public:
+            line_scanner(const line_scanner&)=delete;
+            explicit line_scanner(std::istream& is_):
+               is(is_)
+            {}
+
+            bool
+            getline()
             {
-               if(*kit==t) return;
-               ++kit;
+               bool r=std::getline(is,line);
+               if(r)
+               {
+                  range=string_range(line);
+                  ++number;
+               }
+               return r;
             }
+            std::string line;
+            string_range range;
+            int number=0;
+         private:
+            std::istream& is;
+         };
+
+         void
+         skip_whitespace(string_range& r)
+         {
+            while(!r.is_empty() && std::isspace(*(r.istart)))
+               ++(r.istart);
+         }
+
+         bool
+         skip_eol(string_range& r)
+         {
+            skip_whitespace(r);
+            return r.is_empty() || (*(r.istart)==';');
+         }
+
+         bool
+         skip_token(string_range& r, char t)
+         {
+            return !r.is_empty() && (*((r.istart)++)==t);
+         }
+
+         bool
+         skip_optional_separator(string_range& r)
+         {
+            skip_whitespace(r);
+            return !r.is_empty();
+         }
+
+         bool
+         skip_mandatory_separator(string_range& r)
+         {
+            auto imarked=r.istart;
+            return skip_optional_separator(r) && (imarked!=r.istart);
          }
 
          void
-         skip_alnum_string(std::string::const_iterator& kit, std::string::const_iterator kitend)
+         skip_until_token(string_range& r, char t)
          {
-            while((kit!=kitend) && std::isalnum(*kit))
-               ++kit;
+            while((!r.is_empty()) && (*(r.istart)!=t))
+               ++(r.istart);
+         }
+
+         std::string
+         get_until_token(string_range& r, char t)
+         {
+            auto imarked=r.istart;
+            skip_until_token(r,t);
+            return std::string(imarked,r.istart);
+         }
+
+         std::string
+         get_alnum_string(string_range& r)
+         {
+            auto imarked=r.istart;
+            while((!r.is_empty()) && std::isalnum(*r.istart))
+               ++r.istart;
+            return std::string(imarked,r.istart);
          }
       }
 
-      bool
-      parse_pgn_attribute(const std::string& current_line,
-                          const std::function<void (const std::string& attrname, const std::string& attrval)>& fun)
+      namespace
       {
-         auto kit=current_line.begin();
-         const auto kitend=current_line.end();
-         if(!skip_token_with_whitespace(kit,kitend,'[')) return false;
-         if(kit==kitend) return false;
-         const auto attrnameit=kit;
-         skip_alnum_string(kit,kitend);
-         if(kit==kitend) return false;
-         std::string attrname=std::string(attrnameit,kit);
-         skip_whitespace(kit,kitend);
-         if(kit==kitend) return false;
-         if(!skip_token(kit,'"')) return false;
-         const auto attrvalit=kit;
-         skip_until_token(kit,kitend,'"');
-         if(kit==kitend) return false;
-         std::string attrval=std::string(attrvalit,kit);
-         skip_token(kit,'"');
-         if(kit==kitend) return false;
-         skip_whitespace(kit,kitend);
-         if(kit==kitend) return false;
-         if(!skip_token(kit,']')) return false;
-         skip_whitespace_with_semicolon_comments(kit,kitend);
-         if(kit!=kitend) return false;
-         fun(attrname,attrval);
-         return true;
+         bool
+         skip_move_number(string_range& r, side c, std::uint64_t n)
+         {
+            std::size_t p;
+            std::uint64_t n2=std::stoull(&*r.istart,&p,10);
+            if(n!=n2)
+               throw io_error("numbers don't match");
+            std::advance(r.istart,p);
+            skip_token(r,'.');
+            return true;
+         }
+
+         bool
+         skip_double_dot(string_range& r)
+         {
+            for(int i=0;i<2;++i)
+               if(!skip_token(r,'.')) return false;
+            return true;
+         }
+
+         // format: "[Event \"F/S Return Match\"]"
+         bool
+         parse_pgn_attribute(string_range& r, const on_attribute_t& on_attr)
+         {
+            if(skip_eol(r)) return true;
+            if(!skip_token(r,'[')) return false;
+            if(!skip_optional_separator(r)) return false;
+            std::string attrname=get_alnum_string(r);
+            if(!skip_mandatory_separator(r)) return false;
+            if(!skip_token(r,'"')) return false;
+            std::string attrval=get_until_token(r,'"');
+            if(!skip_token(r,'"')) return false;
+            if(!skip_optional_separator(r)) return false;
+            if(!skip_token(r,']')) return false;
+            if(!skip_eol(r)) return false;
+
+            on_attr(attrname,attrval);
+            return true;
+         }
+      }
+
+      extern bool
+      parse_pgn_attribute(const std::string& current_line, const on_attribute_t& on_attr)
+      {
+         pgn::string_range r(current_line);
+         return parse_pgn_attribute(r,on_attr);
+      }
+
+      class pgn_moves
+      {
+      public:
+         pgn_moves(pgn::line_scanner& ls_);
+         parse_state
+         parse(const on_move_t& on_move);
+      private:
+         parse_state
+         parse_white(const on_move_t& on_move);
+         parse_state
+         parse_black(const on_move_t& on_move);
+
+         parse_state
+         skip_multiline_whitespace()
+         {
+            // std::cout << "start multiline whitespace '" << &*ls.range.istart << "'" << std::endl;
+            while(true)
+            {
+               if(skip_eol(ls.range))
+               {
+                  // std::cout << "get line" << std::endl;
+                  if(!ls.getline())
+                     return parse_state::eof;
+               }
+               if(!ls.range.is_empty())
+                  break;
+            }
+            // std::cout << "success finish" << std::endl;
+            return parse_state::in_progress;
+         }
+
+         parse_state
+         skip_move_separator()
+         {
+            // std::cout << "move separator started" << std::endl;
+            state=skip_multiline_whitespace();
+            if(bool(state)) return state;
+            // std::cout << "move separator skipped '" << &*ls.range.istart << "'" << std::endl;
+            if(*ls.range.istart=='{')
+               while(true)
+               {
+                  skip_until_token(ls.range,'}');
+                  if(ls.range.is_empty())
+                  {
+                     if(!ls.getline())
+                        return parse_state::eof;
+                  }
+                  else
+                  {
+                     ++ls.range.istart;
+                     break;
+                  }
+               }
+            state=skip_multiline_whitespace();
+            if(bool(state)) return state;
+            return parse_state::in_progress;
+         }
+
+         parse_state state=parse_state::in_progress;
+         side c=side::white;
+         int n=1;
+         pgn::line_scanner& ls;
+      };
+
+      pgn_moves::pgn_moves(pgn::line_scanner& ls_):
+         ls(ls_)
+      {}
+
+      parse_state
+      pgn_moves::parse(const on_move_t& on_move)
+      {
+         if(c==side::black)
+           parse_black(on_move);
+         while(!bool(state))
+            parse_white(on_move);
+         return state;
+      }
+
+      parse_state
+      pgn_moves::parse_white(const on_move_t& on_move)
+      {
+         state=skip_move_separator();
+         // std::cout << "white move separator skipped'" << std::endl;
+         if(bool(state)) return state;
+         if(!skip_move_number(ls.range,side::white,n))
+            return parse_state::syntax_error;
+         state=skip_move_separator();
+         if(bool(state)) return state;
+         {
+            std::string move=get_alnum_string(ls.range);
+            on_move(c,move);
+         }
+         c=other_side(c);
+         parse_black(on_move);
+         return parse_state::in_progress;
+      }
+
+      parse_state
+      pgn_moves::parse_black(const on_move_t& on_move)
+      {
+         state=skip_move_separator();
+         // std::cout << "black move '" << &*ls.range.istart << "'" << std::endl;
+         if(bool(state)) return state;
+         // std::cout << "black move state correct '" << &*ls.range.istart << "'" << std::endl;
+         if(std::isdigit(*ls.range.istart))
+         {
+            // std::cout << "black move digit" << &*ls.range.istart << "'" << std::endl;
+            if(!skip_move_number(ls.range,side::white,n))
+               return parse_state::syntax_error;
+            // std::cout << "black move skipped" << &*ls.range.istart << "'" << std::endl;
+            skip_double_dot(ls.range);
+            state=skip_move_separator();
+            // std::cout << "black move separator" << &*ls.range.istart << "'" << std::endl;
+            if(bool(state)) return state;
+         }
+         {
+            std::string move=get_alnum_string(ls.range);
+            on_move(c,move);
+         }
+         c=other_side(c);
+         ++n;
+         return parse_state::in_progress;
+      }
+
+      extern parse_state
+      parse_pgn_moves(std::istream& is,const on_move_t& on_move)
+      {
+         pgn::line_scanner ls(is);
+         pgn_moves moves(ls);
+         ls.getline();
+         // std::cout << "'" << ls.line << "'" << std::endl;
+         return moves.parse(on_move);
       }
    }
 
-   // uncomplete
+   // incomplete
    extern std::tuple<board_t,pgn_attributes>
-   make_pgn_moves(std::istream& is,
-                  const std::function<void (board_t& board, side c, context& ctx)>& fun)
+   make_pgn_moves(std::istream& is,const pgn::on_move_t& on_move)
    {
       std::string current_line;
-      std::getline(is,current_line);
+
       pgn_attributes attributes;
-      pgn::parse_pgn_attribute(current_line,
-                               [&attributes](const std::string& argname, const std::string& argval)
-                               {
-                                  attributes.push_back({argname,argval});
-                               }
-         );
+      pgn::line_scanner ls(is);
+      bool end_of_input;
+      while((end_of_input=ls.getline()) &&
+            pgn::parse_pgn_attribute(ls.line,
+                                     [&attributes](const std::string& argname, const std::string& argval)
+                                     {
+                                        attributes.push_back({argname,argval});
+                                     }));
+      if(end_of_input)
+         throw io_error("pgn game cannot consist uniquely of attributes");
       board_t b=initial_board();
+      pgn::pgn_moves moves(ls);
+      moves.parse(on_move);
       return std::make_tuple(b,attributes);
    }
 

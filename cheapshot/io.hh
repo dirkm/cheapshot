@@ -81,9 +81,17 @@ namespace cheapshot
 
    namespace pgn
    {
-      bool
-      parse_pgn_attribute(const std::string& current_line,
-                          const std::function<void (const std::string& attrname, const std::string& attrval)>& fun);
+      using on_attribute_t=std::function<void (const std::string& attrname, const std::string& attrval)>;
+
+      extern bool
+      parse_pgn_attribute(const std::string& current_line, const on_attribute_t& fun);
+
+      using on_move_t=std::function<bool (side c, const std::string& move)>;
+
+      enum class parse_state {in_progress, completed, syntax_error, eof};
+
+      extern parse_state
+      parse_pgn_moves(std::istream& is,const on_move_t& on_move);
    }
 
    extern std::tuple<board_t,pgn_attributes>

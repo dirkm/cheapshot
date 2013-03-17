@@ -12,11 +12,11 @@ namespace cheapshot
 {
    namespace control
    {
-      template<typename T> struct scoped_ply_count;
-      template<typename T, side S> struct scoped_score;
-      template<typename T> struct scoped_hash;
-      template<typename T> struct scoped_material;
-      template<typename T> struct cache_update;
+      template<typename> struct scoped_ply_count;
+      template<typename, side> struct scoped_score;
+      template<typename> struct scoped_hash;
+      template<typename> struct scoped_material;
+      template<typename> struct cache_update;
    }
 
    struct board_metrics
@@ -217,7 +217,7 @@ namespace cheapshot
       return hhash(board,mi[0])^hhash(board,mi[1]);
    }
 
-   template<typename Info>
+   template<typename>
    class scoped_move;
 
    template<>
@@ -341,7 +341,7 @@ namespace cheapshot
       control::scoped_hash<decltype(Controller::hasher)> sc_hash;
    };
 
-   template<side S, typename Controller>
+   template<side, typename Controller>
    int
    recurse_with_cutoff(const context& ctx, const Controller& ec);
 
