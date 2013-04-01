@@ -1,4 +1,3 @@
-#include "cheapshot/board.hh"
 #include "cheapshot/io.hh"
 #include <iostream>
 #include <cstring>

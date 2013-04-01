@@ -2,7 +2,6 @@
 #include <cstring>
 #include <tuple>
 
-#include "cheapshot/board.hh"
 #include "cheapshot/control.hh"
 #include "cheapshot/io.hh"
 
