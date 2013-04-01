@@ -360,7 +360,13 @@ BOOST_AUTO_TEST_CASE(pgn_test)
             return true;
          };
 
-      auto test_pgn=[&](const char* s)
+      auto nomove=[](side c, const std::string& move) -> bool
+         {
+            BOOST_FAIL("should not be called");
+            return true;
+         };
+
+      auto test_pgn_moves=[&](const char* s)
       {
          it_expected_moves=std::begin(expected_moves);
          std::istringstream test_stream(s);
@@ -368,15 +374,19 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          BOOST_CHECK_EQUAL(it_expected_moves,std::end(expected_moves));
       };
 
-      test_pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6\n");
-      test_pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6\n");
-      test_pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} {comment 2} 3... a6\n");
-      test_pgn("1. e4 e5\n2. Nf3 Nc6 3. Bb5 3... a6\n");
-      test_pgn("1.\ne4\ne5\n2.\nNf3\nNc6\n3.\nBb5\n3...\na6\n");
-      test_pgn("1. e4 e5; blabber\n 2. Nf3 Nc6 3. Bb5 3... a6\n");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6\n");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6\n");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} {comment 2} 3... a6\n");
+      test_pgn_moves("1. e4 e5\n2. Nf3 Nc6 3. Bb5 3... a6\n");
+      test_pgn_moves("1.\ne4\ne5\n2.\nNf3\nNc6\n3.\nBb5\n3...\na6\n");
+      test_pgn_moves("1. e4 e5; eolcomment\n 2. Nf3 Nc6 3. Bb5 3... a6\n");
+      {
+         std::istringstream empty_stream("\n");
+         pgn::parse_pgn_moves(empty_stream,nomove);
+      }
    }
    {
-      const char* __attribute__((unused)) example_game=
+      const char* example_game=
          "[Event \"F/S Return Match\"]\n"
          "[Site \"Belgrade, Serbia Yugoslavia|JUG\"]\n"
          "[Date \"1992.11.04\"]\n"
@@ -393,6 +403,10 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          "hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5\n"
          "35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6\n"
          "Nf2 42. g4 Bd3 43. Re6 1/2-1/2";
+      std::istringstream test_stream(example_game);
+      auto null_move=[](side, const std::string&) -> bool { return true; };
+      auto null_attr=[](const std::string&, const std::string&){};
+      scan_pgn(test_stream,null_attr,null_move);
    }
 }
 

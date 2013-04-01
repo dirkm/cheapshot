@@ -129,10 +129,19 @@ namespace cheapshot
       int
       scan_number(const char*& rs)
       {
-         std::size_t idx;
-         int n=std::stoull(rs,&idx);
-         rs+=idx;
-         return n;
+         try
+         {
+            std::size_t idx;
+            int n=std::stoull(rs,&idx);
+            rs+=idx;
+            return n;
+         }
+         catch(std::invalid_argument& ex)
+         {
+            std::stringstream oss;
+            oss << "could not read as number: '" << rs << "'";
+            throw io_error(oss.str());
+         }
       }
 
       void
@@ -790,9 +799,15 @@ namespace cheapshot
                oss << "could not read stream at line: " << number;
                throw io_error(oss.str());
             }
-            remaining=line.c_str();
             ++number;
+            resetline();
             return r;
+         }
+
+         void
+         resetline()
+         {
+            remaining=line.c_str();
          }
          std::string line;
          const char* remaining;
@@ -848,10 +863,12 @@ namespace cheapshot
       }
 
       std::string
-      get_alnum_string(const char*& s)
+      get_movelike_string(const char*& s)
       {
          const char* const sstart=s;
-         while(std::isalnum(*s))
+         while(std::isalnum(*s)||(*s=='-')||(*s=='='))
+            ++s;
+         if((*s=='#')||(*s=='+'))
             ++s;
          return std::string(sstart,s);
       }
@@ -863,13 +880,29 @@ namespace cheapshot
       namespace
       {
          bool
-         skip_move_number(const char*& s, side c, std::uint64_t n)
+         skip_move_number(const char*& s, std::uint64_t n)
          {
             std::uint64_t n2=scan_number(s);
             if(n!=n2)
                throw io_error("numbers don't match");
             if(!skip_token(s,'.')) return false;
             return true;
+         }
+
+         const std::array<const char*,4> game_result_strings={"1-0","0-1","1/2-1/2","*"};
+
+         bool
+         parse_result(const char*& s,game_result& r)
+         {
+            for(unsigned i=0;i<game_result_strings.size();++i)
+            {
+               if(skip_string(s,game_result_strings[i]))
+               {
+                  r=game_result(i);
+                  return true;
+               }
+            }
+            return false;
          }
 
          bool
@@ -888,7 +921,7 @@ namespace cheapshot
          if(skip_eol(s)) return true;
          if(!skip_token(s,'[')) return false;
          if(!skip_optional_separator(s)) return false;
-         std::string attrname=get_alnum_string(s);
+         std::string attrname=get_movelike_string(s);
          if(!skip_mandatory_separator(s)) return false;
          if(!skip_token(s,'"')) return false;
          std::string attrval=get_until_token(s,'"');
@@ -913,7 +946,7 @@ namespace cheapshot
          {
             if(c==side::black)
                if(!parse_black(on_move)) return false;
-            while(true) // TODO
+            while(result==pgn::game_result::no_result) // TODO
                if(!parse_full_move(on_move)) return false;
             return true;
          }
@@ -922,10 +955,11 @@ namespace cheapshot
          parse_full_move(const on_move_t& on_move)
          {
             if(!skip_move_separator()) return false;
-            if(!skip_move_number(ls.remaining,side::white,n)) return false;
+            if(!skip_move_number(ls.remaining,n))
+               return parse_result(ls.remaining,result);
             if(!skip_move_separator()) return false;
             {
-               std::string move=get_alnum_string(ls.remaining);
+               std::string move=get_movelike_string(ls.remaining);
                on_move(c,move);
             }
             c=other_side(c);
@@ -939,12 +973,19 @@ namespace cheapshot
             if(!skip_move_separator()) return false;
             if(std::isdigit(*ls.remaining))
             {
-               if(!skip_move_number(ls.remaining,side::white,n)) return false;
+               if(!skip_move_number(ls.remaining,n))
+                  return parse_result(ls.remaining,result);
                if(!skip_double_dot(ls.remaining)) return false;
                if(!skip_move_separator()) return false;
             }
+            else if(skip_token(ls.remaining,'*'))
             {
-               std::string move=get_alnum_string(ls.remaining);
+               result=pgn::game_result::in_progress;
+               return true;
+            }
+
+            {
+               std::string move=get_movelike_string(ls.remaining);
                on_move(c,move);
             }
             c=other_side(c);
@@ -991,9 +1032,11 @@ namespace cheapshot
             }
             return true;
          }
-
+      public:
          side c=side::white;
          int n=1;
+         pgn::game_result result=pgn::game_result::no_result;
+      private:
          line_scanner& ls;
       };
 
@@ -1007,25 +1050,18 @@ namespace cheapshot
       }
    }
 
-   extern std::tuple<board_t,pgn_attributes>
-   make_pgn_moves(std::istream& is, const on_position_t& on_each_position)
+   extern bool
+   scan_pgn(std::istream& is, const pgn::on_attribute_t& on_attribute, const pgn::on_move_t& on_move)
    {
-      pgn_attributes attributes;
       line_scanner ls(is);
-      bool end_of_input;
-      while((end_of_input=ls.getline()) &&
-            pgn::parse_pgn_attribute(ls.remaining,
-                                     [&attributes](const std::string& argname, const std::string& argval)
-                                     {
-                                        attributes.push_back({argname,argval});
-                                     }));
-      if(end_of_input)
+      bool more_input;
+      while((more_input=ls.getline()) &&
+            pgn::parse_pgn_attribute(ls.remaining,on_attribute));
+      if(!more_input)
          throw io_error("pgn game cannot consist uniquely of attributes");
-      board_t b=initial_board();
+      ls.resetline();
       pgn::pgn_moves moves(ls);
-      pgn::on_move_t on_move=[](side c, const std::string& move) -> bool { return true; };
-      moves.parse(on_move);
-      return std::make_tuple(b,attributes);
+      return moves.parse(on_move);
    }
 
    namespace

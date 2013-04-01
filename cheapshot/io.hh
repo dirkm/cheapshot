@@ -92,10 +92,12 @@ namespace cheapshot
 
       extern bool
       parse_pgn_moves(std::istream& is,const on_move_t& on_move);
+
+      enum class game_result{white_win=0,black_win=1,draw=2,in_progress=3,no_result};
    }
 
-   extern std::tuple<board_t,pgn_attributes>
-   make_pgn_moves(std::istream& is, const on_position_t& on_each_position=nullpos);
+   extern bool
+   scan_pgn(std::istream& is, const pgn::on_attribute_t& on_attribute, const pgn::on_move_t& on_move);
 
    extern std::ostream&
    print_score(int score, std::ostream& os);
