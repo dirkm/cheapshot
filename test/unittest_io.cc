@@ -352,18 +352,16 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       };
 
       auto it_expected_moves=std::begin(expected_moves);
-      auto check_moves=[&it_expected_moves](side c, const std::string& move) -> bool
+      auto check_moves=[&it_expected_moves](side c, const std::string& move)
          {
             // std::cout << move << std::endl;
             BOOST_CHECK(*it_expected_moves==std::make_pair(c,move));
             ++it_expected_moves;
-            return true;
          };
 
-      auto nomove=[](side c, const std::string& move) -> bool
+      auto nomove=[](side c, const std::string& move)
          {
             BOOST_FAIL("should not be called");
-            return true;
          };
 
       auto test_pgn_moves=[&](const char* s)
@@ -403,10 +401,14 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          "hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5\n"
          "35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6\n"
          "Nf2 42. g4 Bd3 43. Re6 1/2-1/2";
-      std::istringstream test_stream(example_game);
-      auto null_move=[](side, const std::string&) -> bool { return true; };
-      auto null_attr=[](const std::string&, const std::string&){};
-      scan_pgn(test_stream,null_attr,null_move);
+      {
+         std::istringstream test_stream(example_game);
+         parse_pgn(test_stream,null_attr,null_move);
+      }
+      {
+         std::istringstream test_stream(example_game);
+         make_pgn_moves(test_stream);
+      }
    }
 }
 

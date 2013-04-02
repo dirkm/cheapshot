@@ -1,6 +1,6 @@
 #; -*-makefile-*-
 
-EXEC += $~unittest $~print_position $~print_fen $~forced_mate
+EXEC += $~unittest $~print_position $~print_fen $~forced_mate $~parse_pgn
 
 $(EXEC): $(LIBCHEAPSHOT)
 
@@ -24,6 +24,9 @@ $~forced_mate: $(call depend, $~forced_mate.cc)
 	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
 
 $~print_fen: $(call depend, $~print_fen.cc)
+	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
+
+$~parse_pgn: $(call depend, $~parse_pgn.cc)
 	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
 
 .PHONY: test unittest ct_test test_report

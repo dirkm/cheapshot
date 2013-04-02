@@ -54,6 +54,14 @@ namespace cheapshot
       int fullmove_number;
    };
 
+   constexpr cheapshot::context start_context=
+   {
+      0_U64, /*ep_info*/
+      0_U64, /*castling_rights*/
+      1, // halfmove clock
+      1 // fullmove number
+   };
+
    constexpr board_side init_white_side={
          row_with_algebraic_number(2), // p
          algpos('b',1)|algpos('g',1), // n

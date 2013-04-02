@@ -40,6 +40,6 @@ main(int argc, const char* argv[])
    {
       std::cerr << "error parsing fen -- message: '" << ex.what() << "'"
                 << std::endl;
-      return 1;
+      return 2;
    }
 }

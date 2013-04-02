@@ -48,6 +48,6 @@ main(int argc, const char* argv[])
       std::cerr << "ERROR: expected 64 bit unsigned integer at input\n"
          "message: '" << ex.what() << "'"
                 << std::endl;
-      return 1;
+      return 2;
    }
 }

@@ -4,7 +4,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "cheapshot/board.hh"
 #include "cheapshot/control.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/loop.hh"
@@ -620,6 +619,7 @@ namespace cheapshot
       void
       determine_origin(board_t& board, input_move& im, uint64_t obstacles)
       {
+         // BUG: not differentiating between pawn move and pawn capture (check if piece present/capture)
          im.origin&=get_side<S>(board)[idx(im.moving_piece)];
          if(im.origin==0_U64)
             throw io_error("trying to move a missing piece");
@@ -1051,7 +1051,7 @@ namespace cheapshot
    }
 
    extern bool
-   scan_pgn(std::istream& is, const pgn::on_attribute_t& on_attribute, const pgn::on_move_t& on_move)
+   parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_move_t& on_move)
    {
       line_scanner ls(is);
       bool more_input;
@@ -1062,6 +1062,19 @@ namespace cheapshot
       ls.resetline();
       pgn::pgn_moves moves(ls);
       return moves.parse(on_move);
+   }
+
+   extern bool
+   make_pgn_moves(std::istream& is, const on_position_t& on_each_position)
+   {
+      board_t board=initial_board();
+      context ctx=start_context;
+      auto on_move=[&board,&ctx,&on_each_position](side c, const std::string& move)
+      {
+         make_input_move(board,c,ctx,move.c_str(), move_format::flexible);
+         on_each_position(board,c,ctx);
+      };
+      return parse_pgn(is,null_attr,on_move);
    }
 
    namespace

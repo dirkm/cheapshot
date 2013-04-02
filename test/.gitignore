@@ -2,3 +2,4 @@ forced_mate
 print_fen
 unittest
 print_position
+parse_pgn

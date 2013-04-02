@@ -72,23 +72,25 @@ namespace cheapshot
    make_input_move(board_t& board, side c, context& ctx, const char* s, move_format fmt);
 
    using on_position_t=const std::function<void (board_t& board, side c, context& ctx)>;
-   const auto nullpos=[](board_t& board, side c, context& ctx){};
+   const auto null_pos=[](board_t& board, side c, context& ctx){};
 
    extern void
    make_input_moves(board_t& board, side c, context& ctx,
                     const std::vector<const char*>& input_moves, move_format fmt,
-                    const on_position_t& on_each_position=nullpos);
+                    const on_position_t& on_each_position=null_pos);
 
    using pgn_attributes=std::vector<std::pair<std::string,std::string> >;
 
+   using on_move_t=std::function<void (side c, const std::string& move)>;
+   const auto null_move=[](side, const std::string&){};
+
+   using on_attribute_t=std::function<void (const std::string& attrname, const std::string& attrval)>;
+   const auto null_attr=[](const std::string&, const std::string&){};
+
    namespace pgn
    {
-      using on_attribute_t=std::function<void (const std::string& attrname, const std::string& attrval)>;
-
       extern bool
       parse_pgn_attribute(const char* current_line, const on_attribute_t& fun);
-
-      using on_move_t=std::function<bool (side c, const std::string& move)>;
 
       extern bool
       parse_pgn_moves(std::istream& is,const on_move_t& on_move);
@@ -97,7 +99,10 @@ namespace cheapshot
    }
 
    extern bool
-   scan_pgn(std::istream& is, const pgn::on_attribute_t& on_attribute, const pgn::on_move_t& on_move);
+   parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_move_t& on_move);
+
+   extern bool
+   make_pgn_moves(std::istream& is, const on_position_t& on_each_position=null_pos);
 
    extern std::ostream&
    print_score(int score, std::ostream& os);

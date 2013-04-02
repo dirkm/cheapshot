@@ -52,14 +52,6 @@ namespace cheapshot
       "........\n"
       "....K...\n";
 
-   constexpr cheapshot::context start_context=
-   {
-      0_U64, /*ep_info*/
-      0_U64, /*castling_rights*/
-      1, // halfmove clock
-      1 // fullmove number
-   };
-
    constexpr cheapshot::context no_castle_context=
    {
       0_U64, /*ep_info*/
