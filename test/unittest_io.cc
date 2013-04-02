@@ -15,6 +15,8 @@ namespace
       bool operator()(const cheapshot::io_error& ex)
       {
          bool r=strstr(ex.what(),fragment)!=nullptr;
+         BOOST_CHECK_MESSAGE(r,"received unexpected exception :'" << ex.what() <<
+                             "', expected '" << fragment << "'");
          return r;
       }
 
@@ -234,14 +236,14 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       test_input_exception("",move_format::long_algebraic,"invalid character");
       test_input_exception("",move_format::short_algebraic,"invalid character");
 
-      test_input_exception("e2-e5",move_format::long_algebraic,"invalid destination");
-      test_input_exception("e5",move_format::short_algebraic,"invalid destination");
+      test_input_exception("e2-e5",move_format::long_algebraic,"illegal");
+      test_input_exception("e5",move_format::short_algebraic,"illegal");
 
       test_input_exception("e3-e4",move_format::long_algebraic,"missing piece");
       test_input_exception("3e4",move_format::short_algebraic,"missing piece");
 
-      test_input_exception("e2xd3",move_format::long_algebraic,"capture");
-      test_input_exception("exd3",move_format::short_algebraic,"capture");
+      test_input_exception("e2xd3",move_format::long_algebraic,"illegal");
+      test_input_exception("exd3",move_format::short_algebraic,"illegal");
 
       test_input_exception("e2xd3e.p.",move_format::long_algebraic,"en passant");
       test_input_exception("exd3e.p.",move_format::short_algebraic,"en passant");

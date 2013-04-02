@@ -537,15 +537,22 @@ namespace cheapshot
       return slide_pawn<S>(s,obstacles)|capture_with_pawn<S>(s,obstacles);
    }
 
-   // TODO is_capture is often known
    template<side S>
    constexpr uint64_t
-   reverse_move_capture_pawn(uint64_t s, uint64_t obstacles)
+   reverse_capture_pawn(uint64_t s, uint64_t obstacles)
    {
       using namespace detail;
       return
          shift_backward<S>(unalias_forward<S>(s),7)|
-         shift_backward<S>(unalias_backward<S>(s),9)|
+         shift_backward<S>(unalias_backward<S>(s),9);
+   }
+
+   template<side S>
+   constexpr uint64_t
+   reverse_move_pawn(uint64_t s, uint64_t obstacles)
+   {
+      using namespace detail;
+      return
          reverse_slide_2_squares<S>(shift_backward<S>(s,8),obstacles);
    }
 

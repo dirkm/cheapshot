@@ -600,35 +600,46 @@ namespace cheapshot
          return im;
       }
 
-      // all possible reverse moves are calculated to disambiguate moves in short notation
-      // this is most likely faster than iterating over pieces and all their possible moves
       template<side S>
-      constexpr std::array<move_generator_t,count<piece>()>
-      reverse_move_generators()
+      void
+      determine_origin(board_t& board, input_move& im, const board_metrics& bm)
       {
-         return {reverse_move_capture_pawn<S>,
-               jump_knight,
-               slide_bishop,
-               slide_rook,
-               slide_queen,
-               move_king
-               };
+         uint64_t obstacles=bm.all_pieces();
+         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
+         if(im.origin==0_U64)
+            throw io_error("trying to move a missing piece");
+         uint64_t possible_origins;
+         if(im.moving_piece==piece::pawn)
+         {
+            if(im.destination&bm.opposing<S>())
+               possible_origins=reverse_capture_pawn<S>(im.destination,obstacles);
+            else
+               possible_origins=reverse_move_pawn<S>(im.destination,obstacles);
+         }
+         else
+         {
+            possible_origins=basic_piece_move_generators()[idx(im.moving_piece)-1](im.destination,obstacles);
+         }
+         im.origin&=possible_origins;
+         if(im.origin==0_U64)
+            throw io_error("trying to make illegal move");
+         if(!is_single_bit(im.origin))
+            throw io_error("piece origin not uniquely defined");
       }
 
       template<side S>
       void
-      determine_origin(board_t& board, input_move& im, uint64_t obstacles)
+      determine_origin_ep(board_t& board, input_move& im, const board_metrics& bm)
       {
-         // BUG: not differentiating between pawn move and pawn capture (check if piece present/capture)
+         uint64_t obstacles=bm.all_pieces();
          im.origin&=get_side<S>(board)[idx(im.moving_piece)];
          if(im.origin==0_U64)
-            throw io_error("trying to move a missing piece");
-         uint64_t possible_origins=reverse_move_generators<S>()[idx(im.moving_piece)](im.destination,obstacles);
-         im.origin&=possible_origins;
+            throw io_error("trying to move a missing pawn");
+         im.origin&=reverse_capture_pawn<S>(im.destination,obstacles);
          if(im.origin==0_U64)
-            throw io_error("trying to move to an invalid destination");
+            throw io_error("trying to move a missing pawn for e.p. capture");
          if(!is_single_bit(im.origin))
-            throw io_error("piece origin not uniquely defined");
+            throw io_error("e.p. pawn origin not uniquely defined");
       }
 
       template<side S>
@@ -690,7 +701,7 @@ namespace cheapshot
                break;
             case special_move::ep_capture:
             {
-               determine_origin<S>(board, im, bm.all_pieces());
+               determine_origin_ep<S>(board, im, bm);
                if(im.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
@@ -701,7 +712,7 @@ namespace cheapshot
             case special_move::normal:
             case special_move::promotion:
             {
-               determine_origin<S>(board, im, bm.all_pieces());
+               determine_origin<S>(board, im, bm);
                bool destination_occupied=im.destination&bm.opposing<S>();
                if(im.is_capture)
                {
