@@ -374,14 +374,18 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          BOOST_CHECK_EQUAL(it_expected_moves,std::end(expected_moves));
       };
 
-      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6\n");
-      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6\n");
-      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} {comment 2} 3... a6\n");
-      test_pgn_moves("1. e4 e5\n2. Nf3 Nc6 3. Bb5 3... a6\n");
-      test_pgn_moves("1.\ne4\ne5\n2.\nNf3\nNc6\n3.\nBb5\n3...\na6\n");
-      test_pgn_moves("1. e4 e5; eolcomment\n 2. Nf3 Nc6 3. Bb5 3... a6\n");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6 *");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6 *");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} {comment 2} 3... a6 *");
+      test_pgn_moves("1. e4 e5\n2. Nf3 Nc6 3. Bb5 3... a6 *");
+      test_pgn_moves("1.\ne4\ne5\n2.\nNf3\nNc6\n3.\nBb5\n3...\na6 *");
+      test_pgn_moves("1. e4 e5; eolcomment\n 2. Nf3 Nc6 3. Bb5 3... a6 *");
       {
-         std::istringstream empty_stream("\n");
+         std::istringstream empty_stream("\n*");
+         pgn::parse_pgn_moves(empty_stream,nomove);
+      }
+      {
+         std::istringstream empty_stream("\n  *");
          pgn::parse_pgn_moves(empty_stream,nomove);
       }
    }

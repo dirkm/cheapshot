@@ -484,21 +484,6 @@ namespace cheapshot
 
    namespace
    {
-      enum class special_move { normal, long_castling, short_castling, promotion, ep_capture };
-      enum class game_status { normal, check, checkmate };
-
-      struct input_move
-      {
-         special_move type;
-         // params below may not be initialized, depending on move type
-         bool is_capture;
-         game_status phase;
-         cheapshot::piece moving_piece;
-         uint64_t origin;
-         uint64_t destination;
-         cheapshot::piece promoting_piece;
-      };
-
       bool
       skip_string(const char*& s, const char* s2)
       {
@@ -513,8 +498,8 @@ namespace cheapshot
       {
          if(*s=='=')
          {
-            im.type=special_move::promotion;
-            im.promoting_piece=character_to_moved_piece(*s);;
+            im.type=move_type::promotion;
+            im.promoting_piece=character_to_moved_piece(*s);
             ++s;
          }
          switch(*s)
@@ -534,15 +519,15 @@ namespace cheapshot
       }
 
       input_move
-      scan_input_move(const char* s, move_format fmt)
+      scan_input_move(const char*& s, move_format fmt)
       {
          input_move im;
-         im.type=special_move::normal; // for now
+         im.type=move_type::normal; // for now
          im.is_capture=false; // for now
          if(skip_string(s,"O-O-O"))
-            im={special_move::long_castling};
+            im={move_type::long_castling};
          else if (skip_string(s,"O-O"))
-            im={special_move::short_castling};
+            im={move_type::short_castling};
          else
          {
             im.moving_piece=character_to_moved_piece(*s);
@@ -594,52 +579,48 @@ namespace cheapshot
          }
 
          if((im.moving_piece==piece::pawn) && (im.is_capture==true) && skip_string(s,"e.p."))
-            im.type=special_move::ep_capture;
+            im.type=move_type::ep_capture;
 
          scan_move_suffix(im,s);
          return im;
       }
 
       template<side S>
-      void
-      determine_origin(board_t& board, input_move& im, const board_metrics& bm)
+      uint64_t
+      possible_origins(const board_t& board, const board_metrics& bm, const input_move& im)
       {
-         uint64_t obstacles=bm.all_pieces();
-         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
-         if(im.origin==0_U64)
-            throw io_error("trying to move a missing piece");
-         uint64_t possible_origins;
+         const uint64_t obstacles=bm.all_pieces();
          if(im.moving_piece==piece::pawn)
          {
             if(im.destination&bm.opposing<S>())
-               possible_origins=reverse_capture_pawn<S>(im.destination,obstacles);
+               return reverse_capture_pawn<S>(im.destination,obstacles);
             else
-               possible_origins=reverse_move_pawn<S>(im.destination,obstacles);
+               return reverse_move_pawn<S>(im.destination,obstacles);
          }
          else
-         {
-            possible_origins=basic_piece_move_generators()[idx(im.moving_piece)-1](im.destination,obstacles);
-         }
+            return basic_piece_move_generators()[idx(im.moving_piece)-1](im.destination,obstacles);
+      }
+
+      template<side S>
+      uint64_t
+      possible_origins_ep(const board_t& board, const board_metrics& bm, const input_move& im)
+      {
+         const uint64_t obstacles=bm.all_pieces();
+         return reverse_capture_pawn<S>(im.destination,obstacles);
+      }
+
+      template<side S>
+      void
+      narrow_origin(input_move& im, const board_t& board, uint64_t possible_origins)
+      {
+         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
+         if(im.origin==0_U64)
+            throw io_error("trying to move a missing piece");
          im.origin&=possible_origins;
          if(im.origin==0_U64)
             throw io_error("trying to make illegal move");
          if(!is_single_bit(im.origin))
             throw io_error("piece origin not uniquely defined");
-      }
-
-      template<side S>
-      void
-      determine_origin_ep(board_t& board, input_move& im, const board_metrics& bm)
-      {
-         uint64_t obstacles=bm.all_pieces();
-         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
-         if(im.origin==0_U64)
-            throw io_error("trying to move a missing pawn");
-         im.origin&=reverse_capture_pawn<S>(im.destination,obstacles);
-         if(im.origin==0_U64)
-            throw io_error("trying to move a missing pawn for e.p. capture");
-         if(!is_single_bit(im.origin))
-            throw io_error("e.p. pawn origin not uniquely defined");
       }
 
       template<side S>
@@ -693,15 +674,15 @@ namespace cheapshot
          uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
          switch(im.type)
          {
-            case special_move::long_castling:
+            case move_type::long_castling:
                make_castling_move<S>(board,ctx,long_castling<S>(),bm);
                break;
-            case special_move::short_castling:
+            case move_type::short_castling:
                make_castling_move<S>(board,ctx,short_castling<S>(),bm);
                break;
-            case special_move::ep_capture:
+            case move_type::ep_capture:
             {
-               determine_origin_ep<S>(board, im, bm);
+               narrow_origin<S>(im,board,possible_origins_ep<S>(board, bm,im));
                if(im.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
@@ -709,10 +690,10 @@ namespace cheapshot
                   make_move(board,m);
                break;
             }
-            case special_move::normal:
-            case special_move::promotion:
+            case move_type::normal:
+            case move_type::promotion:
             {
-               determine_origin<S>(board, im, bm);
+               narrow_origin<S>(im,board,possible_origins<S>(board, bm,im));
                bool destination_occupied=im.destination&bm.opposing<S>();
                if(im.is_capture)
                {
@@ -729,7 +710,7 @@ namespace cheapshot
                   move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
                   make_move(board,mi);
                }
-               if(im.type==special_move::promotion)
+               if(im.type==move_type::promotion)
                {
                   if(!promoting_pawns<S>(im.destination))
                      throw io_error("promotion only allowed on last row");
@@ -792,23 +773,27 @@ namespace cheapshot
       class line_scanner
       {
       public:
-         line_scanner(const line_scanner&)=delete;
          explicit line_scanner(std::istream& is_):
             is(is_)
          {}
 
+         line_scanner(const line_scanner&)=delete;
+
          bool
          getline()
          {
-            std::getline(is,line);
             bool r=!is.eof();
             if(!r)
                line.clear();
-            else if(is.fail())
+            else
             {
-               std::ostringstream oss;
-               oss << "could not read stream at line: " << number;
-               throw io_error(oss.str());
+               std::getline(is,line);
+               if(is.fail())
+               {
+                  std::ostringstream oss;
+                  oss << "could not read stream at line: " << number;
+                  throw io_error(oss.str());
+               }
             }
             ++number;
             resetline();
@@ -916,12 +901,11 @@ namespace cheapshot
             return false;
          }
 
-         bool
+         void
          skip_double_dot(const char*& s)
          {
             for(int i=0;i<2;++i)
-               if(!skip_token(s,'.')) return false;
-            return true;
+               if(!skip_token(s,'.')) throw io_error("unexpected character when '..' expected");
          }
       }
 
@@ -931,15 +915,15 @@ namespace cheapshot
       {
          if(skip_eol(s)) return true;
          if(!skip_token(s,'[')) return false;
-         if(!skip_optional_separator(s)) return false;
+         if(!skip_optional_separator(s)) throw io_error("eol before attribute name");
          std::string attrname=get_movelike_string(s);
-         if(!skip_mandatory_separator(s)) return false;
-         if(!skip_token(s,'"')) return false;
+         if(!skip_mandatory_separator(s)) throw io_error("missing separator between attribute name and value");
+         if(!skip_token(s,'"')) throw io_error("missing attribute value");
          std::string attrval=get_until_token(s,'"');
-         if(!skip_token(s,'"')) return false;
-         if(!skip_optional_separator(s)) return false;
-         if(!skip_token(s,']')) return false;
-         if(!skip_eol(s)) return false;
+         if(!skip_token(s,'"')) throw io_error("missing attribute value end");
+         if(!skip_optional_separator(s)) throw io_error("missing closing tag in attribute");
+         if(!skip_token(s,']')) throw io_error("missing closing tag in attribute");
+         if(!skip_eol(s)) throw io_error("attribute line not ended correctly");
 
          on_attr(attrname,attrval);
          return true;
@@ -952,73 +936,65 @@ namespace cheapshot
             ls(ls_)
          {}
 
-         bool
+         void
          parse(const on_move_t& on_move)
          {
             if(c==side::black)
-               if(!parse_black(on_move)) return false;
-            while(result==pgn::game_result::no_result) // TODO
-               if(!parse_full_move(on_move)) return false;
-            return true;
+               parse_black(on_move);
+            while(result==pgn::game_result::no_result)
+               parse_full_move(on_move);
          }
       private:
-         bool
+         void
          parse_full_move(const on_move_t& on_move)
          {
-            if(!skip_move_separator()) return false;
+            skip_move_separator();
+            if(parse_result(ls.remaining,result))
+               return;
             if(!skip_move_number(ls.remaining,n))
-               return parse_result(ls.remaining,result);
-            if(!skip_move_separator()) return false;
+               throw io_error("could not interpret parameter as move number nor as game-result");
+            skip_move_separator();
             {
                std::string move=get_movelike_string(ls.remaining);
                on_move(c,move);
             }
             c=other_side(c);
-            if(!parse_black(on_move)) return false;
-            return true;
+            parse_black(on_move);
          }
 
-         bool
+         void
          parse_black(const on_move_t& on_move)
          {
-            if(!skip_move_separator()) return false;
+            skip_move_separator();
+            if(parse_result(ls.remaining,result))
+               return;
             if(std::isdigit(*ls.remaining))
             {
                if(!skip_move_number(ls.remaining,n))
-                  return parse_result(ls.remaining,result);
-               if(!skip_double_dot(ls.remaining)) return false;
-               if(!skip_move_separator()) return false;
+                  throw io_error("could not interpret parameter as move number nor as game-result");
+               skip_double_dot(ls.remaining);
+               skip_move_separator();
             }
-            else if(skip_token(ls.remaining,'*'))
-            {
-               result=pgn::game_result::in_progress;
-               return true;
-            }
-
             {
                std::string move=get_movelike_string(ls.remaining);
                on_move(c,move);
             }
             c=other_side(c);
             ++n;
-            return true;
          }
 
-         bool
+         void
          skip_multiline_whitespace()
          {
-            while(true)
-            {
-               if(skip_eol(ls.remaining))
-                  if(!ls.getline()) return false;
-               if(*ls.remaining!='\x0') return true;
-            }
+            while(skip_eol(ls.remaining))
+               if(!ls.getline())
+                  throw io_error("unexpected eol");
          }
 
-         bool
+         void
          skip_move_separator()
          {
-            if(!skip_multiline_whitespace()) return false;
+            skip_multiline_whitespace();
             while(*ls.remaining=='{')
             {
                while(true)
@@ -1039,9 +1015,8 @@ namespace cheapshot
                      break;
                   }
                }
-               if(!skip_multiline_whitespace()) return false;
+               skip_multiline_whitespace();
             }
-            return true;
          }
       public:
          side c=side::white;
@@ -1051,17 +1026,17 @@ namespace cheapshot
          line_scanner& ls;
       };
 
-      extern bool
+      extern void
       parse_pgn_moves(std::istream& is,const on_move_t& on_move)
       {
          line_scanner ls(is);
          pgn_moves moves(ls);
          ls.getline();
-         return moves.parse(on_move);
+         moves.parse(on_move);
       }
    }
 
-   extern bool
+   extern void
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_move_t& on_move)
    {
       line_scanner ls(is);
@@ -1072,10 +1047,10 @@ namespace cheapshot
          throw io_error("pgn game cannot consist uniquely of attributes");
       ls.resetline();
       pgn::pgn_moves moves(ls);
-      return moves.parse(on_move);
+      moves.parse(on_move);
    }
 
-   extern bool
+   extern void
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position)
    {
       board_t board=initial_board();
@@ -1085,7 +1060,7 @@ namespace cheapshot
          make_input_move(board,c,ctx,move.c_str(), move_format::flexible);
          on_each_position(board,c,ctx);
       };
-      return parse_pgn(is,null_attr,on_move);
+      parse_pgn(is,null_attr,on_move);
    }
 
    namespace

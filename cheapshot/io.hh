@@ -67,6 +67,20 @@ namespace cheapshot
    print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
 
    enum class move_format { long_algebraic, short_algebraic, flexible};
+   enum class move_type { normal, long_castling, short_castling, promotion, ep_capture};
+   enum class game_status { normal, check, checkmate};
+
+   struct input_move
+   {
+      move_type type;
+      // params below may not be initialized, depending on move type
+      bool is_capture;
+      game_status phase;
+      cheapshot::piece moving_piece;
+      uint64_t origin;
+      uint64_t destination;
+      cheapshot::piece promoting_piece;
+   };
 
    extern void
    make_input_move(board_t& board, side c, context& ctx, const char* s, move_format fmt);
@@ -92,16 +106,16 @@ namespace cheapshot
       extern bool
       parse_pgn_attribute(const char* current_line, const on_attribute_t& fun);
 
-      extern bool
+      extern void
       parse_pgn_moves(std::istream& is,const on_move_t& on_move);
 
-      enum class game_result{white_win=0,black_win=1,draw=2,in_progress=3,no_result};
+      enum class game_result{white_win=0,black_win=1,draw=2,in_progress=3,no_result=4};
    }
 
-   extern bool
+   extern void
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_move_t& on_move);
 
-   extern bool
+   extern void
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position=null_pos);
 
    extern std::ostream&
