@@ -344,7 +344,8 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       BOOST_CHECK(pgn::parse_pgn_attribute("",noattr));
    }
    {
-      std::pair<side,std::string> expected_moves[]={
+      // TODO: removing static seems to trigger gcc bug
+      constexpr static struct {side c; const char* s;} expected_moves[]={
          {side::white,"e4"},
          {side::black,"e5"},
          {side::white,"Nf3"},
@@ -354,14 +355,20 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       };
 
       auto it_expected_moves=std::begin(expected_moves);
-      auto check_moves=[&it_expected_moves](side c, const std::string& move)
+      auto check_moves=[&it_expected_moves](const char*& s, side c)
          {
-            // std::cout << move << std::endl;
-            BOOST_CHECK(*it_expected_moves==std::make_pair(c,move));
+            // std::cout << "string received '" << s << "'" << std::endl;
+            // std::cout << "expected: '" << it_expected_moves->s << "'" << std::endl;
+            BOOST_CHECK_EQUAL(it_expected_moves->c,c);
+            int n=std::strlen(it_expected_moves->s);
+            int r=std::strncmp(it_expected_moves->s,s,n);
+            BOOST_CHECK_EQUAL(r,0);
+            s+=n;
             ++it_expected_moves;
+            // std::cout << "succeeded" << std::endl;
          };
 
-      auto nomove=[](side c, const std::string& move)
+      auto nomove=[](const char*& s, side c)
          {
             BOOST_FAIL("should not be called");
          };
@@ -409,7 +416,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          "Nf2 42. g4 Bd3 43. Re6 1/2-1/2";
       {
          std::istringstream test_stream(example_game);
-         parse_pgn(test_stream,null_attr,null_move);
+         parse_pgn(test_stream,null_attr,naive_consume_move);
       }
       {
          std::istringstream test_stream(example_game);

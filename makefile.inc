@@ -18,6 +18,7 @@ LDFLAGS := -Wl,--as-needed
 #CXX := g++-4.7.1
 #CXX := g++-4.6
 CXX := g++-trunk
+#CXX := ${HOME}/local/clang+llvm-3.2-x86-linux-ubuntu-12.04/bin/clang++
 #CXX:=/usr/lib/gcc-snapshot/bin/g++
 
 ## no optimisations to make gdb more intuitive
