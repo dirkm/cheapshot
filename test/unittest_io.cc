@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
 BOOST_AUTO_TEST_CASE(input_move_test)
 {
    {
-      auto mytest=[](const std::vector<const char*>& moves, move_format fmt)
+      auto mytest=[](const std::vector<const char*>& moves, format fmt)
          {
             board_t b=initial_board();
             context ctx=start_context;
@@ -179,21 +179,46 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             BOOST_CHECK(ots.is_equal(expected));
          };
       mytest({"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"},
-             move_format::long_algebraic);
+             long_algebraic);
       mytest({"e4","e5","Nf3","Nc6","Bc4","Nf6","O-O"},
-             move_format::short_algebraic);
+             short_algebraic);
    }
    {
-      auto mytest=[](const std::vector<const char*>& moves, move_format fmt)
+      auto mytest=[](const std::vector<const char*>& moves, format fmt)
          {
             board_t b=en_passant_initial_board;
             context ctx=start_context;
             make_input_moves(b,side::black,ctx,moves,fmt);
             BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
          };
-      mytest({"d7-d5","e5xd6e.p."},move_format::long_algebraic);
-      mytest({"d5","exd6e.p."},move_format::short_algebraic);
+      mytest({"d7-d5","e5xd6ep"},long_algebraic);
+      mytest({"d5","exd6ep"},short_algebraic);
+      mytest({"d5","exd6"},pgn_format);
    }
+   {
+      const board_t b=scan_board(
+         "r.b....k\n"
+         ".P......\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".......K\n");
+      auto mytest=[&b](const char* move, format fmt)
+         {
+            board_t b2=b;
+            context ctx=start_context;
+            make_input_move(b2,side::white,ctx,move,fmt);
+         };
+      mytest("b7-b8=Q",long_algebraic);
+      mytest("b7xc8=Q+",long_algebraic);
+      mytest("b8=N",short_algebraic);
+      mytest("b8=Q",short_algebraic);
+      mytest("bxc8=Q+",short_algebraic);
+      mytest("b8=N",short_algebraic);
+   }
+
    const board_t simple_mate=scan_board(
       "....k...\n"
       "........\n"
@@ -205,7 +230,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       ".......R\n");
 
    {
-      auto mytest=[&simple_mate](const char* move, move_format fmt)
+      auto mytest=[&simple_mate](const char* move, format fmt)
          {
             board_t b=simple_mate;
             context ctx=no_castle_context;
@@ -220,11 +245,11 @@ BOOST_AUTO_TEST_CASE(input_move_test)
                                  "........\n"
                                  "........\n"));
          };
-      mytest("Rh1-h8#",move_format::long_algebraic);
-      mytest("Rh8#",move_format::short_algebraic);
+      mytest("Rh1-h8#",long_algebraic);
+      mytest("Rh8#",short_algebraic);
    }
    {
-      auto test_input_exception=[](const char* move, move_format fmt, const char* msg)
+      auto test_input_exception=[](const char* move, format fmt, const char* msg)
       {
          board_t b=initial_board();
          context ctx=start_context;
@@ -233,38 +258,40 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             cheapshot::io_error,
             check_io_message(msg));
       };
-      test_input_exception("",move_format::long_algebraic,"invalid character");
-      test_input_exception("",move_format::short_algebraic,"invalid character");
+      test_input_exception("",long_algebraic,"empty");
+      test_input_exception("",short_algebraic,"empty");
 
-      test_input_exception("e2-e5",move_format::long_algebraic,"illegal");
-      test_input_exception("e5",move_format::short_algebraic,"illegal");
+      test_input_exception("e2-e5",long_algebraic,"illegal");
+      test_input_exception("e5",short_algebraic,"illegal");
 
-      test_input_exception("e3-e4",move_format::long_algebraic,"missing piece");
-      test_input_exception("3e4",move_format::short_algebraic,"missing piece");
+      test_input_exception("e3-e4",long_algebraic,"missing piece");
+      test_input_exception("3e4",short_algebraic,"missing piece");
 
-      test_input_exception("e2xd3",move_format::long_algebraic,"illegal");
-      test_input_exception("exd3",move_format::short_algebraic,"illegal");
+      test_input_exception("e2xd3",long_algebraic,"illegal");
+      test_input_exception("exd3",short_algebraic,"illegal");
 
-      test_input_exception("e2xd3e.p.",move_format::long_algebraic,"en passant");
-      test_input_exception("exd3e.p.",move_format::short_algebraic,"en passant");
+      test_input_exception("e2xd3ep",long_algebraic,"en passant");
+      test_input_exception("exd3ep",short_algebraic,"en passant");
 
-      test_input_exception("e2xe4",move_format::long_algebraic,"capture");
-      test_input_exception("2xe4",move_format::short_algebraic,"capture");
+      test_input_exception("exd3ep",pgn_format,"illegal");
 
-      test_input_exception("e2@e4",move_format::long_algebraic,"separator");
-      test_input_exception("e2@e4",move_format::short_algebraic,"invalid character"); // TODO
+      test_input_exception("e2xe4",long_algebraic,"capture");
+      test_input_exception("2xe4",short_algebraic,"capture");
+
+      test_input_exception("e2@e4",long_algebraic,"separator");
+      test_input_exception("e2@e4",short_algebraic,"invalid character"); // TODO
    }
    {
       board_t b=initial_board();
       context ctx=start_context;
-      make_input_moves(b,side::white,ctx,{"e2-e4","d7-d5"},move_format::long_algebraic);
+      make_input_moves(b,side::white,ctx,{"e2-e4","d7-d5"},long_algebraic);
       BOOST_CHECK_EXCEPTION(
-         make_input_move(b,side::white,ctx,"e4-d5",move_format::long_algebraic),
+         make_input_move(b,side::white,ctx,"e4-d5",long_algebraic),
          cheapshot::io_error,
          check_io_message("indication with 'x'"));
    }
    {
-      auto test_mate_exception=[&simple_mate](const char* move, move_format fmt, const char* msg)
+      auto test_mate_exception=[&simple_mate](const char* move, format fmt, const char* msg)
          {
             board_t b=simple_mate;
             context ctx=no_castle_context;
@@ -273,17 +300,17 @@ BOOST_AUTO_TEST_CASE(input_move_test)
                cheapshot::io_error,
                check_io_message(msg));
          };
-      test_mate_exception("Rh1-h8+",move_format::long_algebraic,"checkmate-flag incorrect");
-      test_mate_exception("Rh8+",move_format::short_algebraic,"checkmate-flag incorrect");
+      test_mate_exception("Rh1-h8+",long_algebraic,"checkmate-flag incorrect");
+      test_mate_exception("Rh8+",short_algebraic,"checkmate-flag incorrect");
 
-      test_mate_exception("Rh1-h8",move_format::long_algebraic,"check-flag incorrect");
-      test_mate_exception("Rh8",move_format::short_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh1-h8",long_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh8",short_algebraic,"check-flag incorrect");
 
-      test_mate_exception("Rh1-h7#",move_format::long_algebraic,"check-flag incorrect");
-      test_mate_exception("Rh7#",move_format::short_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh1-h7#",long_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh7#",short_algebraic,"check-flag incorrect");
 
-      test_mate_exception("Rh1-h7+",move_format::long_algebraic,"check-flag incorrect");
-      test_mate_exception("Rh7+",move_format::short_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh1-h7+",long_algebraic,"check-flag incorrect");
+      test_mate_exception("Rh7+",short_algebraic,"check-flag incorrect");
    }
 }
 
@@ -384,6 +411,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6 *");
       test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} 3... a6 *");
       test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This opening is called the Ruy Lopez.} {comment 2} 3... a6 *");
+      test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 {This\n opening is called \n the Ruy Lopez.} 3... a6 *");
       test_pgn_moves("1. e4 e5\n2. Nf3 Nc6 3. Bb5 3... a6 *");
       test_pgn_moves("1.\ne4\ne5\n2.\nNf3\nNc6\n3.\nBb5\n3...\na6 *");
       test_pgn_moves("1. e4 e5; eolcomment\n 2. Nf3 Nc6 3. Bb5 3... a6 *");
@@ -421,6 +449,26 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       {
          std::istringstream test_stream(example_game);
          make_pgn_moves(test_stream);
+      }
+      {
+         std::string s(example_game);
+         for(unsigned i=0;i<s.length()-1;++i)
+         {
+            char oldval=s[i];
+            s[i]='\x0'; // inject random errors in input
+            std::istringstream test_stream(s);
+            try
+            {
+               make_pgn_moves(test_stream);
+            }
+            catch(io_error& ex)
+            {
+               // std::string msg("got exception: ");
+               // msg.append(ex.what());
+               // BOOST_CHECK_MESSAGE(false,msg);
+            }
+            s[i]=oldval;
+         }
       }
    }
 }

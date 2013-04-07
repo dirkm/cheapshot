@@ -155,6 +155,17 @@ namespace cheapshot
          while(std::isspace(*s))
             ++s;
       }
+
+      std::string
+      get_text_string(const char*& s)
+      {
+         const char* const sstart=s;
+         while(std::isgraph(*s))
+            ++s;
+         if(s==sstart)
+            throw io_error("empty string not allowed");
+         return std::string(sstart,s);
+      }
    }
 
    extern char
@@ -492,6 +503,10 @@ namespace cheapshot
    {
       enum class move_type { normal, long_castling, short_castling, promotion, ep_capture};
 
+      constexpr char long_castling_notation[]="O-O-O";
+      constexpr char short_castling_notation[]="O-O";
+      constexpr char ep_notation[]="ep";
+
       struct input_move
       {
          move_type type;
@@ -510,17 +525,17 @@ namespace cheapshot
          switch(im.type)
          {
             case move_type::long_castling:
-               os << "O-O-O";
+               os << long_castling_notation;
                break;
             case move_type::short_castling:
-               os << "O-O";
+               os << short_castling_notation;
                break;
             default:
                print_algpos(im.origin,os);
                os << (im.is_capture?'x':'-');
                print_algpos(im.destination,os);
                if(im.type==move_type::ep_capture)
-                  os << "ep";
+                  os << ep_notation;
                else if(im.type==move_type::promotion)
                   os << "="<<repr_pieces_white[idx(im.promoting_piece)];
                break;
@@ -564,7 +579,7 @@ namespace cheapshot
       }
 
       input_move
-      scan_input_move(const char*& s, move_format fmt)
+      scan_input_move(const char*& s, const format fmt)
       {
          input_move im;
          im.type=move_type::normal; // for now
@@ -578,7 +593,7 @@ namespace cheapshot
             im.moving_piece=character_to_moved_piece(*s);
             if(im.moving_piece!=piece::pawn)
                ++s;
-            if(fmt!=move_format::long_algebraic)
+            if(fmt.move_fmt!=format::move::long_algebraic)
             {
                uint64_t pos1=scan_partial_algpos(s);
                if(is_single_bit(pos1))
@@ -606,13 +621,13 @@ namespace cheapshot
                   im.is_capture=true;
                   break;
                case '-':
-                  if(fmt!=move_format::short_algebraic)
+                  if(fmt.move_fmt!=format::move::short_algebraic)
                      ++s;
                   else
                      throw io_error("'-' as separator not allowed in short algebraic format");
                   break;
                default:
-                  if(fmt==move_format::long_algebraic)
+                  if(fmt.move_fmt==format::move::long_algebraic)
                   {
                      std::stringstream oss;
                      oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
@@ -622,10 +637,10 @@ namespace cheapshot
             }
             im.destination=scan_algpos(s);
          }
-
-         if((im.moving_piece==piece::pawn) && (im.is_capture==true) && skip_string(s,"e.p."))
+         if((fmt.ep_fmt==format::ep::annotated) &&
+            (im.moving_piece==piece::pawn) && (im.is_capture==true) &&
+            skip_string(s,ep_notation))
             im.type=move_type::ep_capture;
-
          scan_move_suffix(im,s);
          return im;
       }
@@ -713,10 +728,17 @@ namespace cheapshot
 
       template<side S>
       void
-      make_move(board_t& board, context& ctx, input_move& im)
+      make_move(board_t& board, context& ctx, input_move& im, format::ep ep_fmt)
       {
          board_metrics bm(board);
          uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+         if((ep_fmt==format::ep::implicit) &&
+            (im.type==move_type::normal) &&
+            (im.moving_piece==piece::pawn) &&
+            (im.destination==ctx.ep_info) &&
+            im.is_capture)
+            im.type=move_type::ep_capture;
+
          switch(im.type)
          {
             case move_type::long_castling:
@@ -775,39 +797,41 @@ namespace cheapshot
       }
 
       void
-      consume_input_move(board_t& board, side c, context& ctx, const char*& s, move_format fmt)
+      consume_input_move(board_t& board, side c, context& ctx, const char*& s, format fmt)
       {
+         const char* sstart=s;
          try
          {
             input_move im=scan_input_move(s,fmt);
             switch(c)
             {
                case side::white:
-                  make_move<side::white>(board, ctx, im);
+                  make_move<side::white>(board, ctx, im, fmt.ep_fmt);
                   return;
                case side::black:
-                  make_move<side::black>(board, ctx, im);
+                  make_move<side::black>(board, ctx, im, fmt.ep_fmt);
                   return;
             }
          }
          catch(const io_error& io)
          {
             std::ostringstream oss;
-            oss << "move: '" << s << "': " << io.what();
+            std::string wrong_move=get_text_string(sstart);
+            oss << "move: '" << wrong_move << "': " << io.what();
             throw io_error(oss.str());
          }
       }
    }
 
    extern void
-   make_input_move(board_t& board, side c, context& ctx, const char* s, move_format fmt)
+   make_input_move(board_t& board, side c, context& ctx, const char* s, format fmt)
    {
       consume_input_move(board,c,ctx,s,fmt);
    }
 
    extern void
    make_input_moves(board_t& board, side c, context& ctx,
-                    const std::vector<const char*>& input_moves, move_format fmt,
+                    const std::vector<const char*>& input_moves, format fmt,
                     const std::function<void (board_t& board, side c, context& ctx)>& on_each_position)
    {
       for(const char* input_move: input_moves)
@@ -840,7 +864,7 @@ namespace cheapshot
             {
                std::getline(is,line);
                if(is.fail())
-                  throw_io_error("io failed when reading file");
+                  throw io_error("io failed when reading file");
             }
             ++number;
             resetline();
@@ -853,15 +877,10 @@ namespace cheapshot
             remaining=line.c_str();
          }
 
-         void rethrow_io_error(const io_error& ex)
-         {
-            throw_io_error(ex.what());
-         }
-
-         void throw_io_error(const char* msg)
+         void rethrow_with_linenumber(const io_error& ex)
          {
             std::ostringstream oss;
-            oss << line << ": error:" << msg;
+            oss << number << ": error:" << ex.what();;
             throw io_error(oss.str());
          }
 
@@ -916,50 +935,46 @@ namespace cheapshot
          return std::string(sstart,s);
       }
 
-      std::string
-      get_text_string(const char*& s)
+      bool
+      skip_move_number(const char*& s, std::uint64_t n)
       {
-         const char* const sstart=s;
-         while(std::isgraph(*s))
-            ++s;
-         if(s==sstart)
-            throw io_error("empty text string not allowed");
-         return std::string(sstart,s);
+         std::uint64_t n2=scan_number(s);
+         if(n!=n2)
+            throw io_error("numbers don't match");
+         if(!skip_token(s,'.')) return false;
+         return true;
+      }
+
+      // dollar sign followed with number ($7)
+      bool
+      skip_nag(const char*& s)
+      {
+         bool r=skip_token(s,'$');
+         if(r)
+            while(std::isdigit(*s))
+               ++s;
+         return r;
+      }
+
+      const std::array<const char*,4> game_result_strings={"1-0","0-1","1/2-1/2","*"};
+
+      bool
+      parse_result(const char*& s,pgn::game_result& r)
+      {
+         for(unsigned i=0;i<game_result_strings.size();++i)
+         {
+            if(skip_string(s,game_result_strings[i]))
+            {
+               r=pgn::game_result(i);
+               return true;
+            }
+         }
+         return false;
       }
    }
 
    namespace pgn
    {
-
-      namespace
-      {
-         bool
-         skip_move_number(const char*& s, std::uint64_t n)
-         {
-            std::uint64_t n2=scan_number(s);
-            if(n!=n2)
-               throw io_error("numbers don't match");
-            if(!skip_token(s,'.')) return false;
-            return true;
-         }
-
-         const std::array<const char*,4> game_result_strings={"1-0","0-1","1/2-1/2","*"};
-
-         bool
-         parse_result(const char*& s,game_result& r)
-         {
-            for(unsigned i=0;i<game_result_strings.size();++i)
-            {
-               if(skip_string(s,game_result_strings[i]))
-               {
-                  r=game_result(i);
-                  return true;
-               }
-            }
-            return false;
-         }
-      }
-
       // format: "[Event \"F/S Return Match\"]"
       extern bool
       parse_pgn_attribute(const char* s, const on_attribute_t& on_attr)
@@ -984,50 +999,40 @@ namespace cheapshot
       class pgn_moves
       {
       public:
-         pgn_moves(line_scanner& ls_):
-            ls(ls_)
+         pgn_moves(line_scanner& ls_, context& ctx_):
+            ls(ls_),
+            ctx(ctx_)
          {}
 
          void
          parse(const on_consume_move_t& on_consume_move)
          {
-            if(c==side::black)
-               parse_black(on_consume_move);
             while(result==pgn::game_result::no_result)
-               parse_full_move(on_consume_move);
+               parse_half_move(on_consume_move);
          }
       private:
          void
-         parse_full_move(const on_consume_move_t& on_consume_move)
+         parse_half_move(const on_consume_move_t& on_consume_move)
          {
             skip_move_separator();
             if(parse_result(ls.remaining,result))
                return;
-            if(!skip_move_number(ls.remaining,n))
-               ls.throw_io_error("could not interpret parameter as move number nor as game-result");
-            skip_move_separator();
-            on_consume_move(ls.remaining,c);
-            c=other_side(c);
-            parse_black(on_consume_move);
-         }
-
-         void
-         parse_black(const on_consume_move_t& on_consume_move)
-         {
-            skip_move_separator();
-            if(parse_result(ls.remaining,result))
-               return;
-            if(std::isdigit(*ls.remaining))
+            if((c==side::white) || std::isdigit(*ls.remaining))
             {
-               if(!skip_move_number(ls.remaining,n))
-                  ls.throw_io_error("could not interpret parameter as move number nor as game-result");
-               if(!skip_string(ls.remaining,".."))
-                  ls.throw_io_error("expected '..' after move number for a move from black");
+               if(!skip_move_number(ls.remaining,ctx.fullmove_number))
+                  throw io_error("could not interpret parameter as move number nor as game-result");
+               if((c==side::black) && (!skip_string(ls.remaining,"..")))
+                  throw io_error("expected '..' after move number for a move from black");
                skip_move_separator();
             }
             on_consume_move(ls.remaining,c);
+            skip_move_separator();
+            // skip_nag(ls.remaining); // TODO: seems to be extension
+
+            if(c==side::black)
+               ++ctx.fullmove_number;
+            ++ctx.halfmove_clock;
             c=other_side(c);
-            ++n;
          }
 
          void
@@ -1035,7 +1040,7 @@ namespace cheapshot
          {
             while(skip_eol(ls.remaining))
                if(!ls.getline())
-                  ls.throw_io_error("unexpected eof");
+                  throw io_error("unexpected eof");
          }
 
          void
@@ -1050,7 +1055,7 @@ namespace cheapshot
                   if(*ls.remaining=='\x0')
                   {
                      if(!ls.getline())
-                        ls.throw_io_error("unexpected eof");
+                        throw io_error("unexpected eof");
                   }
                   else
                   {
@@ -1063,17 +1068,18 @@ namespace cheapshot
          }
       public:
          side c=side::white;
-         int n=1;
          pgn::game_result result=pgn::game_result::no_result;
       private:
          line_scanner& ls;
+         context& ctx;
       };
 
       extern void
       parse_pgn_moves(std::istream& is,const on_consume_move_t& on_consume_move)
       {
          line_scanner ls(is);
-         pgn_moves moves(ls);
+         context ctx=start_context;
+         pgn_moves moves(ls,ctx);
          ls.getline();
          moves.parse(on_consume_move);
       }
@@ -1092,24 +1098,24 @@ namespace cheapshot
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
    {
       line_scanner ls(is);
-      bool more_input;
-      while((more_input=ls.getline()))
+      try
       {
-         try
-         {
-            if(!pgn::parse_pgn_attribute(ls.remaining,on_attribute))
-               break;
-         }
-         catch(io_error& ex)
-         {
-            ls.rethrow_io_error(ex);
-         }
+         bool more_input;
+         while((more_input=ls.getline()) &&
+               pgn::parse_pgn_attribute(ls.remaining,on_attribute));
+
+         if(!more_input)
+            throw io_error("pgn game cannot consist uniquely of attributes");
+         ls.resetline();
+         context ctx=start_context;
+
+         pgn::pgn_moves moves(ls,ctx);
+         moves.parse(on_consume_move);
       }
-      if(!more_input)
-         ls.throw_io_error("pgn game cannot consist uniquely of attributes");
-      ls.resetline();
-      pgn::pgn_moves moves(ls);
-      moves.parse(on_consume_move);
+      catch(const io_error& ex)
+      {
+         ls.rethrow_with_linenumber(ex);
+      }
    }
 
    extern void
@@ -1118,10 +1124,10 @@ namespace cheapshot
       board_t board=initial_board();
       context ctx=start_context;
       auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
-      {
-         consume_input_move(board,c,ctx,s,move_format::short_algebraic);
-         on_each_position(board,c,ctx);
-      };
+         {
+            consume_input_move(board,c,ctx,s,pgn_format);
+            on_each_position(board,c,ctx);
+         };
       on_each_position(board,side::white,ctx);
       parse_pgn(is,null_attr,on_consume_move);
    }

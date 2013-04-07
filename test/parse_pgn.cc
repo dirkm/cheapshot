@@ -3,6 +3,12 @@
 #include <fstream>
 #include <iostream>
 
+void parse_pgn_games(std::istream& is)
+{
+   while(!is.eof())
+      cheapshot::make_pgn_moves(is);
+}
+
 int
 main(int argc, const char* argv[])
 {
@@ -19,18 +25,17 @@ main(int argc, const char* argv[])
       if(argc==2)
       {
          std::ifstream ifs(argv[1]);
-         cheapshot::make_pgn_moves(ifs);
+         parse_pgn_games(ifs);
       }
       else
       {
-         cheapshot::make_pgn_moves(std::cin);
+         parse_pgn_games(std::cin);
       }
       return 0;
    }
    catch(const std::exception& ex)
    {
-      std::cerr << "error parsing pgn -- message: '" << ex.what() << "'"
-                << std::endl;
+      std::cerr << ex.what() << std::endl;
       return 2;
    }
 }

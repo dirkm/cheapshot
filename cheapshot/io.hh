@@ -66,18 +66,28 @@ namespace cheapshot
    extern void
    print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
 
-   enum class move_format { long_algebraic, short_algebraic, flexible};
+   struct format
+   {
+      enum class move { long_algebraic, short_algebraic, flexible};
+      enum class ep { annotated, implicit};
+      move move_fmt;
+      ep ep_fmt;
+   };
+
+   constexpr format long_algebraic={format::move::long_algebraic,format::ep::annotated};
+   constexpr format short_algebraic={format::move::short_algebraic,format::ep::annotated};
+   constexpr format pgn_format={format::move::short_algebraic,format::ep::implicit};
+
    enum class game_status { normal, check, checkmate};
 
    extern void
-   make_input_move(board_t& board, side c, context& ctx, const char* s, move_format fmt);
-
+   make_input_move(board_t& board, side c, context& ctx, const char* s, format fmt);
    using on_position_t=const std::function<void (board_t& board, side c, context& ctx)>;
    const auto null_pos=[](board_t& board, side c, context& ctx){};
 
    extern void
    make_input_moves(board_t& board, side c, context& ctx,
-                    const std::vector<const char*>& input_moves, move_format fmt,
+                    const std::vector<const char*>& input_moves, format fmt,
                     const on_position_t& on_each_position=null_pos);
 
    using pgn_attributes=std::vector<std::pair<std::string,std::string> >;

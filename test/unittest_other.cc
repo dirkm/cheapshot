@@ -43,7 +43,7 @@ namespace
       {
          board_t btmp=b;
          make_input_moves(
-            btmp,c,ctx,input_moves,move_format::long_algebraic,
+            btmp,c,ctx,input_moves,long_algebraic,
             [this](board_t& b2, side c, context& ctx) mutable { boards.push_back(b2); }
             );
       }
@@ -1009,7 +1009,7 @@ BOOST_AUTO_TEST_CASE(rook_queen_cache_test)
       std::vector<board_t> boards;
       context ctx=no_castle_context;
       make_input_moves(b, side::black, ctx,
-                       rook_queen_mate_moves,move_format::long_algebraic,
+                       rook_queen_mate_moves,long_algebraic,
                        [&boards,b](board_t& b2, side c, context& ctx) {
                           if(b!=b2)
                              boards.push_back(b2);
@@ -1021,7 +1021,7 @@ BOOST_AUTO_TEST_CASE(rook_queen_cache_test)
       std::vector<board_t> boards;
       context ctx=no_castle_context;
       make_input_moves(b, side::black, ctx,
-                       rook_queen_mate_moves,move_format::long_algebraic,
+                       rook_queen_mate_moves,long_algebraic,
                        [&boards](board_t& b2, side c, context& ctx) {
                           boards.push_back(b2);
                        });
