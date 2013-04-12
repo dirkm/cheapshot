@@ -104,7 +104,14 @@ namespace cheapshot
       parse_pgn_attribute(const char* current_line, const on_attribute_t& fun);
 
       extern void
-      parse_pgn_moves(std::istream& is,const on_consume_move_t& on_consume_move);
+      parse_pgn_moves(std::istream& is, context& ctx, const on_consume_move_t& on_consume_move);
+
+      inline void
+      parse_pgn_moves(std::istream& is,const on_consume_move_t& on_consume_move)
+      {
+         context ctx=start_context;
+         parse_pgn_moves(is, ctx, on_consume_move);
+      }
 
       enum class game_result{white_win=0,black_win=1,draw=2,in_progress=3,no_result=4};
    }
@@ -115,6 +122,9 @@ namespace cheapshot
 
    extern void
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position=null_pos);
+
+   extern void
+   make_pgn_moves_multiple_games(std::istream& is, const on_position_t& on_each_position=null_pos);
 
    extern std::ostream&
    print_score(int score, std::ostream& os);

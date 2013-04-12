@@ -6,7 +6,6 @@
 #include "cheapshot/hash.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/score.hh"
-// #include "cheapshot/io.hh"
 
 namespace cheapshot
 {
@@ -197,6 +196,13 @@ namespace cheapshot
    make_move(board_t& board, const move_info& mi)
    {
       make_move(board[idx(mi.moved_side)][idx(mi.moved_piece)],mi.mask);
+   }
+
+   inline void
+   make_move(board_t& board, board_metrics& bm, const move_info& mi)
+   {
+      make_move(board,mi);
+      make_move((mi.moved_side==side::white)?bm.white_pieces:bm.black_pieces,mi.mask);
    }
 
    inline

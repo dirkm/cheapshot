@@ -558,8 +558,11 @@ namespace cheapshot
       {
          if(*s=='=')
          {
+            ++s;
             im.type=move_type::promotion;
             im.promoting_piece=character_to_moved_piece(*s);
+            if(im.promoting_piece==piece::pawn)
+               throw io_error("invalid promotion");
             ++s;
          }
          switch(*s)
@@ -645,6 +648,16 @@ namespace cheapshot
          return im;
       }
 
+      void
+      detect_ep_capture(input_move& im, const context& ctx)
+      {
+         if((im.type==move_type::normal) &&
+            (im.moving_piece==piece::pawn) &&
+            (im.destination==ctx.ep_info) &&
+            im.is_capture)
+            im.type=move_type::ep_capture;
+      }
+
       template<side S>
       uint64_t
       possible_origins(const board_t& board, const board_metrics& bm, const input_move& im)
@@ -679,88 +692,89 @@ namespace cheapshot
          im.origin&=possible_origins;
          if(im.origin==0_U64)
             throw io_error("trying to make illegal move");
-         if(!is_single_bit(im.origin))
-            throw io_error("piece origin not uniquely defined");
       }
 
+      template<side S>
+      bool
+      is_king_under_attack(const board_t& board, const board_metrics& bm)
+      {
+         uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
+         return (own_under_attack & get_side<S>(board)[idx(piece::king)]) != 0_U64;
+      }
+
+      // TODO: stop with stalemate as well
       template<side S>
       void
       check_game_state(board_t& board, const board_metrics& bm, const context& ctx, const input_move& im)
       {
-         uint64_t other_under_attack=generate_own_under_attack<other_side(S)>(board,bm);
-         const bool other_under_check=(other_under_attack & get_side<other_side(S)>(board)[idx(piece::king)]) != 0_U64;
-         const bool status_check=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
-         if(other_under_check!=status_check)
+         const bool check_analyzed=is_king_under_attack<other_side(S)>(board,bm);
+         const bool checkflag_set=(im.phase==game_status::check)||(im.phase==game_status::checkmate);
+         if(check_analyzed!=checkflag_set)
          {
             std::ostringstream oss;
-            oss << "check-flag incorrect. input-move: " << other_under_check
-                << " analyzed: " << status_check;
+            oss << "check-flag incorrect. input-move: " << checkflag_set
+                << " analyzed: " << check_analyzed;
             throw io_error(oss.str());
          }
-         bool status_checkmate=false;
-         if(status_check||other_under_check)
+         bool checkmate_analyzed=false;
+         if(checkflag_set||check_analyzed)
          {
             max_ply_cutoff<control::minimax,control::noop_hash,
                            control::noop_material,control::noop_cache> ec(board,other_side(S),ctx,1);
             analyze_position<other_side(S)>(ctx,ec);
-            status_checkmate=(ec.pruning.score==score::checkmate(S));
+            checkmate_analyzed=(ec.pruning.score==score::checkmate(S));
          }
-         if(status_checkmate!=(im.phase==game_status::checkmate))
+         const bool checkmateflag_set=(im.phase==game_status::checkmate);
+         if(checkmate_analyzed!=checkmateflag_set)
          {
             std::ostringstream oss;
-            oss << "checkmate-flag incorrect. input-move: " << (im.phase==game_status::checkmate)
-                << " analyzed: " << status_checkmate;
+            oss << "checkmate-flag incorrect. input-move: " << checkmateflag_set
+                << " analyzed: " << checkmate_analyzed;
             throw io_error(oss.str());
          }
       }
 
       template<side S>
       void
-      make_castling_move(board_t& board, context& ctx, const castling_t& c, const board_metrics& bm)
+      make_castling_move(board_t& board, board_metrics& bm, const context& ctx, const castling_t& c)
       {
          uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
          if(!c.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
-            throw io_error("long castling not allowed");
+            throw io_error("castling not allowed");
          move_info2 mi2=castle_info<S>(c);
          for(auto m: mi2)
-            make_move(board,m);
+            make_move(board,bm,m);
       }
 
       template<side S>
       void
-      make_move(board_t& board, context& ctx, input_move& im, format::ep ep_fmt)
+      make_move(board_t& board, context& ctx, input_move& im)
       {
          board_metrics bm(board);
          uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-         if((ep_fmt==format::ep::implicit) &&
-            (im.type==move_type::normal) &&
-            (im.moving_piece==piece::pawn) &&
-            (im.destination==ctx.ep_info) &&
-            im.is_capture)
-            im.type=move_type::ep_capture;
 
-         switch(im.type)
+         if(im.type==move_type::long_castling)
+            make_castling_move<S>(board,bm,ctx,long_castling<S>());
+         else if(im.type==move_type::short_castling)
+            make_castling_move<S>(board,bm,ctx,short_castling<S>());
+         else
          {
-            case move_type::long_castling:
-               make_castling_move<S>(board,ctx,long_castling<S>(),bm);
-               break;
-            case move_type::short_castling:
-               make_castling_move<S>(board,ctx,short_castling<S>(),bm);
-               break;
-            case move_type::ep_capture:
+            uint64_t origins=(im.type!=move_type::ep_capture)?
+               possible_origins<S>(board, bm,im):
+               possible_origins_ep<S>(board, bm,im);
+            narrow_origin<S>(im,board,origins);
+            bit_iterator originit(im.origin);
+            im.origin=*originit;
+            if(im.type==move_type::ep_capture)
             {
-               narrow_origin<S>(im,board,possible_origins_ep<S>(board, bm,im));
                if(im.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
                for(auto m: mi2)
-                  make_move(board,m);
-               break;
+                  make_move(board,bm,m);
             }
-            case move_type::normal:
-            case move_type::promotion:
+            else
             {
-               narrow_origin<S>(im,board,possible_origins<S>(board, bm,im));
                bool destination_occupied=im.destination&bm.opposing<S>();
                if(im.is_capture)
                {
@@ -768,14 +782,14 @@ namespace cheapshot
                      throw io_error("trying to capture a missing piece");
                   move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
                   for(auto m: mi2)
-                     make_move(board,m);
+                     make_move(board,bm,m);
                }
                else
                {
                   if(destination_occupied)
                      throw io_error("capture without indication with 'x'");
                   move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
-                  make_move(board,mi);
+                  make_move(board,bm,mi);
                }
                if(im.type==move_type::promotion)
                {
@@ -783,10 +797,25 @@ namespace cheapshot
                      throw io_error("promotion only allowed on last row");
                   move_info2 mi2=promotion_info<S>(im.promoting_piece,im.destination);
                   for(auto m: mi2)
-                     make_move(board,m);
+                     make_move(board,bm,m);
                }
-               break;
             }
+            bool valid_position=!is_king_under_attack<S>(board,bm);
+            for(++originit;originit!=bit_iterator();++originit)
+            {
+               move_info mi{S,im.moving_piece,im.origin|*originit};
+               make_move(board,bm,mi);
+               if(is_king_under_attack<S>(board,bm))
+                  make_move(board,bm,mi);
+               else
+               {
+                  if(valid_position)
+                     throw io_error("piece origin not uniquely defined");
+                  valid_position=true;
+               }
+            }
+            if(!valid_position)
+               throw io_error("move-attempt results in self-check");
          }
          ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
          ctx.castling_rights|=castling_block_mask<S>(
@@ -803,13 +832,16 @@ namespace cheapshot
          try
          {
             input_move im=scan_input_move(s,fmt);
+            if(fmt.ep_fmt==format::ep::implicit)
+               detect_ep_capture(im,ctx);
+
             switch(c)
             {
                case side::white:
-                  make_move<side::white>(board, ctx, im, fmt.ep_fmt);
+                  make_move<side::white>(board, ctx, im);
                   return;
                case side::black:
-                  make_move<side::black>(board, ctx, im, fmt.ep_fmt);
+                  make_move<side::black>(board, ctx, im);
                   return;
             }
          }
@@ -996,10 +1028,10 @@ namespace cheapshot
          return true;
       }
 
-      class pgn_moves
+      class pgn_parse_state
       {
       public:
-         pgn_moves(line_scanner& ls_, context& ctx_):
+         pgn_parse_state(line_scanner& ls_, context& ctx_):
             ls(ls_),
             ctx(ctx_)
          {}
@@ -1027,7 +1059,7 @@ namespace cheapshot
             }
             on_consume_move(ls.remaining,c);
             skip_move_separator();
-            // skip_nag(ls.remaining); // TODO: seems to be extension
+            skip_nag(ls.remaining); // TODO: seems to be extension
 
             if(c==side::black)
                ++ctx.fullmove_number;
@@ -1069,19 +1101,39 @@ namespace cheapshot
       public:
          side c=side::white;
          pgn::game_result result=pgn::game_result::no_result;
-      private:
          line_scanner& ls;
          context& ctx;
       };
 
       extern void
-      parse_pgn_moves(std::istream& is,const on_consume_move_t& on_consume_move)
+      parse_pgn_moves(std::istream& is, context& ctx, const on_consume_move_t& on_consume_move)
       {
          line_scanner ls(is);
-         context ctx=start_context;
-         pgn_moves moves(ls,ctx);
+         pgn_parse_state moves(ls,ctx);
          ls.getline();
          moves.parse(on_consume_move);
+      }
+
+      void
+      parse_pgn(pgn::pgn_parse_state& parse_state, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
+      {
+
+         line_scanner& ls=parse_state.ls;
+         try
+         {
+            bool more_input;
+            while((more_input=ls.getline()) &&
+                  pgn::parse_pgn_attribute(ls.remaining,on_attribute));
+
+            if(!more_input)
+               throw io_error("pgn game cannot consist uniquely of attributes");
+            ls.resetline();
+            parse_state.parse(on_consume_move);
+         }
+         catch(const io_error& ex)
+         {
+            ls.rethrow_with_linenumber(ex);
+         }
       }
    }
 
@@ -1098,29 +1150,15 @@ namespace cheapshot
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
    {
       line_scanner ls(is);
-      try
-      {
-         bool more_input;
-         while((more_input=ls.getline()) &&
-               pgn::parse_pgn_attribute(ls.remaining,on_attribute));
-
-         if(!more_input)
-            throw io_error("pgn game cannot consist uniquely of attributes");
-         ls.resetline();
-         context ctx=start_context;
-
-         pgn::pgn_moves moves(ls,ctx);
-         moves.parse(on_consume_move);
-      }
-      catch(const io_error& ex)
-      {
-         ls.rethrow_with_linenumber(ex);
-      }
+      context ctx=start_context;
+      pgn::pgn_parse_state parse_state(ls,ctx);
+      parse_pgn(parse_state,on_attribute,on_consume_move);
    }
 
    extern void
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position)
    {
+      line_scanner ls(is);
       board_t board=initial_board();
       context ctx=start_context;
       auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
@@ -1129,7 +1167,27 @@ namespace cheapshot
             on_each_position(board,c,ctx);
          };
       on_each_position(board,side::white,ctx);
-      parse_pgn(is,null_attr,on_consume_move);
+      pgn::pgn_parse_state parse_state(ls,ctx);
+      parse_pgn(parse_state,null_attr,on_consume_move);
+   }
+
+   extern void
+   make_pgn_moves_multiple_games(std::istream& is, const on_position_t& on_each_position)
+   {
+      line_scanner ls(is);
+      while(!is.eof())
+      {
+         board_t board=initial_board();
+         context ctx=start_context;
+         auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
+            {
+               consume_input_move(board,c,ctx,s,pgn_format);
+               on_each_position(board,c,ctx);
+            };
+         on_each_position(board,side::white,ctx);
+         pgn::pgn_parse_state parse_state(ls,ctx);
+         parse_pgn(parse_state,null_attr,on_consume_move);
+      }
    }
 
    namespace
