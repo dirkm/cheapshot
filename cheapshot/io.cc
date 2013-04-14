@@ -877,57 +877,17 @@ namespace cheapshot
 
    namespace
    {
-      class line_scanner
-      {
-      public:
-         explicit line_scanner(std::istream& is_):
-            is(is_)
-         {}
-
-         line_scanner(const line_scanner&)=delete;
-
-         bool
-         getline()
-         {
-            bool r=!is.eof();
-            if(!r)
-               line.clear();
-            else
-            {
-               std::getline(is,line);
-               if(is.fail())
-                  throw io_error("io failed when reading file");
-            }
-            ++number;
-            resetline();
-            return r;
-         }
-
-         void
-         resetline()
-         {
-            remaining=line.c_str();
-         }
-
-         void rethrow_with_linenumber(const io_error& ex)
-         {
-            std::ostringstream oss;
-            oss << number << ": error:" << ex.what();;
-            throw io_error(oss.str());
-         }
-
-         std::string line;
-         const char* remaining;
-         int number=0;
-      private:
-         std::istream& is;
-      };
-
       bool
       skip_eol(const char*& s)
       {
          skip_whitespace(s);
          return (*s=='\x0') || (*s==';');
+      }
+
+      void
+      skip_until_token(const char*& s, char t)
+      {
+         s=strchrnul(s,t);
       }
 
       bool
@@ -951,12 +911,6 @@ namespace cheapshot
       {
          const char* const sstart=s;
          return skip_optional_separator(s) && (s!=sstart);
-      }
-
-      void
-      skip_until_token(const char*& s, char t)
-      {
-         s=strchrnul(s,t);
       }
 
       std::string
@@ -988,7 +942,91 @@ namespace cheapshot
          return r;
       }
 
-      const std::array<const char*,4> game_result_strings={"1-0","0-1","1/2-1/2","*"};
+      class line_scanner
+      {
+      public:
+         explicit line_scanner(std::istream& is_):
+            is(is_)
+         {}
+
+         line_scanner(const line_scanner&)=delete;
+
+         // eof results in empty line and false return value
+
+         void
+         getline_must()
+         {
+            std::getline(is,line);
+            if(is.bad()||is.fail())
+               throw io_error("io error when reading file");
+            ++number;
+            resetline();
+         }
+
+         bool
+         getline_empty_if_eof()
+         {
+            bool r=!is.eof() && std::getline(is,line);
+            if(!r)
+            {
+               if(is.bad())
+                  throw io_error("io error when reading file");
+               line.clear();
+            }
+            resetline();
+            return r;
+         }
+
+         void
+         resetline()
+         {
+            remaining=line.c_str();
+         }
+
+         void rethrow_with_linenumber(const io_error& ex)
+         {
+            std::ostringstream oss;
+            oss << number << ": error:" << ex.what();;
+            throw io_error(oss.str());
+         }
+
+         std::string line;
+         const char* remaining;
+         int number=0;
+      private:
+         std::istream& is;
+      };
+
+      void
+      skip_multiline_whitespace(line_scanner& ls)
+      {
+         while(skip_eol(ls.remaining))
+            if(!ls.getline_empty_if_eof())
+               return;
+      }
+
+      void
+      skip_move_separator(line_scanner& ls)
+      {
+         skip_multiline_whitespace(ls);
+         while(*ls.remaining=='{')
+         {
+            while(true)
+            {
+               skip_until_token(ls.remaining,'}');
+               if(*ls.remaining=='\x0')
+                  ls.getline_must();
+               else
+               {
+                  ++ls.remaining;
+                  break;
+               }
+            }
+            skip_multiline_whitespace(ls);
+         }
+      }
+
+      constexpr std::array<const char*,4> game_result_strings={"1-0","0-1","1/2-1/2","*"};
 
       bool
       parse_result(const char*& s,pgn::game_result& r)
@@ -1028,10 +1066,10 @@ namespace cheapshot
          return true;
       }
 
-      class pgn_parse_state
+      class pgn_move_state
       {
       public:
-         pgn_parse_state(line_scanner& ls_, context& ctx_):
+         pgn_move_state(line_scanner& ls_, context& ctx_):
             ls(ls_),
             ctx(ctx_)
          {}
@@ -1042,11 +1080,12 @@ namespace cheapshot
             while(result==pgn::game_result::no_result)
                parse_half_move(on_consume_move);
          }
+
       private:
          void
          parse_half_move(const on_consume_move_t& on_consume_move)
          {
-            skip_move_separator();
+            skip_move_separator(ls);
             if(parse_result(ls.remaining,result))
                return;
             if((c==side::white) || std::isdigit(*ls.remaining))
@@ -1055,48 +1094,16 @@ namespace cheapshot
                   throw io_error("could not interpret parameter as move number nor as game-result");
                if((c==side::black) && (!skip_string(ls.remaining,"..")))
                   throw io_error("expected '..' after move number for a move from black");
-               skip_move_separator();
+               skip_move_separator(ls);
             }
             on_consume_move(ls.remaining,c);
-            skip_move_separator();
+            skip_move_separator(ls);
             skip_nag(ls.remaining); // TODO: seems to be extension
 
             if(c==side::black)
                ++ctx.fullmove_number;
             ++ctx.halfmove_clock;
             c=other_side(c);
-         }
-
-         void
-         skip_multiline_whitespace()
-         {
-            while(skip_eol(ls.remaining))
-               if(!ls.getline())
-                  throw io_error("unexpected eof");
-         }
-
-         void
-         skip_move_separator()
-         {
-            skip_multiline_whitespace();
-            while(*ls.remaining=='{')
-            {
-               while(true)
-               {
-                  skip_until_token(ls.remaining,'}');
-                  if(*ls.remaining=='\x0')
-                  {
-                     if(!ls.getline())
-                        throw io_error("unexpected eof");
-                  }
-                  else
-                  {
-                     ++ls.remaining;
-                     break;
-                  }
-               }
-               skip_multiline_whitespace();
-            }
          }
       public:
          side c=side::white;
@@ -1109,24 +1116,24 @@ namespace cheapshot
       parse_pgn_moves(std::istream& is, context& ctx, const on_consume_move_t& on_consume_move)
       {
          line_scanner ls(is);
-         pgn_parse_state moves(ls,ctx);
-         ls.getline();
+         pgn_move_state moves(ls,ctx);
+         ls.getline_empty_if_eof();
          moves.parse(on_consume_move);
       }
 
       void
-      parse_pgn(pgn::pgn_parse_state& parse_state, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
+      parse_pgn(pgn::pgn_move_state& parse_state, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
       {
 
          line_scanner& ls=parse_state.ls;
          try
          {
-            bool more_input;
-            while((more_input=ls.getline()) &&
-                  pgn::parse_pgn_attribute(ls.remaining,on_attribute));
+            do
+            {
+               ls.getline_must();
+            }
+            while(pgn::parse_pgn_attribute(ls.remaining,on_attribute));
 
-            if(!more_input)
-               throw io_error("pgn game cannot consist uniquely of attributes");
             ls.resetline();
             parse_state.parse(on_consume_move);
          }
@@ -1151,7 +1158,7 @@ namespace cheapshot
    {
       line_scanner ls(is);
       context ctx=start_context;
-      pgn::pgn_parse_state parse_state(ls,ctx);
+      pgn::pgn_move_state parse_state(ls,ctx);
       parse_pgn(parse_state,on_attribute,on_consume_move);
    }
 
@@ -1167,16 +1174,18 @@ namespace cheapshot
             on_each_position(board,c,ctx);
          };
       on_each_position(board,side::white,ctx);
-      pgn::pgn_parse_state parse_state(ls,ctx);
+      pgn::pgn_move_state parse_state(ls,ctx);
       parse_pgn(parse_state,null_attr,on_consume_move);
    }
 
    extern void
-   make_pgn_moves_multiple_games(std::istream& is, const on_position_t& on_each_position)
+   make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game,
+                                 const on_position_t& on_each_position)
    {
       line_scanner ls(is);
       while(!is.eof())
       {
+         on_game();
          board_t board=initial_board();
          context ctx=start_context;
          auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
@@ -1185,8 +1194,9 @@ namespace cheapshot
                on_each_position(board,c,ctx);
             };
          on_each_position(board,side::white,ctx);
-         pgn::pgn_parse_state parse_state(ls,ctx);
+         pgn::pgn_move_state parse_state(ls,ctx);
          parse_pgn(parse_state,null_attr,on_consume_move);
+         skip_move_separator(ls);
       }
    }
 

@@ -6,6 +6,8 @@
 int
 main(int argc, const char* argv[])
 {
+   // TODO: make a small utility out of this, to dump boards at a certain position
+   // write games in the long algebraic format
    if((argc==2)&&(!std::strcmp("-h",argv[1])||!std::strcmp("--help",argv[1])))
    {
       std::cerr << "usage: parse_pgn <filename>\n"
@@ -21,13 +23,24 @@ main(int argc, const char* argv[])
    }
    try
    {
+      int games=0;
+      auto on_game=[&games]() { ++games; };
+
+      int positions=0;
+      auto on_pos=[&positions](cheapshot::board_t& board, cheapshot::side c,
+                               cheapshot::context& ctx) { ++positions; };
+
       if(argc==2)
       {
          std::ifstream ifs(argv[1]);
-         cheapshot::make_pgn_moves_multiple_games(ifs);
+         cheapshot::make_pgn_moves_multiple_games(ifs,on_game,on_pos);
       }
       else
-         cheapshot::make_pgn_moves_multiple_games(std::cin);
+         cheapshot::make_pgn_moves_multiple_games(std::cin,on_game,on_pos);
+
+      std::cout << "succesfully parsed " << games << " games, "
+                << positions << " positions"
+                << std::endl;
       return 0;
    }
    catch(const std::exception& ex)

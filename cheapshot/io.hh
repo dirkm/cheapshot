@@ -123,8 +123,12 @@ namespace cheapshot
    extern void
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position=null_pos);
 
+   using on_game_t=std::function<void ()>;
+   const auto null_game=[](){};
+
    extern void
-   make_pgn_moves_multiple_games(std::istream& is, const on_position_t& on_each_position=null_pos);
+   make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game,
+                                 const on_position_t& on_each_position=null_pos);
 
    extern std::ostream&
    print_score(int score, std::ostream& os);

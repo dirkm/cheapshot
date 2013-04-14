@@ -289,6 +289,7 @@ namespace cheapshot
    private:
       typedef uint64_t(*hash_fun_t)(board_t& board, const MoveInfo& mi);
    public:
+      // TODO: ec contains board
       scoped_move_hash(board_t& board, Controller& ec, const MoveInfo& mi):
          sc_move(board,mi),
          sc_hash(ec.hasher,(hash_fun_t)hhash,board,mi)
@@ -343,7 +344,6 @@ namespace cheapshot
       {}
    private:
       control::scoped_ply_count<Controller> sc_ply;
-      // typename Controller::scoped_ply sc_ply;
       control::scoped_hash<decltype(Controller::hasher)> sc_hash;
    };
 
