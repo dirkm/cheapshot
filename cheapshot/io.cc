@@ -951,7 +951,7 @@ namespace cheapshot
 
          line_scanner(const line_scanner&)=delete;
 
-         // eof results in empty line and false return value
+         // TODO: cleanup
 
          void
          getline_must()
@@ -973,6 +973,8 @@ namespace cheapshot
                   throw io_error("io error when reading file");
                line.clear();
             }
+            else
+               ++number;
             resetline();
             return r;
          }
@@ -1117,14 +1119,13 @@ namespace cheapshot
       {
          line_scanner ls(is);
          pgn_move_state moves(ls,ctx);
-         ls.getline_empty_if_eof();
+         ls.getline_must();
          moves.parse(on_consume_move);
       }
 
       void
       parse_pgn(pgn::pgn_move_state& parse_state, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
       {
-
          line_scanner& ls=parse_state.ls;
          try
          {
