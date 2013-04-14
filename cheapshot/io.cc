@@ -951,8 +951,6 @@ namespace cheapshot
 
          line_scanner(const line_scanner&)=delete;
 
-         // TODO: cleanup
-
          void
          getline_must()
          {
@@ -963,19 +961,18 @@ namespace cheapshot
             resetline();
          }
 
+         // returns false when eof
          bool
-         getline_empty_if_eof()
+         getline_tolerate_eof()
          {
             bool r=!is.eof() && std::getline(is,line);
-            if(!r)
+            if(is.bad())
+               throw io_error("io error when reading file");
+            if(r)
             {
-               if(is.bad())
-                  throw io_error("io error when reading file");
-               line.clear();
-            }
-            else
                ++number;
-            resetline();
+               resetline();
+            }
             return r;
          }
 
@@ -1003,7 +1000,7 @@ namespace cheapshot
       skip_multiline_whitespace(line_scanner& ls)
       {
          while(skip_eol(ls.remaining))
-            if(!ls.getline_empty_if_eof())
+            if(!ls.getline_tolerate_eof())
                return;
       }
 
@@ -1124,9 +1121,10 @@ namespace cheapshot
       }
 
       void
-      parse_pgn(pgn::pgn_move_state& parse_state, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
+      parse_pgn(pgn::pgn_move_state& move_state, const on_attribute_t& on_attribute,
+                const on_consume_move_t& on_consume_move)
       {
-         line_scanner& ls=parse_state.ls;
+         line_scanner& ls=move_state.ls;
          try
          {
             do
@@ -1136,7 +1134,7 @@ namespace cheapshot
             while(pgn::parse_pgn_attribute(ls.remaining,on_attribute));
 
             ls.resetline();
-            parse_state.parse(on_consume_move);
+            move_state.parse(on_consume_move);
          }
          catch(const io_error& ex)
          {
@@ -1155,12 +1153,13 @@ namespace cheapshot
    };
 
    extern void
-   parse_pgn(std::istream& is, const on_attribute_t& on_attribute, const on_consume_move_t& on_consume_move)
+   parse_pgn(std::istream& is, const on_attribute_t& on_attribute,
+             const on_consume_move_t& on_consume_move)
    {
       line_scanner ls(is);
       context ctx=start_context;
-      pgn::pgn_move_state parse_state(ls,ctx);
-      parse_pgn(parse_state,on_attribute,on_consume_move);
+      pgn::pgn_move_state move_state(ls,ctx);
+      parse_pgn(move_state,on_attribute,on_consume_move);
    }
 
    extern void
@@ -1175,8 +1174,8 @@ namespace cheapshot
             on_each_position(board,c,ctx);
          };
       on_each_position(board,side::white,ctx);
-      pgn::pgn_move_state parse_state(ls,ctx);
-      parse_pgn(parse_state,null_attr,on_consume_move);
+      pgn::pgn_move_state move_state(ls,ctx);
+      parse_pgn(move_state,null_attr,on_consume_move);
    }
 
    extern void
@@ -1195,8 +1194,8 @@ namespace cheapshot
                on_each_position(board,c,ctx);
             };
          on_each_position(board,side::white,ctx);
-         pgn::pgn_move_state parse_state(ls,ctx);
-         parse_pgn(parse_state,null_attr,on_consume_move);
+         pgn::pgn_move_state move_state(ls,ctx);
+         parse_pgn(move_state,null_attr,on_consume_move);
          skip_move_separator(ls);
       }
    }
