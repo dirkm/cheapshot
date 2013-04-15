@@ -3,7 +3,7 @@
 
 #include "cheapshot/board.hh"
 #include "cheapshot/bitops.hh"
-#include "cheapshot/hash.hh"
+#include "cheapshot/hhash.hh"
 #include "cheapshot/loop.hh"
 
 #include <unordered_map>

@@ -369,7 +369,11 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       BOOST_CHECK(pgn::parse_pgn_attribute("",noattr));
    }
    {
-      // TODO: removing static seems to trigger gcc bug
+      auto nomove=[](const char*& s, side c)
+         {
+            BOOST_FAIL("should not be called");
+         };
+
       constexpr static struct {side c; const char* s;} expected_moves[]={
          {side::white,"e4"},
          {side::black,"e5"},
@@ -379,31 +383,22 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          {side::black,"a6"}
       };
 
-      auto it_expected_moves=std::begin(expected_moves);
-      auto check_moves=[&it_expected_moves](const char*& s, side c)
+      auto test_pgn_moves=[](const char* s)
          {
-            // std::cout << "string received '" << s << "'" << std::endl;
-            // std::cout << "expected: '" << it_expected_moves->s << "'" << std::endl;
-            BOOST_CHECK_EQUAL(it_expected_moves->c,c);
-            int n=std::strlen(it_expected_moves->s);
-            int r=std::strncmp(it_expected_moves->s,s,n);
-            BOOST_CHECK_EQUAL(r,0);
-            s+=n;
-            ++it_expected_moves;
-            // std::cout << "succeeded" << std::endl;
-         };
+            auto it=std::begin(expected_moves);
+            auto check_moves=[&it](const char*& s, side c)
+            {
+               BOOST_CHECK_EQUAL(it->c,c);
+               int n=std::strlen(it->s);
+               int r=std::strncmp(it->s,s,n);
+               BOOST_CHECK_EQUAL(r,0);
+               s+=n;
+               ++it;
+            };
 
-      auto nomove=[](const char*& s, side c)
-         {
-            BOOST_FAIL("should not be called");
-         };
-
-      auto test_pgn_moves=[&](const char* s)
-         {
-            it_expected_moves=std::begin(expected_moves);
             std::istringstream test_stream(s);
             pgn::parse_pgn_moves(test_stream,check_moves);
-            BOOST_CHECK_EQUAL(it_expected_moves,std::end(expected_moves));
+            BOOST_CHECK_EQUAL(it,std::end(expected_moves));
          };
 
       test_pgn_moves("1. e4 e5 2. Nf3 Nc6 3. Bb5 3... a6 *");
@@ -461,6 +456,8 @@ BOOST_AUTO_TEST_CASE(pgn_test)
             }
             catch(io_error& ex)
             {
+               s[i]=oldval;
+               continue;
                // std::string msg("got exception: ");
                // msg.append(ex.what());
                // BOOST_CHECK_MESSAGE(false,msg);
@@ -510,7 +507,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       make_pgn_moves(test_stream,on_pos);
    }
    {
-      // 77. Ne2: bug: could not disambiguate
+      // 5. Ne2: bug: could not disambiguate
       const char* example_game=
          "[Event \"17th Neckar Open\"]\n"
          "[Site \"Deizisau GER\"]\n"

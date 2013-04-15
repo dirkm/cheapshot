@@ -4,7 +4,7 @@
 #include "test/unittest.hh"
 
 #include "cheapshot/control.hh"
-#include "cheapshot/hash.hh"
+#include "cheapshot/hhash.hh"
 #include "cheapshot/io.hh"
 #include "cheapshot/loop.hh"
 

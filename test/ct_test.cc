@@ -1,7 +1,7 @@
 #include "cheapshot/bitops.hh"
 #include "cheapshot/extra_bitops.hh"
 #include "cheapshot/iterator.hh"
-#include "cheapshot/hash.hh"
+#include "cheapshot/hhash.hh"
 #include "cheapshot/loop.hh"
 
 // file with compile-time tests

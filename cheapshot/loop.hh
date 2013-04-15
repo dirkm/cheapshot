@@ -3,7 +3,7 @@
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
-#include "cheapshot/hash.hh"
+#include "cheapshot/hhash.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/score.hh"
 
