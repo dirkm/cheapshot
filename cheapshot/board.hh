@@ -170,6 +170,12 @@ namespace cheapshot
          assert(count_set_bits(bs[idx(piece::pawn)])<=8);
       }
    }
+
+   struct basic_state
+   {
+      board_t board;
+   };
+
 } // cheapshot
 
 #endif

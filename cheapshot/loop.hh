@@ -200,12 +200,17 @@ namespace cheapshot
    class scoped_move<move_info>
    {
    public:
-      explicit scoped_move(board_t& board, const move_info& mi):
+      // TODO: remove
+      scoped_move(board_t& board, const move_info& mi):
          piece(board[idx(mi.moved_side)][idx(mi.moved_piece)]),
          mask(mi.mask)
       {
          make_move(piece,mask);
       }
+
+      scoped_move(basic_state& ec, const move_info& mi):
+         scoped_move(ec.board,mi)
+      {}
 
       ~scoped_move()
       {
@@ -223,10 +228,16 @@ namespace cheapshot
    class scoped_move<move_info2>
    {
    public:
-      explicit scoped_move(board_t& board, const move_info2& mi):
+      // TODO: remove
+      scoped_move(board_t& board, const move_info2& mi):
          scoped_move0(board,mi[0]),
          scoped_move1(board,mi[1])
       {}
+
+      scoped_move(basic_state& ec, const move_info2& mi):
+         scoped_move(ec.board,mi)
+      {}
+
    private:
       scoped_move<move_info> scoped_move0;
       scoped_move<move_info> scoped_move1;
@@ -259,10 +270,9 @@ namespace cheapshot
    private:
       typedef uint64_t(*hash_fun_t)(board_t& board, const MoveInfo& mi);
    public:
-      // TODO: ec contains board
-      scoped_move_hash(board_t& board, Controller& ec, const MoveInfo& mi):
-         sc_move(board,mi),
-         sc_hash(ec.hasher,(hash_fun_t)hhash,board,mi)
+      scoped_move_hash(Controller& ec, const MoveInfo& mi):
+         sc_move(ec,mi),
+         sc_hash(ec.hasher,(hash_fun_t)hhash,ec.board,mi)
       {}
    private:
       scoped_move<MoveInfo> sc_move;
@@ -273,14 +283,14 @@ namespace cheapshot
    class scoped_move_hash_material
    {
    public:
-      scoped_move_hash_material(board_t& board, Controller& ec, const move_info2& capture):
-         sc_mvhash(board,ec,capture),
+      scoped_move_hash_material(Controller& ec, const move_info2& capture):
+         sc_mvhash(ec,capture),
          sc_material(ec.material,capture[1].moved_side,capture[1].moved_piece)
       {}
 
       template<typename Op>
-      scoped_move_hash_material(board_t& board,Controller& ec, const Op& op, const move_info2& mi2):
-         sc_mvhash(board,ec,mi2),
+      scoped_move_hash_material(Controller& ec, const Op& op, const move_info2& mi2):
+         sc_mvhash(ec,mi2),
          sc_material(ec.material,op,mi2)
       {}
    private:
@@ -394,7 +404,7 @@ namespace cheapshot
          uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
          if(ep_capture!=0_U64)
          {
-            scoped_material_change mv(board,ec,en_passant_info<S>(*origin_iter,ep_capture));
+            scoped_material_change mv(ec,en_passant_info<S>(*origin_iter,ep_capture));
             if(recurse_with_cutoff<S>(ctx,ec))
                return;
          }
@@ -409,7 +419,7 @@ namespace cheapshot
       for(const auto& cit: castling_generators<S>())
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
-            scoped2 mv(board,ec,castle_info<S>(cit));
+            scoped2 mv(ec,castle_info<S>(cit));
             if(recurse_with_cutoff<S>(ctx,ec))
                return;
          }
@@ -423,11 +433,11 @@ namespace cheapshot
             {
                // pawn to promotion square
                auto mi=basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter);
-               scoped_material_change mv(board,ec,potential_capture_material,mi);
+               scoped_material_change mv(ec,potential_capture_material,mi);
                for(auto prom: piece_promotions)
                {
                   // all promotions
-                  scoped_material_change mv2(board,ec,promotion_material,
+                  scoped_material_change mv2(ec,promotion_material,
                                              promotion_info<S>(prom,*dest_iter));
                   if(recurse_with_cutoff<S>(ctx,ec))
                      return;
@@ -441,7 +451,7 @@ namespace cheapshot
             {
                // captures
                auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
-               scoped_material_change mv(board,ec,mi);
+               scoped_material_change mv(ec,mi);
                if(recurse_with_cutoff<S>(ctx,ec))
                   return;
             }
@@ -451,7 +461,7 @@ namespace cheapshot
             {
                //  moves / ep info
                uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-               scoped mv(board,ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
+               scoped mv(ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                scoped_hash scoped_ep_info(ec.hasher,hhash_ep_change0,ctx.ep_info);
                if(recurse_with_cutoff<S>(ctx,ec))
@@ -472,7 +482,7 @@ namespace cheapshot
          {
             // captures
             auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
-            scoped_material_change mv(board,ec,mi);
+            scoped_material_change mv(ec,mi);
             if(recurse_with_cutoff<S>(ctx,ec))
                return;
          }
@@ -481,7 +491,7 @@ namespace cheapshot
              ++dest_iter)
          {
             // moves
-            scoped mv(board,ec,basic_move_info<S>(moveset.moved_piece,moveset.origin,*dest_iter));
+            scoped mv(ec,basic_move_info<S>(moveset.moved_piece,moveset.origin,*dest_iter));
             if(recurse_with_cutoff<S>(ctx,ec))
                return;
          }
