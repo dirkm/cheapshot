@@ -13,8 +13,8 @@ namespace cheapshot
 {
    namespace control
    {
-      // helpers to sweeten engine-configuration in the controllers below
-      // prefix noop means dummy implementation of a feature (no-operation)
+// helpers to sweeten engine-configuration in the controllers below
+// prefix noop means dummy implementation of a feature (no-operation)
       template<typename C>
       class scoped_ply_count
       {
@@ -22,12 +22,12 @@ namespace cheapshot
          explicit scoped_ply_count(C& ec_):
             ec(ec_)
          {
-            --ec.remaining_plies;
+            ++ec.ply_count;
          }
 
          ~scoped_ply_count()
          {
-            ++ec.remaining_plies;
+            --ec.ply_count;
          }
 
          scoped_ply_count(const scoped_ply_count&) = delete;
@@ -42,20 +42,20 @@ namespace cheapshot
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(board_t& board_, side c, const context& ctx, int max_plies):
+      explicit constexpr max_ply_cutoff(board_t& board_, side c, const context& ctx, int max_plies_):
          board(board_),
-         remaining_plies(max_plies),
+         ply_count(0),
+         max_plies(max_plies_),
          pruning(c),
          hasher(board,c,ctx),
          material(board)
-      {
-      }
+      {}
 
       bool
       leaf_check(side c, const context& ctx, const board_metrics& bm)
       {
          // assert_valid_board(board);
-         bool is_leaf_node=(remaining_plies==0);
+         bool is_leaf_node=(ply_count==max_plies);
          if(is_leaf_node)
          {
             // pruning.score=control::score_material(board);
@@ -66,7 +66,8 @@ namespace cheapshot
 
       board_t& board;
 
-      int remaining_plies;
+      int ply_count;
+      const int max_plies;
 
       Pruning pruning;
       HashController hasher;

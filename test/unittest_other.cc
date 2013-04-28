@@ -53,7 +53,7 @@ namespace
       {
          if(parent::leaf_check(c,ctx,bm))
             return true;
-         std::size_t idx=boards.size()-this->remaining_plies;
+         std::size_t idx=this->ply_count;
          if(boards[idx]!=this->board)
          {
             this->pruning.score=0;

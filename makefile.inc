@@ -31,3 +31,5 @@ CPPFLAGS := ${CFLAGS}
 # performance tests
 # perf record test/unittest --run_test=basic_engine_suite/time_mate_check
 # perf report
+
+# to increase the log level, run with "./unittest --log_level=all"

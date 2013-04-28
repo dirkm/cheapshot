@@ -12,7 +12,7 @@ namespace cheapshot
       struct transposition_info
       {
          int score;
-         int remaining_plies;
+         int ply_count;
          // move_info principal_move; // TODO
       };
 
@@ -43,22 +43,21 @@ namespace cheapshot
             template<typename Controller>
             bool is_shallow(const Controller& ec) const
             {
-               return (ec.remaining_plies>val.remaining_plies);
+               return (ec.ply_count<=val.ply_count); // TODO: check why <=
             }
          };
 
          template<typename Controller>
          insert_info insert(const Controller& ec)
          {
-            return insert(ec.hasher.hash,ec.remaining_plies);
+            return insert(ec.hasher.hash,ec.ply_count);
          }
 
-         insert_info insert(uint64_t hash,int remaining_plies)
+         insert_info insert(uint64_t hash,int ply_count)
          {
-            typedef decltype(transposition_table) T; // todo bug gcc 4.6
-            T::iterator v;
+            decltype(transposition_table)::iterator v;
             bool is_new;
-            std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),remaining_plies}});
+            std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),ply_count}});
             return insert_info{v->second,is_new};
          }
 
@@ -75,19 +74,19 @@ namespace cheapshot
          cache_update(Controller& ec, typename T::insert_info& insert_val_):
             insert_val(insert_val_),
             score(ec.pruning.score),
-            remaining_plies(ec.remaining_plies) // TODO: temp test
+            ply_count(ec.ply_count) // TODO: temp test
          {
          }
 
          ~cache_update()
          {
-            if(remaining_plies>=insert_val.val.remaining_plies)
+            if(ply_count<insert_val.val.ply_count)
                insert_val.val.score=score;
          }
 
          typename T::insert_info& insert_val;
          int& score;
-         int& remaining_plies;
+         int& ply_count;
 
          cache_update(const cache_update&) = delete;
          cache_update& operator=(const cache_update&) = delete;
