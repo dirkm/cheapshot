@@ -1,12 +1,12 @@
 #include "cheapshot/io.hh"
 
-#include <cstring>
-#include <iostream>
-#include <sstream>
-
 #include "cheapshot/control.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/loop.hh"
+
+#include <cstring>
+#include <iostream>
+#include <sstream>
 
 namespace cheapshot
 {

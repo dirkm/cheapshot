@@ -49,6 +49,7 @@ namespace cheapshot
             }
             return hi;
          }
+
       private:
          template<typename Controller>
          hit_info
@@ -66,7 +67,7 @@ namespace cheapshot
             bool is_hit=!is_new && !is_shallow(ply_count,v->second.ply_count);
             return hit_info{v->second,is_hit};
          }
-      private:
+
          std::unordered_map<uint64_t,transposition_info> transposition_table;
          // std::map<uint64_t,transposition_info> transposition_table;
       };
@@ -89,6 +90,7 @@ namespace cheapshot
             hi.val.ply_count=ply_count;
             hi.val.score=score;
          }
+
       private:
          typename T::hit_info& hi;
          const int& score;

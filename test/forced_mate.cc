@@ -4,6 +4,7 @@
 
 #include "cheapshot/control.hh"
 #include "cheapshot/io.hh"
+#include "cheapshot/loop.hh"
 
 int
 main(int argc, const char* argv[])

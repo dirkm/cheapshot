@@ -1,11 +1,9 @@
 #ifndef CHEAPSHOT_CONTROL_HH
 #define CHEAPSHOT_CONTROL_HH
 
-#include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
 #include "cheapshot/cache.hh"
 #include "cheapshot/hhash.hh"
-#include "cheapshot/loop.hh"
 #include "cheapshot/material.hh"
 #include "cheapshot/prune.hh"
 

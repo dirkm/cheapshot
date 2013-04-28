@@ -18,36 +18,6 @@ namespace cheapshot
       template<typename> struct cache_update;
    }
 
-   struct board_metrics
-   {
-      board_metrics(const board_t& board):
-         white_pieces(obstacles(get_side<side::white>(board))),
-         black_pieces(obstacles(get_side<side::black>(board)))
-      {}
-
-      uint64_t all_pieces() const { return white_pieces|black_pieces; }
-
-      template<side S>
-      uint64_t own() const;
-
-      template<side S>
-      uint64_t opposing() const
-      {
-         return own<other_side(S)>();
-      }
-
-      uint64_t white_pieces;
-      uint64_t black_pieces;
-   };
-
-   template<>
-   inline uint64_t
-   board_metrics::own<side::white>() const {return white_pieces;}
-
-   template<>
-   inline uint64_t
-   board_metrics::own<side::black>() const {return black_pieces;}
-
    typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
 
    template<side S>
