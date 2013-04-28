@@ -1,6 +1,8 @@
 #ifndef CHEAPSHOT_SCORE_HH
 #define CHEAPSHOT_SCORE_HH
 
+#include "cheapshot/board.hh"
+
 #include <limits>
 
 namespace cheapshot

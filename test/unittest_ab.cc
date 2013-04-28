@@ -2,7 +2,7 @@
 #include <set>
 
 #include <boost/test/unit_test.hpp>
-#include <cheapshot/control.hh>
+#include <cheapshot/prune.hh>
 
 using namespace cheapshot;
 

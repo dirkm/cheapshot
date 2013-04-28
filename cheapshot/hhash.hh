@@ -160,6 +160,48 @@ namespace cheapshot
          hhash_turn(t)^
          hhash_context(ctx);
    }
+
+   namespace control
+   {
+      // helpers to sweeten engine-configuration in the controllers below
+      // prefix noop means dummy implementation of a feature (no-operation)
+      struct incremental_hash
+      {
+         incremental_hash(const board_t& board, side t, const context& ctx):
+            hash(hhash(board,t,ctx))
+         {}
+         uint64_t hash;
+      };
+
+      template<typename T=incremental_hash>
+      struct scoped_hash
+      {
+      public:
+         template<typename HashFun, typename... Args>
+         scoped_hash(T& hasher, const HashFun& hashfun, Args&&...  args):
+            sh(hasher.hash,hashfun,std::forward<Args>(args)...)
+         {}
+      private:
+         cheapshot::scoped_hash sh;
+      };
+
+      struct noop_hash
+      {
+         noop_hash(const board_t& board, side t, const context& ctx){}
+      };
+
+      template<>
+      struct scoped_hash<noop_hash>
+      {
+      public:
+         template<typename HashFun, typename... Args>
+         scoped_hash(noop_hash&, const HashFun& hashfun, Args&&...  args)
+         {}
+
+         scoped_hash(const scoped_hash&) = delete;
+         scoped_hash& operator=(const scoped_hash&) = delete;
+      };
+   }
 } // cheapshot
 
 #endif
