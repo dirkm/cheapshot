@@ -43,7 +43,7 @@ namespace cheapshot
             template<typename Controller>
             bool is_shallow(const Controller& ec) const
             {
-               return (ec.ply_count<=val.ply_count); // TODO: check why <=
+               return (ec.ply_count<val.ply_count);
             }
          };
 
@@ -71,22 +71,25 @@ namespace cheapshot
       {
       public:
          template<typename Controller>
-         cache_update(Controller& ec, typename T::insert_info& insert_val_):
-            insert_val(insert_val_),
+         cache_update(const Controller& ec, typename T::insert_info& insert_info_):
+            insert_info(insert_info_),
             score(ec.pruning.score),
-            ply_count(ec.ply_count) // TODO: temp test
+            ply_count(ec.ply_count)
          {
          }
 
          ~cache_update()
          {
-            if(ply_count<insert_val.val.ply_count)
-               insert_val.val.score=score;
+            if((ply_count<insert_info.val.ply_count)||insert_info.is_new)
+            {
+               insert_info.val.ply_count=ply_count;
+               insert_info.val.score=score;
+            }
          }
-
-         typename T::insert_info& insert_val;
-         int& score;
-         int& ply_count;
+      private:
+         typename T::insert_info& insert_info;
+         const int& score;
+         const int& ply_count;
 
          cache_update(const cache_update&) = delete;
          cache_update& operator=(const cache_update&) = delete;
@@ -110,7 +113,6 @@ namespace cheapshot
       template<>
       struct cache_update<noop_cache>
       {
-      public:
          template<typename Controller>
          cache_update(Controller& ec, noop_cache::insert_info& insert_val_)
          {}
