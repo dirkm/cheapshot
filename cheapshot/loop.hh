@@ -365,11 +365,11 @@ namespace cheapshot
       int& score=ec.pruning.score;
       board_t& board=ec.board;
 
-      auto cacheval=ec.cache.insert(ec);
-      if(cacheval.template hit_check<S>(ec))
+      auto hit_info=ec.cache.template try_cache_hit<S>(ec);
+      if(hit_info.is_hit)
          return;
 
-      control::cache_update<decltype(ec.cache)> scoped_caching(ec,cacheval);
+      control::cache_update<decltype(ec.cache)> scoped_caching(ec,hit_info);
 
       board_metrics bm(board);
 

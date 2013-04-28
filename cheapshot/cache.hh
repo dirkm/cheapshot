@@ -16,6 +16,12 @@ namespace cheapshot
          // move_info principal_move; // TODO
       };
 
+      inline
+      bool is_shallow(int engine_ply_count,int cache_ply_count)
+      {
+         return engine_ply_count < cache_ply_count;
+      }
+
       struct cache
       {
          cache()
@@ -23,44 +29,43 @@ namespace cheapshot
             transposition_table.reserve(100000); // TODO
          }
 
-         struct insert_info
+         struct hit_info
          {
             transposition_info& val;
-            bool is_new;
-
-            template<side S, typename Controller>
-            bool hit_check(Controller& ec)
-            {
-               if(is_new||is_shallow(ec))
-                  return false;
-               int& score=ec.pruning.score;
-               score=(val.score!=score::repeat())?
-                  val.score:
-                  score::stalemate(S);
-               return true;
-            }
-
-            template<typename Controller>
-            bool is_shallow(const Controller& ec) const
-            {
-               return (ec.ply_count<val.ply_count);
-            }
+            bool is_hit;
          };
 
+         template<side S, typename Controller>
+         hit_info
+         try_cache_hit(Controller& ec)
+         {
+            hit_info hi=insert(ec.hasher.hash,ec.ply_count);
+            if(hi.is_hit)
+            {
+               int& score=ec.pruning.score;
+               score=(hi.val.score!=score::repeat())?
+                  hi.val.score:
+                  score::stalemate(S);
+            }
+            return hi;
+         }
+      private:
          template<typename Controller>
-         insert_info insert(const Controller& ec)
+         hit_info
+         insert(const Controller& ec)
          {
             return insert(ec.hasher.hash,ec.ply_count);
          }
 
-         insert_info insert(uint64_t hash,int ply_count)
+         hit_info
+         insert(uint64_t hash,int ply_count)
          {
             decltype(transposition_table)::iterator v;
             bool is_new;
             std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),ply_count}});
-            return insert_info{v->second,is_new};
+            bool is_hit=!is_new && !is_shallow(ply_count,v->second.ply_count);
+            return hit_info{v->second,is_hit};
          }
-
       private:
          std::unordered_map<uint64_t,transposition_info> transposition_table;
          // std::map<uint64_t,transposition_info> transposition_table;
@@ -71,8 +76,8 @@ namespace cheapshot
       {
       public:
          template<typename Controller>
-         cache_update(const Controller& ec, typename T::insert_info& insert_info_):
-            insert_info(insert_info_),
+         cache_update(const Controller& ec, typename T::hit_info& hi_):
+            hi(hi_),
             score(ec.pruning.score),
             ply_count(ec.ply_count)
          {
@@ -80,14 +85,12 @@ namespace cheapshot
 
          ~cache_update()
          {
-            if((ply_count<insert_info.val.ply_count)||insert_info.is_new)
-            {
-               insert_info.val.ply_count=ply_count;
-               insert_info.val.score=score;
-            }
+            // assert(!hi.is_hit);
+            hi.val.ply_count=ply_count;
+            hi.val.score=score;
          }
       private:
-         typename T::insert_info& insert_info;
+         typename T::hit_info& hi;
          const int& score;
          const int& ply_count;
 
@@ -97,16 +100,16 @@ namespace cheapshot
 
       struct noop_cache
       {
-         struct insert_info
+         struct hit_info
          {
-            template<side S, typename Controller>
-            static constexpr bool hit_check(Controller& ec) { return false; }
+            static constexpr bool is_hit=false;
          };
 
-         template<typename EngineController>
-         insert_info insert(const EngineController&)
+         template<side S, typename Controller>
+         hit_info
+         try_cache_hit(Controller& ec)
          {
-            return insert_info{};
+            return hit_info{};
          }
       };
 
@@ -114,7 +117,7 @@ namespace cheapshot
       struct cache_update<noop_cache>
       {
          template<typename Controller>
-         cache_update(Controller& ec, noop_cache::insert_info& insert_val_)
+         cache_update(Controller& ec, noop_cache::hit_info& hi)
          {}
 
          cache_update(const cache_update&) = delete;
