@@ -1,8 +1,7 @@
 #include "cheapshot/bitops.hh"
-#include "cheapshot/extra_bitops.hh"
 #include "cheapshot/iterator.hh"
 #include "cheapshot/hhash.hh"
-#include "cheapshot/loop.hh"
+#include "cheapshot/score.hh"
 
 // file with compile-time tests
 
@@ -12,8 +11,7 @@ namespace cheapshot
    test_highest_bit(uint64_t v, uint64_t h)
    {
       return
-         (highest_bit_no_zero(v)==h) &&
-         (highest_bit_portable(v)==h);
+         (highest_bit_no_zero(v)==h);
    }
 
    static_assert(test_highest_bit(0xF123_U64,0x8000_U64),"");
@@ -28,10 +26,7 @@ namespace cheapshot
    // tests not strictly for correctness
    static_assert(sizeof(bit_iterator)==sizeof(std::uint64_t),"used extensively; performance-impact to be avoided");
    static_assert(hhash_make_turn()!=0_U64,"should be static constant for performance reasons");
-   // static_assert(__builtin_constant_p(bit_mixer(0_U64))==1,"should be constant for performance reasons");
-
    constexpr castling_t ci=cheapshot::long_castling<side::white>();
-   // constexpr uint64_t bm=bit_mixer(0_U64);
 
    static_assert(count_set_bits(score::limit(side::white))==1,"");
 }

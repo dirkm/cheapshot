@@ -7,7 +7,6 @@
 #include "test/unittest.hh"
 
 #include "cheapshot/io.hh"
-#include "cheapshot/extra_bitops.hh"
 #include "cheapshot/iterator.hh"
 
 using namespace cheapshot;
@@ -73,15 +72,6 @@ BOOST_AUTO_TEST_CASE(primitive_test)
    BOOST_CHECK_EQUAL(highest_bit_no_zero(0x1_U64),0x1_U64);
    BOOST_CHECK_EQUAL(strict_left_of(0x1_U64),0x0_U64);
    BOOST_CHECK_EQUAL(strict_left_of(0x2_U64),0x0101010101010101_U64);
-}
-
-BOOST_AUTO_TEST_CASE(row_and_column_test)
-{
-   BOOST_CHECK_EQUAL(row_number(1_U64<<63),7);
-   BOOST_CHECK_EQUAL(row_number(1_U64<<1),0);
-   BOOST_CHECK_EQUAL(smaller(8),7);
-   BOOST_CHECK_EQUAL(column_number(1_U64<<1),1);
-   BOOST_CHECK_EQUAL(column_number(1_U64<<63),7);
 }
 
 void
@@ -180,16 +170,6 @@ BOOST_AUTO_TEST_CASE(queen_moves_test)
                            scan_canvas(canvas,'o','O','q')),
                         scan_canvas(canvas,'X','q','O'));
    }
-}
-
-BOOST_AUTO_TEST_CASE(vertical_band_test)
-{
-   BOOST_CHECK_EQUAL(detail::aliased_widen(column_with_number(3),1),
-                     column_with_number(2)|column_with_number(3)|column_with_number(4));
-   BOOST_CHECK_EQUAL(vertical_band(4_U64,1),
-                     column_with_number(1)|column_with_number(2)|column_with_number(3));
-   BOOST_CHECK_EQUAL(vertical_band(1_U64,2),
-                     column_with_number(0)|column_with_number(1)|column_with_number(2));
 }
 
 BOOST_AUTO_TEST_CASE(jump_knight_test)
@@ -775,21 +755,6 @@ BOOST_AUTO_TEST_CASE(diagonals_test)
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(timings_suite)
-
-BOOST_AUTO_TEST_CASE(time_column_and_row_test)
-{
-   volatile uint64_t s=(1_U64<<(8*(8-(1))));
-   __attribute__((unused)) volatile uint8_t c;
-   __attribute__((unused)) volatile uint8_t r;
-   TimeOperation time_op;
-   const long ops=runtime_adjusted_ops(100000000);
-   for(long i=0;i<ops;++i)
-   {
-      c=column_number(s);
-      r=row_number(s);
-   }
-   time_op.time_report("column/row calculation",ops);
-}
 
 BOOST_AUTO_TEST_CASE(time_board_pos)
 {
