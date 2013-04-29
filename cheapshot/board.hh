@@ -124,33 +124,20 @@ namespace cheapshot
 
    struct board_metrics
    {
-      board_metrics(const board_t& board):
-         white_pieces(obstacles(get_side<side::white>(board))),
-         black_pieces(obstacles(get_side<side::black>(board)))
+      explicit board_metrics(const board_t& board):
+         pieces{obstacles(get_side<side::white>(board)),obstacles(get_side<side::black>(board))}
       {}
 
-      uint64_t all_pieces() const { return white_pieces|black_pieces; }
+      uint64_t all_pieces() const { return pieces[0]|pieces[1]; }
 
       template<side S>
-      uint64_t own() const;
+      uint64_t own() const {return pieces[idx(S)];}
 
       template<side S>
-      uint64_t opposing() const
-      {
-         return own<other_side(S)>();
-      }
+      uint64_t opposing() const { return own<other_side(S)>(); }
 
-      uint64_t white_pieces;
-      uint64_t black_pieces;
+      uint64_t pieces[2];
    };
-
-   template<>
-   inline uint64_t
-   board_metrics::own<side::white>() const {return white_pieces;}
-
-   template<>
-   inline uint64_t
-   board_metrics::own<side::black>() const {return black_pieces;}
 
    inline void
    assert_valid_board(const board_t& b)
@@ -171,9 +158,14 @@ namespace cheapshot
       }
    }
 
-   struct basic_state
+   struct board_state
    {
-      board_t board;
+      board_state(board_t& board_):
+         board(board_),
+         bm(board_)
+      {}
+      board_t& board;
+      board_metrics bm;
    };
 
 } // cheapshot

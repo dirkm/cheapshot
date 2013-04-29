@@ -3,6 +3,7 @@
 
 #include "cheapshot/score.hh"
 
+#include <limits>
 #include <unordered_map>
 
 namespace cheapshot
@@ -16,10 +17,13 @@ namespace cheapshot
          // move_info principal_move; // TODO
       };
 
-      inline
-      bool is_shallow(int engine_ply_count,int cache_ply_count)
+      namespace detail
       {
-         return engine_ply_count < cache_ply_count;
+         inline bool
+         is_shallow(int engine_ply_count,int cache_ply_count)
+         {
+            return engine_ply_count < cache_ply_count;
+         }
       }
 
       struct cache
@@ -63,8 +67,9 @@ namespace cheapshot
          {
             decltype(transposition_table)::iterator v;
             bool is_new;
-            std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),ply_count}});
-            bool is_hit=!is_new && !is_shallow(ply_count,v->second.ply_count);
+            // std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),ply_count}});
+            std::tie(v,is_new)=transposition_table.insert({hash,{score::repeat(),std::numeric_limits<int>::max()}});
+            bool is_hit=!is_new && !detail::is_shallow(ply_count,v->second.ply_count);
             return hit_info{v->second,is_hit};
          }
 

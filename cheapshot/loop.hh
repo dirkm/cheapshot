@@ -172,7 +172,7 @@ namespace cheapshot
    make_move(board_t& board, board_metrics& bm, const move_info& mi)
    {
       make_move(board,mi);
-      make_move((mi.moved_side==side::white)?bm.white_pieces:bm.black_pieces,mi.mask);
+      make_move(bm.pieces[idx(mi.moved_side)],mi.mask);
    }
 
    inline
@@ -200,44 +200,40 @@ namespace cheapshot
    class scoped_move<move_info>
    {
    public:
-      // TODO: remove
-      scoped_move(board_t& board, const move_info& mi):
-         piece(board[idx(mi.moved_side)][idx(mi.moved_piece)]),
-         mask(mi.mask)
+      template<typename Controller>
+      scoped_move(Controller& ec, const move_info& mi_):
+         mi(mi_),
+         state(ec.state)
       {
-         make_move(piece,mask);
+         move();
       }
-
-      scoped_move(basic_state& ec, const move_info& mi):
-         scoped_move(ec.board,mi)
-      {}
 
       ~scoped_move()
       {
-         make_move(piece,mask);
+         move();
       }
 
       scoped_move(const scoped_move&) = delete;
       scoped_move& operator=(const scoped_move&) = delete;
    private:
-      uint64_t& piece;
-      uint64_t mask;
+      void move()
+      {
+         make_move(state.board,state.bm,mi);
+      }
+
+      move_info mi;
+      board_state& state;
    };
 
    template<>
    class scoped_move<move_info2>
    {
    public:
-      // TODO: remove
-      scoped_move(board_t& board, const move_info2& mi):
-         scoped_move0(board,mi[0]),
-         scoped_move1(board,mi[1])
+      template<typename Controller>
+      scoped_move(Controller& ec, const move_info2& mi):
+         scoped_move0(ec,mi[0]),
+         scoped_move1(ec,mi[1])
       {}
-
-      scoped_move(basic_state& ec, const move_info2& mi):
-         scoped_move(ec.board,mi)
-      {}
-
    private:
       scoped_move<move_info> scoped_move0;
       scoped_move<move_info> scoped_move1;
@@ -272,7 +268,7 @@ namespace cheapshot
    public:
       scoped_move_hash(Controller& ec, const MoveInfo& mi):
          sc_move(ec,mi),
-         sc_hash(ec.hasher,(hash_fun_t)hhash,ec.board,mi)
+         sc_hash(ec.hasher,(hash_fun_t)hhash,ec.state.board,mi)
       {}
    private:
       scoped_move<MoveInfo> sc_move;
@@ -342,16 +338,15 @@ namespace cheapshot
    void
    analyze_position(const context& oldctx, Controller& ec)
    {
-      int& score=ec.pruning.score;
-      board_t& board=ec.board;
-
       auto hit_info=ec.cache.template try_cache_hit<S>(ec);
       if(hit_info.is_hit)
          return;
 
       control::cache_update<decltype(ec.cache)> scoped_caching(ec,hit_info);
 
-      board_metrics bm(board);
+      board_t& board=ec.state.board;
+      board_metrics& bm=ec.state.bm;
+      int& score=ec.pruning.score;
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
       std::array<move_set,16>::iterator basic_moves_end=begin(basic_moves);
@@ -379,7 +374,7 @@ namespace cheapshot
          }
       }
 
-      if(ec.leaf_check(S,oldctx,bm))
+      if(ec.leaf_check(S,oldctx))
          return;
 
       typedef scoped_move_hash<Controller,move_info> scoped;

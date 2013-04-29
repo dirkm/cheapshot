@@ -11,7 +11,14 @@
 #include <map>
 
 using namespace cheapshot;
-using namespace cheapshot::control;
+using control::minimax;
+using control::noop_hash;
+using control::incremental_hash;
+using control::noop_material;
+using control::incremental_material;
+using control::noop_cache;
+using control::cache;
+using control::alphabeta;
 // tests not classified yet
 
 namespace
@@ -49,12 +56,12 @@ namespace
       }
 
       bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx)
       {
-         if(parent::leaf_check(c,ctx,bm))
+         if(parent::leaf_check(c,ctx))
             return true;
          std::size_t idx=this->ply_count;
-         if(boards[idx]!=this->board)
+         if(boards[idx]!=this->state.board)
          {
             this->pruning.score=0;
             return true;
@@ -68,7 +75,7 @@ namespace
       std::vector<board_t> boards;
    };
 
-   typedef std::function<void (const board_t&, side, const context&, const board_metrics&) > funpos;
+   typedef std::function<void (const board_t&, side, const context&) > funpos;
 
    template<typename... Controls>
    class do_until_ply_cutoff: public max_ply_cutoff_noop<Controls...>
@@ -81,11 +88,11 @@ namespace
       {}
 
       bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx)
       {
-         if(parent::leaf_check(c,ctx,bm))
+         if(parent::leaf_check(c,ctx))
             return true;
-         fun(this->board,c,ctx,bm);
+         fun(this->state.board,c,ctx);
          return false;
       }
    private:
@@ -262,6 +269,14 @@ BOOST_AUTO_TEST_CASE(hash_test)
    BOOST_CHECK_EQUAL(bit_mixer_runtime(0x12345678_U64),detail::bit_mixer(0x12345678_U64));
 }
 
+struct state_holder
+{
+   explicit state_holder(board_t& b):
+      state(b)
+   {};
+   board_state state;
+};
+
 BOOST_AUTO_TEST_CASE(scoped_move_test)
 {
    const char c[]=
@@ -280,7 +295,8 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
    uint64_t dest=scan_canvas(c,'p');
    // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
-      scoped_move<move_info2> scope(b,basic_capture_info<side::white>(b,moved_piece,origin,dest));
+      state_holder h(b);
+      scoped_move<move_info2> scope(h,basic_capture_info<side::white>(b,moved_piece,origin,dest));
       BOOST_CHECK_EQUAL(b,scan_board(
                            "........\n"
                            "........\n"
@@ -328,7 +344,8 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "....K..R\n");
       BOOST_CHECK(is_castling_allowed<side::white>(b,sci));
 
-      scoped_move<move_info2> scope(b,castle_info<side::white>(sci));
+      state_holder h(b);
+      scoped_move<move_info2> scope(h,castle_info<side::white>(sci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -439,7 +456,8 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "R...K...\n");
       BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
 
-      scoped_move<move_info2> scope(b,castle_info<side::white>(lci));
+      state_holder h(b);
+      scoped_move<move_info2> scope(h,castle_info<side::white>(lci));
       boost::test_tools::output_test_stream ots;
       print_board(b,ots);
       BOOST_CHECK(ots.is_equal(
@@ -1172,7 +1190,7 @@ namespace
    time_control(int depth,const char* test_name)
    {
       int nodes=0;
-      auto f=[&nodes](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+      auto f=[&nodes](const board_t& board, side t, const context& ctx)
          {
             ++nodes;
          };
@@ -1194,7 +1212,7 @@ namespace
       int matches=0;
       std::map<uint64_t,std::tuple<board_t,side, uint64_t, uint64_t> > r;
 
-      auto fhash=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+      auto fhash=[&r,&nodes,&matches](const board_t& board, side t, const context& ctx)
          {
             ++nodes;
             uint64_t hash=hhash(board,t,ctx);
@@ -1232,7 +1250,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
    time_control<alphabeta>(8,"alphabeta nodes test");
    {
       int nodes=0;
-      auto f=[&nodes](const board_t& board, side t, const context& ctx, const board_metrics& bm)
+      auto f=[&nodes](const board_t& board, side t, const context& ctx)
          {
             ++nodes;
          };
@@ -1274,11 +1292,11 @@ namespace
       using move_checker<incremental_hash>::move_checker;
 
       bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx)
       {
-         uint64_t complete_hash=hhash(this->board,c,ctx);
+         uint64_t complete_hash=hhash(this->state.board,c,ctx);
          BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
-         return move_checker::leaf_check(c,ctx,bm);
+         return move_checker::leaf_check(c,ctx);
       }
    };
 
@@ -1341,11 +1359,11 @@ namespace
       using move_checker<noop_hash,incremental_material>::move_checker;
 
       bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx)
       {
-         int complete_material=score::material(board);
+         int complete_material=score::material(state.board);
          BOOST_CHECK_EQUAL(material.material,complete_material);
-         return move_checker::leaf_check(c,ctx,bm);
+         return move_checker::leaf_check(c,ctx);
       }
    };
 }

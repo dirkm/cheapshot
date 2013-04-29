@@ -37,11 +37,11 @@ namespace cheapshot
 
 // different controls, to be combined in analyze_position
    template<typename Pruning, typename HashController, typename MaterialController, typename Cache>
-   class max_ply_cutoff: public basic_state
+   class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(board_t& board_, side c, const context& ctx, int max_plies_):
-         basic_state{board_},
+      explicit constexpr max_ply_cutoff(board_t& board, side c, const context& ctx, int max_plies_):
+         state(board),
          ply_count(0),
          max_plies(max_plies_),
          pruning(c),
@@ -50,7 +50,7 @@ namespace cheapshot
       {}
 
       bool
-      leaf_check(side c, const context& ctx, const board_metrics& bm)
+      leaf_check(side c, const context& ctx)
       {
          // assert_valid_board(board);
          bool is_leaf_node=(ply_count==max_plies);
@@ -61,6 +61,8 @@ namespace cheapshot
          }
          return is_leaf_node;
       }
+
+      board_state state;
 
       int ply_count;
       const int max_plies;
