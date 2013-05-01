@@ -152,9 +152,9 @@ namespace cheapshot
          struct scoped_hash
          {
          public:
-            template<typename HashFun, typename... Args>
-            scoped_hash(incremental_hash& hasher, const HashFun& hashfun, Args&&...  args):
-               hashref(hasher.hash),
+            template<typename Controller, typename HashFun, typename... Args>
+            scoped_hash(Controller& ec, const HashFun& hashfun, Args&&...  args):
+               hashref(ec.hasher.hash),
                oldhash(hashref)
             {
                hashref^=hashfun(std::forward<Args>(args)...);
@@ -179,8 +179,8 @@ namespace cheapshot
 
          struct scoped_hash
          {
-            template<typename HashFun, typename... Args>
-            scoped_hash(noop_hash&, const HashFun& hashfun, Args&&...  args)
+            template<typename Controller, typename HashFun, typename... Args>
+            scoped_hash(Controller&, const HashFun& hashfun, Args&&...  args)
             {}
 
             scoped_hash(const scoped_hash&) = delete;

@@ -276,7 +276,7 @@ namespace cheapshot
    public:
       scoped_move_hash(Controller& ec, const MoveInfo& mi):
          sc_move(ec,mi),
-         sc_hash(ec.hasher,(hash_fun_t)hhash,ec.state.board,mi)
+         sc_hash(ec,(hash_fun_t)hhash,ec.state.board,mi)
       {}
    private:
       scoped_move<MoveInfo> sc_move;
@@ -289,13 +289,13 @@ namespace cheapshot
    public:
       scoped_move_hash_material(Controller& ec, const move_info2& capture):
          sc_mvhash(ec,capture),
-         sc_material(ec.material,capture[1].moved_side,capture[1].moved_piece)
+         sc_material(ec,capture[1].moved_side,capture[1].moved_piece)
       {}
 
       template<typename Op>
       scoped_move_hash_material(Controller& ec, const Op& op, const move_info2& mi2):
          sc_mvhash(ec,mi2),
-         sc_material(ec.material,op,mi2)
+         sc_material(ec,op,mi2)
       {}
    private:
       scoped_move_hash<Controller,move_info2> sc_mvhash;
@@ -324,7 +324,7 @@ namespace cheapshot
    public:
       explicit scoped_make_turn(Controller& ec):
          sc_ply(ec),
-         sc_hash(ec.hasher,hhash_make_turn)
+         sc_hash(ec,hhash_make_turn)
       {}
    private:
       control::scoped_ply_count<Controller> sc_ply;
@@ -394,7 +394,7 @@ namespace cheapshot
 
       context ctx=oldctx;
       ctx.ep_info=0_U64;
-      scoped_hash scoped_reset_ep(ec.hasher,hhash_ep_change0,oldctx.ep_info);
+      scoped_hash scoped_reset_ep(ec,hhash_ep_change0,oldctx.ep_info);
 
       scoped_make_turn<Controller> scoped_turn(ec);
 
@@ -416,7 +416,7 @@ namespace cheapshot
       ctx.castling_rights|=castling_block_mask<S>(get_side<S>(board)[idx(piece::rook)],
                                                   get_side<S>(board)[idx(piece::king)]);
 
-      scoped_hash scoped_castling(ec.hasher,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
+      scoped_hash scoped_castling(ec,hhash_castling_change,oldctx.castling_rights,ctx.castling_rights);
 
       // castling
       for(const auto& cit: castling_generators<S>())
@@ -466,7 +466,7 @@ namespace cheapshot
                uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
                scoped mv(ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
-               scoped_hash scoped_ep_info(ec.hasher,hhash_ep_change0,ctx.ep_info);
+               scoped_hash scoped_ep_info(ec,hhash_ep_change0,ctx.ep_info);
                if(recurse_with_cutoff<S>(ctx,ec))
                   return;
                ctx.ep_info=0_U64;

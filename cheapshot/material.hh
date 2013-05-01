@@ -17,16 +17,17 @@ namespace cheapshot
          struct scoped_material
          {
          public:
-            template<typename Op, typename... Args>
-            scoped_material(incremental_material& mat_cont_,const Op& op,  Args&&...  args):
-               mat_cont(mat_cont_),
+            template<typename Controller, typename Op, typename... Args>
+            scoped_material(Controller& ec,const Op& op,  Args&&...  args):
+               mat_cont(ec.material),
                old_material(mat_cont.material)
             {
                mat_cont.material-=op(std::forward<Args>(args)...);
             }
 
-            scoped_material(incremental_material& mat_cont_,side c,piece p):
-               scoped_material(mat_cont_,(int (*)(side,piece))score::weight,c,p)
+            template<typename Controller>
+            scoped_material(Controller& ec, side c, piece p):
+               scoped_material(ec,(int (*)(side,piece))score::weight,c,p)
             {}
 
             ~scoped_material()
@@ -51,11 +52,12 @@ namespace cheapshot
 
          struct scoped_material
          {
-            scoped_material(noop_material& mat_cont_, side c, piece p)
+            template<typename Controller>
+            scoped_material(Controller& ec, side c, piece p)
             {}
 
-            template<typename Op, typename... Args>
-            scoped_material(noop_material& mat_cont_,const Op& op,  Args&&...  args)
+            template<typename Controller, typename Op, typename... Args>
+            scoped_material(Controller& ec, const Op& op,  Args&&...  args)
             {}
 
             scoped_material(const scoped_material&) = delete;

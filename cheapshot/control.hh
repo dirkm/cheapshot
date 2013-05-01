@@ -11,8 +11,8 @@ namespace cheapshot
 {
    namespace control
    {
-// helpers to sweeten engine-configuration in the controllers below
-// prefix noop means dummy implementation of a feature (no-operation)
+      // TODO: ply count should be stored in context
+      //   scoped_ply_count has to be dropped and replaced
       template<typename C>
       class scoped_ply_count
       {
