@@ -87,7 +87,7 @@ prune(const tree_t& t, toy s,
 {
    const auto& v=t[idx(s)];
    finit(s,v);
-   cheapshot::control::scoped_score<Algo,S> sc(algo_data);
+   typename Algo::template scoped_score<S> sc(algo_data);
    if(v.first.empty())
       algo_data.score=v.second;
    else

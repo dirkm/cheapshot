@@ -122,28 +122,6 @@ namespace cheapshot
          return 0_U64;
    }
 
-   class scoped_hash
-   {
-   public:
-      template<typename HashFun, typename... Args>
-      scoped_hash(uint64_t& hashref_, const HashFun& hashfun, Args&&...  args):
-         hashref(hashref_),
-         oldhash(hashref_)
-      {
-         hashref_^=hashfun(std::forward<Args>(args)...);
-      }
-
-      ~scoped_hash()
-      {
-         hashref=oldhash;
-      }
-      scoped_hash(const scoped_hash&) = delete;
-      scoped_hash& operator=(const scoped_hash&) = delete;
-   private:
-      uint64_t& hashref;
-      uint64_t oldhash;
-   };
-
    inline uint64_t
    hhash_context(const context& ctx)
    {
@@ -163,43 +141,51 @@ namespace cheapshot
 
    namespace control
    {
-      // helpers to sweeten engine-configuration in the controllers below
-      // prefix noop means dummy implementation of a feature (no-operation)
       struct incremental_hash
       {
          incremental_hash(const board_t& board, side t, const context& ctx):
             hash(hhash(board,t,ctx))
          {}
-         uint64_t hash;
-      };
 
-      template<typename T=incremental_hash>
-      struct scoped_hash
-      {
-      public:
-         template<typename HashFun, typename... Args>
-         scoped_hash(T& hasher, const HashFun& hashfun, Args&&...  args):
-            sh(hasher.hash,hashfun,std::forward<Args>(args)...)
-         {}
-      private:
-         cheapshot::scoped_hash sh;
+         uint64_t hash;
+
+         struct scoped_hash
+         {
+         public:
+            template<typename HashFun, typename... Args>
+            scoped_hash(incremental_hash& hasher, const HashFun& hashfun, Args&&...  args):
+               hashref(hasher.hash),
+               oldhash(hashref)
+            {
+               hashref^=hashfun(std::forward<Args>(args)...);
+            }
+
+            ~scoped_hash()
+            {
+               hashref=oldhash;
+            }
+
+            scoped_hash(const scoped_hash&) = delete;
+            scoped_hash& operator=(const scoped_hash&) = delete;
+         private:
+            uint64_t& hashref;
+            uint64_t oldhash;
+         };
       };
 
       struct noop_hash
       {
          noop_hash(const board_t& board, side t, const context& ctx){}
-      };
 
-      template<>
-      struct scoped_hash<noop_hash>
-      {
-      public:
-         template<typename HashFun, typename... Args>
-         scoped_hash(noop_hash&, const HashFun& hashfun, Args&&...  args)
-         {}
+         struct scoped_hash
+         {
+            template<typename HashFun, typename... Args>
+            scoped_hash(noop_hash&, const HashFun& hashfun, Args&&...  args)
+            {}
 
-         scoped_hash(const scoped_hash&) = delete;
-         scoped_hash& operator=(const scoped_hash&) = delete;
+            scoped_hash(const scoped_hash&) = delete;
+            scoped_hash& operator=(const scoped_hash&) = delete;
+         };
       };
    }
 } // cheapshot

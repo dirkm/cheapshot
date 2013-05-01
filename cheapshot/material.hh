@@ -13,33 +13,33 @@ namespace cheapshot
             material(score::material(b))
          {}
          int material;
-      };
 
-      template<typename Controller=incremental_material>
-      struct scoped_material
-      {
-      public:
-         template<typename Op, typename... Args>
-         scoped_material(Controller& mat_cont_,const Op& op,  Args&&...  args):
-            mat_cont(mat_cont_),
-            old_material(mat_cont.material)
+         struct scoped_material
          {
-            mat_cont.material-=op(std::forward<Args>(args)...);
-         }
+         public:
+            template<typename Op, typename... Args>
+            scoped_material(incremental_material& mat_cont_,const Op& op,  Args&&...  args):
+               mat_cont(mat_cont_),
+               old_material(mat_cont.material)
+            {
+               mat_cont.material-=op(std::forward<Args>(args)...);
+            }
 
-         scoped_material(Controller& mat_cont_,side c,piece p):
-            scoped_material(mat_cont_,(int (*)(side,piece))score::weight,c,p)
-         {}
+            scoped_material(incremental_material& mat_cont_,side c,piece p):
+               scoped_material(mat_cont_,(int (*)(side,piece))score::weight,c,p)
+            {}
 
-         ~scoped_material()
-         {
-            mat_cont.material=old_material;
-         }
-         scoped_material(const scoped_material&) = delete;
-         scoped_material& operator=(const scoped_material&) = delete;
-      private:
-         Controller& mat_cont;
-         int old_material;
+            ~scoped_material()
+            {
+               mat_cont.material=old_material;
+            }
+
+            scoped_material(const scoped_material&) = delete;
+            scoped_material& operator=(const scoped_material&) = delete;
+         private:
+            incremental_material& mat_cont;
+            int old_material;
+         };
       };
 
       struct noop_material
@@ -48,20 +48,19 @@ namespace cheapshot
          {}
 
          static constexpr int material=0;
-      };
 
-      template<>
-      struct scoped_material<noop_material>
-      {
-         scoped_material(noop_material& mat_cont_, side c, piece p)
-         {}
+         struct scoped_material
+         {
+            scoped_material(noop_material& mat_cont_, side c, piece p)
+            {}
 
-         template<typename Op, typename... Args>
-         scoped_material(noop_material& mat_cont_,const Op& op,  Args&&...  args)
-         {}
+            template<typename Op, typename... Args>
+            scoped_material(noop_material& mat_cont_,const Op& op,  Args&&...  args)
+            {}
 
-         scoped_material(const scoped_material&) = delete;
-         scoped_material& operator=(const scoped_material&) = delete;
+            scoped_material(const scoped_material&) = delete;
+            scoped_material& operator=(const scoped_material&) = delete;
+         };
       };
    }
 }

@@ -12,10 +12,18 @@ namespace cheapshot
    namespace control
    {
       template<typename> struct scoped_ply_count;
-      template<typename, side> struct scoped_score;
-      template<typename> struct scoped_hash;
-      template<typename> struct scoped_material;
-      template<typename> struct cache_update;
+
+      template<typename Controller, side S>
+      using scoped_score=typename decltype(Controller::pruning)::template scoped_score<S>;
+
+      template<typename Controller>
+      using scoped_material=typename decltype(Controller::material)::scoped_material;
+
+      template<typename Controller>
+      using scoped_hash=typename decltype(Controller::hasher)::scoped_hash;
+
+      template<typename Controller>
+      using cache_update=typename decltype(Controller::cache)::cache_update;
    }
 
    typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
@@ -272,7 +280,7 @@ namespace cheapshot
       {}
    private:
       scoped_move<MoveInfo> sc_move;
-      control::scoped_hash<decltype(Controller::hasher)> sc_hash;
+      control::scoped_hash<Controller> sc_hash;
    };
 
    template<typename Controller>
@@ -291,7 +299,7 @@ namespace cheapshot
       {}
    private:
       scoped_move_hash<Controller,move_info2> sc_mvhash;
-      control::scoped_material<decltype(Controller::material)> sc_material;
+      control::scoped_material<Controller> sc_material;
    };
 
    inline int
@@ -320,7 +328,7 @@ namespace cheapshot
       {}
    private:
       control::scoped_ply_count<Controller> sc_ply;
-      control::scoped_hash<decltype(Controller::hasher)> sc_hash;
+      control::scoped_hash<Controller> sc_hash;
    };
 
    template<side, typename Controller>
@@ -338,11 +346,11 @@ namespace cheapshot
    void
    analyze_position(const context& oldctx, Controller& ec)
    {
-      auto hit_info=ec.cache.template try_cache_hit<S>(ec);
+      auto hit_info=try_cache_hit<S>(ec);
       if(hit_info.is_hit)
          return;
 
-      control::cache_update<decltype(ec.cache)> scoped_caching(ec,hit_info);
+      control::cache_update<Controller> scoped_caching(ec,hit_info);
 
       board_t& board=ec.state.board;
       board_metrics& bm=ec.state.bm;
@@ -380,7 +388,7 @@ namespace cheapshot
       typedef scoped_move_hash<Controller,move_info> scoped;
       typedef scoped_move_hash<Controller,move_info2> scoped2;
       typedef scoped_move_hash_material<Controller> scoped_material_change;
-      typedef control::scoped_hash<decltype(ec.hasher)> scoped_hash;
+      typedef control::scoped_hash<Controller> scoped_hash;
 
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
@@ -506,7 +514,7 @@ namespace cheapshot
    recurse_with_cutoff(const context& ctx, Controller& ec)
    {
       {
-         control::scoped_score<decltype(ec.pruning),S> scope(ec.pruning);
+         control::scoped_score<Controller,S> scope(ec.pruning);
          analyze_position<other_side(S)>(ctx,ec);
       }
       return ec.pruning.template cutoff<S>();

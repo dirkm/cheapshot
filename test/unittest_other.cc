@@ -11,15 +11,7 @@
 #include <map>
 
 using namespace cheapshot;
-using control::minimax;
-using control::noop_hash;
-using control::incremental_hash;
-using control::noop_material;
-using control::incremental_material;
-using control::noop_cache;
-using control::cache;
-using control::alphabeta;
-// tests not classified yet
+using namespace cheapshot::control;
 
 namespace
 {
