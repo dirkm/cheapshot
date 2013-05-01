@@ -4,4 +4,7 @@
 *.o
 *~
 *.out
+*.gcda
+*.gcno
+*.info
 readme.html

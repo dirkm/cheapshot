@@ -10,6 +10,8 @@ LDFLAGS := -Wl,--as-needed
 #CFLAGS := -g -O3 -pg -I. -std=c++0x -march=native -mtune=native
 #LDFLAGS := -pg
 
+## for coverage, add the flag --coverage to CFLAGS and LDFLAGS
+
 ## some flags for suggestions from the compiler which have proven not that useful
 #CFLAGS := -O3 -g -I. -std=c++0x -Wsuggest-attribute=const -Wsuggest-attribute=pure -march=native -mtune=native
 
