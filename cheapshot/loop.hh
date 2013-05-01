@@ -382,7 +382,7 @@ namespace cheapshot
          }
       }
 
-      if(ec.leaf_check(S,oldctx))
+      if(ec.template leaf_check<S>(oldctx))
          return;
 
       typedef scoped_move_hash<Controller,move_info> scoped;

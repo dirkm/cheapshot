@@ -49,8 +49,9 @@ namespace cheapshot
          material(board)
       {}
 
+      template<side S>
       bool
-      leaf_check(side c, const context& ctx)
+      leaf_check(const context& ctx)
       {
          // assert_valid_board(board);
          bool is_leaf_node=(ply_count==max_plies);

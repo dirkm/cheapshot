@@ -160,11 +160,11 @@ namespace cheapshot
 
    struct board_state
    {
-      board_state(board_t& board_):
-         board(board_),
-         bm(board_)
+      board_state(board_t& init_board):
+         board(init_board),
+         bm(init_board)
       {}
-      board_t& board;
+      board_t board;
       board_metrics bm;
    };
 

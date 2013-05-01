@@ -47,10 +47,11 @@ namespace
             );
       }
 
+      template<side S>
       bool
-      leaf_check(side c, const context& ctx)
+      leaf_check(const context& ctx)
       {
-         if(parent::leaf_check(c,ctx))
+         if(parent::template leaf_check<S>(ctx))
             return true;
          std::size_t idx=this->ply_count;
          if(boards[idx]!=this->state.board)
@@ -79,12 +80,13 @@ namespace
          fun(fun_)
       {}
 
+      template<side S>
       bool
-      leaf_check(side c, const context& ctx)
+      leaf_check(const context& ctx)
       {
-         if(parent::leaf_check(c,ctx))
+         if(parent::template leaf_check<S>(ctx))
             return true;
-         fun(this->state.board,c,ctx);
+         fun(this->state.board,S,ctx);
          return false;
       }
    private:
@@ -289,7 +291,7 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
    {
       state_holder h(b);
       scoped_move<move_info2> scope(h,basic_capture_info<side::white>(b,moved_piece,origin,dest));
-      BOOST_CHECK_EQUAL(b,scan_board(
+      BOOST_CHECK_EQUAL(h.state.board,scan_board(
                            "........\n"
                            "........\n"
                            "........\n"
@@ -339,7 +341,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
       state_holder h(b);
       scoped_move<move_info2> scope(h,castle_info<side::white>(sci));
       boost::test_tools::output_test_stream ots;
-      print_board(b,ots);
+      print_board(h.state.board,ots);
       BOOST_CHECK(ots.is_equal(
                      "....k...\n"
                      "........\n"
@@ -451,7 +453,7 @@ BOOST_AUTO_TEST_CASE(castle_test)
       state_holder h(b);
       scoped_move<move_info2> scope(h,castle_info<side::white>(lci));
       boost::test_tools::output_test_stream ots;
-      print_board(b,ots);
+      print_board(h.state.board,ots);
       BOOST_CHECK(ots.is_equal(
                      "....k...\n"
                      "........\n"
@@ -1283,12 +1285,13 @@ namespace
    {
       using move_checker<incremental_hash>::move_checker;
 
+      template<side S>
       bool
-      leaf_check(side c, const context& ctx)
+      leaf_check(const context& ctx)
       {
-         uint64_t complete_hash=hhash(this->state.board,c,ctx);
+         uint64_t complete_hash=hhash(this->state.board,S,ctx);
          BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
-         return move_checker::leaf_check(c,ctx);
+         return move_checker::template leaf_check<S>(ctx);
       }
    };
 
@@ -1350,12 +1353,13 @@ namespace
    {
       using move_checker<noop_hash,incremental_material>::move_checker;
 
+      template<side S>
       bool
-      leaf_check(side c, const context& ctx)
+      leaf_check(const context& ctx)
       {
          int complete_material=score::material(state.board);
          BOOST_CHECK_EQUAL(material.material,complete_material);
-         return move_checker::leaf_check(c,ctx);
+         return move_checker::template leaf_check<S>(ctx);
       }
    };
 }
