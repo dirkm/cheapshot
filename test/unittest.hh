@@ -64,7 +64,6 @@ namespace cheapshot
       1 // fullmove number
    };
 
-
 // TODO: constexpr
    inline long
    runtime_adjusted_ops(long ops, long divisor=4, long multiplier=1)

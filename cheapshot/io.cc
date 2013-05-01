@@ -969,10 +969,10 @@ namespace cheapshot
             if(is.bad())
                throw io_error("io error when reading file");
             if(r)
-            {
                ++number;
-               resetline();
-            }
+            else
+               line.clear();
+            resetline();
             return r;
          }
 
