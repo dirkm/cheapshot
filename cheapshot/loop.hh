@@ -14,7 +14,7 @@ namespace cheapshot
       template<typename> struct scoped_ply_count;
 
       template<typename Controller, side S>
-      using scoped_score=typename decltype(Controller::pruning)::template scoped_score<S>;
+      using scoped_prune=typename decltype(Controller::pruning)::template scoped_prune<S>;
 
       template<typename Controller>
       using scoped_material=typename decltype(Controller::material)::scoped_material;
@@ -514,10 +514,10 @@ namespace cheapshot
    recurse_with_cutoff(const context& ctx, Controller& ec)
    {
       {
-         control::scoped_score<Controller,S> scope(ec.pruning);
+         control::scoped_prune<Controller,S> scope(ec.pruning);
          analyze_position<other_side(S)>(ctx,ec);
       }
-      return ec.pruning.template cutoff<S>();
+      return prune_cutoff<S>(ec);
    }
 
    template<typename Controller>

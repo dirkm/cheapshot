@@ -22,22 +22,22 @@ namespace cheapshot
          minimax& operator=(const minimax&) = delete;
 
          template<side S>
-         struct scoped_score
+         struct scoped_prune
          {
-            scoped_score(minimax& m_):
+            scoped_prune(minimax& m_):
                m(m_),
                old_score(m.score)
             {
                m.score=score::no_valid_move(other_side(S));
             }
 
-            ~scoped_score()
+            ~scoped_prune()
             {
                m.score=score::best<S>(old_score,m.score);
             }
 
-            scoped_score(const scoped_score&) = delete;
-            scoped_score& operator=(const scoped_score&) = delete;
+            scoped_prune(const scoped_prune&) = delete;
+            scoped_prune& operator=(const scoped_prune&) = delete;
          private:
             minimax& m;
             int old_score;
@@ -71,10 +71,10 @@ namespace cheapshot
          alphabeta& operator=(const alphabeta&) = delete;
 
          template<side S>
-         class scoped_score
+         class scoped_prune
          {
          public:
-            scoped_score(alphabeta& m_):
+            scoped_prune(alphabeta& m_):
                m(m_),
                old_treshold(m.template treshold<S>()),
                old_score(m.score),
@@ -83,15 +83,15 @@ namespace cheapshot
                m.score=score::no_valid_move(other_side(S));
             }
 
-            ~scoped_score()
+            ~scoped_prune()
             {
                m.score=score::best<S>(old_score,m.score);
                m.template treshold<S>()=score::best<S>(old_treshold,m.score);
                m.template treshold<other_side(S)>()=old_treshold_other;
             }
 
-            scoped_score(const scoped_score&) = delete;
-            scoped_score& operator=(const scoped_score&) = delete;
+            scoped_prune(const scoped_prune&) = delete;
+            scoped_prune& operator=(const scoped_prune&) = delete;
          private:
 
             alphabeta& m;
@@ -117,6 +117,13 @@ namespace cheapshot
       inline int&
       alphabeta::treshold<side::black>() { return beta; }
    }
+
+   template<side S, typename Controller>
+   bool prune_cutoff(Controller& ec)
+   {
+      return ec.pruning.template cutoff<S>();
+   }
+
 }
 
 #endif
