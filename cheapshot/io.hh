@@ -60,11 +60,11 @@ namespace cheapshot
    }
 
    // classic fen only
-   extern std::tuple<board_t,side,context>
+   extern std::tuple<board_t,context>
    scan_fen(const char* s);
 
    extern void
-   print_fen(const board_t& board, side c, const context& ctx, std::ostream& os);
+   print_fen(const board_t& board, const context& ctx, std::ostream& os);
 
    struct format
    {
@@ -81,18 +81,18 @@ namespace cheapshot
    enum class game_status { normal, check, checkmate};
 
    extern void
-   make_input_move(board_t& board, side c, context& ctx, const char* s, format fmt);
-   using on_position_t=const std::function<void (board_t& board, side c, context& ctx)>;
-   const auto null_pos=[](board_t& board, side c, context& ctx){};
+   make_input_move(board_t& board, context& ctx, const char* s, format fmt);
+   using on_position_t=const std::function<void (board_t& board, context& ctx)>;
+   const auto null_pos=[](board_t& board, context& ctx){};
 
    extern void
-   make_input_moves(board_t& board, side c, context& ctx,
+   make_input_moves(board_t& board, context& ctx,
                     const std::vector<const char*>& input_moves, format fmt,
                     const on_position_t& on_each_position=null_pos);
 
    using pgn_attributes=std::vector<std::pair<std::string,std::string> >;
 
-   using on_consume_move_t=std::function<void (const char*& s,side c)>;
+   using on_consume_move_t=std::function<void (const char*& s, context& ctx)>;
    extern const on_consume_move_t naive_consume_move; // simple scan without validity check
 
    using on_attribute_t=std::function<void (const std::string& attrname, const std::string& attrval)>;
@@ -109,7 +109,7 @@ namespace cheapshot
       inline void
       parse_pgn_moves(std::istream& is,const on_consume_move_t& on_consume_move)
       {
-         context ctx=start_context;
+         context ctx(start_context);
          parse_pgn_moves(is, ctx, on_consume_move);
       }
 

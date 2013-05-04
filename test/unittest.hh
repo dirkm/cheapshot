@@ -59,9 +59,21 @@ namespace cheapshot
        cheapshot::long_castling<cheapshot::side::white>().mask()|
        cheapshot::short_castling<cheapshot::side::black>().mask()|
        cheapshot::long_castling<cheapshot::side::black>().mask()),
-      // 0_U64, /*castling_rights*/
-      1, // halfmove clock
-      1 // fullmove number
+      /*castling_rights*/
+      0, // halfmove_ply
+      0 // halfmove clock
+   };
+
+   constexpr cheapshot::context no_castle_context_black=
+   {
+      0_U64, /*ep_info*/
+      (cheapshot::short_castling<cheapshot::side::white>().mask()|
+       cheapshot::long_castling<cheapshot::side::white>().mask()|
+       cheapshot::short_castling<cheapshot::side::black>().mask()|
+       cheapshot::long_castling<cheapshot::side::black>().mask()),
+      /*castling_rights*/
+      1, // halfmove_ply
+      0 // halfmove clock
    };
 
 // TODO: constexpr

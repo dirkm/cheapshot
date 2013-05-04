@@ -382,7 +382,7 @@ namespace cheapshot
          }
       }
 
-      if(ec.template leaf_check<S>(oldctx))
+      if(ec.leaf_check(oldctx))
          return;
 
       typedef scoped_move_hash<Controller,move_info> scoped;
@@ -393,6 +393,7 @@ namespace cheapshot
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
       context ctx=oldctx;
+      ++ctx.halfmove_ply; // TODO: fix
       ctx.ep_info=0_U64;
       scoped_hash scoped_reset_ep(ec,hhash_ep_change0,oldctx.ep_info);
 
@@ -522,9 +523,9 @@ namespace cheapshot
 
    template<typename Controller>
    inline int
-   score_position(side turn, const context& ctx, Controller& ec)
+   score_position(const context& ctx, Controller& ec)
    {
-      switch(turn)
+      switch(ctx.get_side())
       {
          case side::white:
             analyze_position<side::white>(ctx,ec);

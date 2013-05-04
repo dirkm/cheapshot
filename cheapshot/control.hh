@@ -40,16 +40,15 @@ namespace cheapshot
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(board_t& board, side c, const context& ctx, int max_plies_):
+      explicit constexpr max_ply_cutoff(board_t& board, const context& ctx, int max_plies_):
          state(board),
          ply_count(0),
          max_plies(max_plies_),
-         pruning(c),
-         hasher(board,c,ctx),
+         pruning(ctx.get_side()),
+         hasher(board,ctx.get_side(),ctx),
          material(board)
       {}
 
-      template<side S>
       bool
       leaf_check(const context& ctx)
       {

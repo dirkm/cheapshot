@@ -29,7 +29,6 @@ pppppppp
 ........
 PPPPPPPP
 RNBQKBNR
-side: w
 en passant info:
 ........
 ........
@@ -50,6 +49,7 @@ castling rights:
 ........
 halfmove clock: 0
 fullmove number: 1
+side: w
 EOF
 )
 

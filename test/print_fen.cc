@@ -9,8 +9,13 @@ print_context(const cheapshot::context& ctx,std::ostream& os)
    cheapshot::print_position(ctx.ep_info,std::cout);
    std::cout << "castling rights:\n";
    cheapshot::print_position(ctx.castling_rights,std::cout);
-   std::cout << "halfmove clock: " << ctx.halfmove_clock << "\n"
-      "fullmove number: " << ctx.fullmove_number << "\n";
+   int fullmove_number;
+   cheapshot::side c;
+   std::tie(fullmove_number,c)=ctx.get_fullmove_number();
+   std::cout <<
+      "halfmove clock: " << ctx.halfmove_clock << "\n"
+      "fullmove number: " << fullmove_number << "\n"
+      "side: " << to_char(c);
 }
 
 int
@@ -27,12 +32,10 @@ main(int argc, const char* argv[])
    try
    {
       cheapshot::board_t b;
-      cheapshot::side c;
       cheapshot::context ctx;
-      std::tie(b,c,ctx)=cheapshot::scan_fen(argv[1]);
+      std::tie(b,ctx)=cheapshot::scan_fen(argv[1]);
       std::cout << "board:\n";
       cheapshot::print_board(b,std::cout);
-      std::cout << "side: " << to_char(c) << "\n";
       print_context(ctx,std::cout);
       return 0;
    }

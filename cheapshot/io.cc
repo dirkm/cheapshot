@@ -465,7 +465,7 @@ namespace cheapshot
 
    // start position
    // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-   extern std::tuple<board_t,side,context>
+   extern std::tuple<board_t,context>
    scan_fen(const char* s)
    {
       board_t b=fen::scan_position(s);
@@ -479,15 +479,18 @@ namespace cheapshot
       skip_whitespace(s);
       ctx.halfmove_clock=scan_number(s);
       skip_whitespace(s);
-      ctx.fullmove_number=scan_number(s);
-      return std::make_tuple(b,c,ctx);
+      ctx.set_fullmove(scan_number(s),c);
+      return std::make_tuple(b,ctx);
    }
 
    extern void
-   print_fen(const board_t& board, side c, const context& ctx, std::ostream& os)
+   print_fen(const board_t& board, const context& ctx, std::ostream& os)
    {
       fen::print_position(board,os);
       os << " ";
+      int fullmove_number;
+      side c;
+      std::tie(fullmove_number,c)=ctx.get_fullmove_number();
       fen::print_color(c,os);
       os << " ";
       fen::print_castling_rights(ctx.castling_rights,os);
@@ -496,7 +499,7 @@ namespace cheapshot
       os << " ";
       fen::print_number(ctx.halfmove_clock,os);
       os << " ";
-      fen::print_number(ctx.fullmove_number,os);
+      fen::print_number(fullmove_number,os);
    }
 
    namespace
@@ -720,7 +723,7 @@ namespace cheapshot
          if(checkflag_set||check_analyzed)
          {
             max_ply_cutoff<control::minimax,control::noop_hash,
-                           control::noop_material,control::noop_cache> ec(board,other_side(S),ctx,1);
+                           control::noop_material,control::noop_cache> ec(board,ctx,1);
             analyze_position<other_side(S)>(ctx,ec);
             checkmate_analyzed=(ec.pruning.score==score::checkmate(S));
          }
@@ -821,12 +824,12 @@ namespace cheapshot
          ctx.castling_rights|=castling_block_mask<S>(
             get_side<S>(board)[idx(piece::rook)],
             get_side<S>(board)[idx(piece::king)]);
-
+         ++ctx.halfmove_ply;
          check_game_state<S>(board,bm,ctx,im);
       }
 
       void
-      consume_input_move(board_t& board, side c, context& ctx, const char*& s, format fmt)
+      consume_input_move(board_t& board, context& ctx, const char*& s, format fmt)
       {
          const char* sstart=s;
          try
@@ -835,15 +838,10 @@ namespace cheapshot
             if(fmt.ep_fmt==format::ep::implicit)
                detect_ep_capture(im,ctx);
 
-            switch(c)
-            {
-               case side::white:
-                  make_move<side::white>(board, ctx, im);
-                  return;
-               case side::black:
-                  make_move<side::black>(board, ctx, im);
-                  return;
-            }
+            if(ctx.get_side()==side::white)
+               make_move<side::white>(board, ctx, im);
+            else
+               make_move<side::black>(board, ctx, im);
          }
          catch(const io_error& io)
          {
@@ -856,23 +854,22 @@ namespace cheapshot
    }
 
    extern void
-   make_input_move(board_t& board, side c, context& ctx, const char* s, format fmt)
+   make_input_move(board_t& board, context& ctx, const char* s, format fmt)
    {
-      consume_input_move(board,c,ctx,s,fmt);
+      consume_input_move(board,ctx,s,fmt);
    }
 
    extern void
-   make_input_moves(board_t& board, side c, context& ctx,
+   make_input_moves(board_t& board, context& ctx,
                     const std::vector<const char*>& input_moves, format fmt,
-                    const std::function<void (board_t& board, side c, context& ctx)>& on_each_position)
+                    const on_position_t& on_each_position)
    {
       for(const char* input_move: input_moves)
       {
-         on_each_position(board,c,ctx);
-         make_input_move(board,c,ctx,input_move,fmt);
-         c=other_side(c);
+         on_each_position(board,ctx);
+         make_input_move(board,ctx,input_move,fmt);
       }
-      on_each_position(board,c,ctx);
+      on_each_position(board,ctx);
    }
 
    namespace
@@ -1087,25 +1084,22 @@ namespace cheapshot
             skip_move_separator(ls);
             if(parse_result(ls.remaining,result))
                return;
+            int fullmove_number;
+            side c;
+            std::tie(fullmove_number,c)=ctx.get_fullmove_number();
             if((c==side::white) || std::isdigit(*ls.remaining))
             {
-               if(!skip_move_number(ls.remaining,ctx.fullmove_number))
+               if(!skip_move_number(ls.remaining,fullmove_number))
                   throw io_error("could not interpret parameter as move number nor as game-result");
                if((c==side::black) && (!skip_string(ls.remaining,"..")))
                   throw io_error("expected '..' after move number for a move from black");
                skip_move_separator(ls);
             }
-            on_consume_move(ls.remaining,c);
+            on_consume_move(ls.remaining,ctx);
             skip_move_separator(ls);
             skip_nag(ls.remaining); // TODO: seems to be extension
-
-            if(c==side::black)
-               ++ctx.fullmove_number;
-            ++ctx.halfmove_clock;
-            c=other_side(c);
          }
       public:
-         side c=side::white;
          pgn::game_result result=pgn::game_result::no_result;
          line_scanner& ls;
          context& ctx;
@@ -1143,13 +1137,14 @@ namespace cheapshot
       }
    }
 
-   const on_consume_move_t naive_consume_move=[](const char*& s,side c)
+   const on_consume_move_t naive_consume_move=[](const char*& s, context& ctx)
    {
       const char* sstart=s;
       while(std::isgraph(*s))
          ++s;
       if(s==sstart)
          throw io_error("moves cannot be empty");
+      ++ctx.halfmove_ply;
    };
 
    extern void
@@ -1167,13 +1162,13 @@ namespace cheapshot
    {
       line_scanner ls(is);
       board_t board=initial_board();
-      context ctx=start_context;
-      auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
+      auto on_consume_move=[&board,&on_each_position](const char*& s, context& ctx)
          {
-            consume_input_move(board,c,ctx,s,pgn_format);
-            on_each_position(board,c,ctx);
+            consume_input_move(board,ctx,s,pgn_format);
+            on_each_position(board,ctx);
          };
-      on_each_position(board,side::white,ctx);
+      context ctx=start_context;
+      on_each_position(board,ctx);
       pgn::pgn_move_state move_state(ls,ctx);
       parse_pgn(move_state,null_attr,on_consume_move);
    }
@@ -1187,13 +1182,13 @@ namespace cheapshot
       {
          on_game();
          board_t board=initial_board();
-         context ctx=start_context;
-         auto on_consume_move=[&board,&ctx,&on_each_position](const char*& s, side c)
+         auto on_consume_move=[&board,&on_each_position](const char*& s, context& ctx)
             {
-               consume_input_move(board,c,ctx,s,pgn_format);
-               on_each_position(board,c,ctx);
+               consume_input_move(board,ctx,s,pgn_format);
+               on_each_position(board,ctx);
             };
-         on_each_position(board,side::white,ctx);
+         context ctx=start_context;
+         on_each_position(board,ctx);
          pgn::pgn_move_state move_state(ls,ctx);
          parse_pgn(move_state,null_attr,on_consume_move);
          skip_move_separator(ls);

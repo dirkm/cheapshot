@@ -27,8 +27,10 @@ main(int argc, const char* argv[])
       auto on_game=[&games]() { ++games; };
 
       int positions=0;
-      auto on_pos=[&positions](cheapshot::board_t& board, cheapshot::side c,
-                               cheapshot::context& ctx) { ++positions; };
+      auto on_pos=[&positions](cheapshot::board_t& board, cheapshot::context& ctx)
+         {
+            ++positions;
+         };
 
       if(argc==2)
       {

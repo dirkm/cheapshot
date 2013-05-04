@@ -72,17 +72,19 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
       static const char initial_pos[]=
          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
       board_t b;
-      side turn;
       context ctx;
-      std::tie(b,turn,ctx)=scan_fen(initial_pos);
+      std::tie(b,ctx)=scan_fen(initial_pos);
+      int fullmove_number;
+      side turn;
+      std::tie(fullmove_number,turn)=ctx.get_fullmove_number();
       BOOST_CHECK_EQUAL(b,initial_board());
+      BOOST_CHECK_EQUAL(fullmove_number,1);
       BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0_U64);
       BOOST_CHECK_EQUAL(ctx.castling_rights,0_U64);
-      std::tie(b,turn,ctx)=scan_fen(initial_pos);
 
       boost::test_tools::output_test_stream ots;
-      print_fen(b,turn,ctx,ots);
+      print_fen(b,ctx,ots);
       BOOST_CHECK(ots.is_equal(initial_pos));
    }
    {
@@ -90,9 +92,11 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
       static const char initial_pos[]=
          "r1b2rk1/pp1p1pp1/1b1p2B1/n1qQ2p1/8/5N2/P3RPPP/4R1K1 w - - 0 1";
       board_t b;
-      side turn;
       context ctx;
-      std::tie(b,turn,ctx)=scan_fen(initial_pos);
+      std::tie(b,ctx)=scan_fen(initial_pos);
+      int fullmove_number;
+      side turn;
+      std::tie(fullmove_number,turn)=ctx.get_fullmove_number();
       BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,0_U64);
       BOOST_CHECK_EQUAL(ctx.castling_rights,
@@ -108,7 +112,7 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
                            ,'B'));
 
       boost::test_tools::output_test_stream ots;
-      print_fen(b,turn,ctx,ots);
+      print_fen(b,ctx,ots);
       BOOST_CHECK(ots.is_equal(initial_pos));
    }
    {
@@ -116,9 +120,11 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
       static constexpr char ep_pos[]=
          "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
       board_t b;
-      side turn;
       context ctx;
-      std::tie(b,turn,ctx)=scan_fen(ep_pos);
+      std::tie(b,ctx)=scan_fen(ep_pos);
+      int fullmove_number;
+      side turn;
+      std::tie(fullmove_number,turn)=ctx.get_fullmove_number();
       BOOST_CHECK_EQUAL(turn,side::white);
       BOOST_CHECK_EQUAL(ctx.ep_info,scan_canvas(
                            "........\n"
@@ -132,7 +138,7 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
                            ,'P'));
 
       boost::test_tools::output_test_stream ots;
-      print_fen(b,turn,ctx,ots);
+      print_fen(b,ctx,ots);
       BOOST_CHECK(ots.is_equal(ep_pos));
    }
    {
@@ -171,7 +177,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             ".....N..\n"
             "PPPP.PPP\n"
             "RNBQ.RK.\n";
-            make_input_moves(b,side::white,ctx,moves,fmt);
+            make_input_moves(b,ctx,moves,fmt);
             boost::test_tools::output_test_stream ots;
             print_board(b,ots);
             BOOST_CHECK(ots.is_equal(expected));
@@ -186,7 +192,8 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          {
             board_t b=en_passant_initial_board;
             context ctx=start_context;
-            make_input_moves(b,side::black,ctx,moves,fmt);
+            ctx.set_fullmove(1,side::black);
+            make_input_moves(b,ctx,moves,fmt);
             BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
          };
       mytest({"d7-d5","e5xd6ep"},long_algebraic);
@@ -207,7 +214,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          {
             board_t b2=b;
             context ctx=start_context;
-            make_input_move(b2,side::white,ctx,move,fmt);
+            make_input_move(b2,ctx,move,fmt);
          };
       mytest("b7-b8=Q",long_algebraic);
       mytest("b7xc8=Q+",long_algebraic);
@@ -232,7 +239,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          {
             board_t b=simple_mate;
             context ctx=no_castle_context;
-            make_input_move(b,side::white,ctx,move,fmt);
+            make_input_move(b,ctx,move,fmt);
             BOOST_CHECK_EQUAL(b,scan_board(
                                  "....k..R\n"
                                  "........\n"
@@ -252,7 +259,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             board_t b=initial_board();
             context ctx=start_context;
             BOOST_CHECK_EXCEPTION(
-               make_input_move(b,side::white,ctx,move,fmt),
+               make_input_move(b,ctx,move,fmt),
                cheapshot::io_error,
                check_io_message(msg));
          };
@@ -282,9 +289,9 @@ BOOST_AUTO_TEST_CASE(input_move_test)
    {
       board_t b=initial_board();
       context ctx=start_context;
-      make_input_moves(b,side::white,ctx,{"e2-e4","d7-d5"},long_algebraic);
+      make_input_moves(b,ctx,{"e2-e4","d7-d5"},long_algebraic);
       BOOST_CHECK_EXCEPTION(
-         make_input_move(b,side::white,ctx,"e4-d5",long_algebraic),
+         make_input_move(b,ctx,"e4-d5",long_algebraic),
          cheapshot::io_error,
          check_io_message("indication with 'x'"));
    }
@@ -294,7 +301,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             board_t b=simple_mate;
             context ctx=no_castle_context;
             BOOST_CHECK_EXCEPTION(
-               make_input_move(b,side::white,ctx,move,fmt),
+               make_input_move(b,ctx,move,fmt),
                cheapshot::io_error,
                check_io_message(msg));
          };
@@ -455,7 +462,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       BOOST_CHECK(pgn::parse_pgn_attribute("",noattr));
    }
    {
-      auto nomove=[](const char*& s, side c)
+      auto nomove=[](const char*& s, context& ctx)
          {
             BOOST_FAIL("should not be called");
          };
@@ -472,14 +479,15 @@ BOOST_AUTO_TEST_CASE(pgn_test)
       auto test_pgn_moves=[](const char* s)
          {
             auto it=std::begin(expected_moves);
-            auto check_moves=[&it](const char*& s, side c)
+            auto check_moves=[&it](const char*& s, context& ctx)
             {
-               BOOST_CHECK_EQUAL(it->c,c);
+               BOOST_CHECK_EQUAL(it->c,ctx.get_side());
                int n=std::strlen(it->s);
                int r=std::strncmp(it->s,s,n);
                BOOST_CHECK_EQUAL(r,0);
                s+=n;
                ++it;
+               ++ctx.halfmove_ply;
             };
 
             std::istringstream test_stream(s);
@@ -535,7 +543,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
          }
       }
    }
-   auto on_pos=[](board_t& board, side c, context& ctx){};
+   auto on_pos=[](board_t& board, context& ctx){};
    {
       std::istringstream test_stream(pgn2);
       make_pgn_moves(test_stream,on_pos);
@@ -548,23 +556,21 @@ BOOST_AUTO_TEST_CASE(pgn_test)
 
 BOOST_AUTO_TEST_CASE(pgn_time_test)
 {
-   TimeOperation time_op;
    const long ops=runtime_adjusted_ops(7500);
-   auto on_pos=[](board_t& board, side c, context& ctx){};
+   auto on_pos=[](board_t& board, context& ctx){};
+   std::istringstream test_stream1(pgn1);
+   std::istringstream test_stream2(pgn2);
+   std::istringstream test_stream3(pgn3);
+   TimeOperation time_op;
+
    for(long i=0;i<ops/3;++i)
    {
-      {
-         std::istringstream test_stream(pgn1);
-         make_pgn_moves(test_stream,on_pos);
-      }
-      {
-         std::istringstream test_stream(pgn2);
-         make_pgn_moves(test_stream,on_pos);
-      }
-      {
-         std::istringstream test_stream(pgn3);
-         make_pgn_moves(test_stream,on_pos);
-      }
+      test_stream1.seekg(std::ios_base::beg);
+      test_stream2.seekg(std::ios_base::beg);
+      test_stream3.seekg(std::ios_base::beg);
+      make_pgn_moves(test_stream1,on_pos);
+      make_pgn_moves(test_stream2,on_pos);
+      make_pgn_moves(test_stream3,on_pos);
    }
    time_op.time_report("parse pgn games",ops);
 }

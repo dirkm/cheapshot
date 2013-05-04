@@ -22,16 +22,15 @@ main(int argc, const char* argv[])
    try
    {
       cheapshot::board_t b;
-      cheapshot::side c;
       cheapshot::context ctx;
-      std::tie(b,c,ctx)=cheapshot::scan_fen(argv[2]);
+      std::tie(b,ctx)=cheapshot::scan_fen(argv[2]);
 
       int nrplies=std::atoi(argv[1]);
       ++nrplies; // checkmated-position is checked as well, to determine mate/stalemate.
       namespace ct=cheapshot::control;
       cheapshot::max_ply_cutoff<ct::minimax,ct::noop_hash,
-                                ct::noop_material,ct::noop_cache> cutoff(b,c,ctx,nrplies);
-      int s=cheapshot::score_position(c,ctx,cutoff);
+                                ct::noop_material,ct::noop_cache> cutoff(b,ctx,nrplies);
+      int s=cheapshot::score_position(ctx,cutoff);
       std::cout <<
          ((s==cheapshot::score::checkmate(cheapshot::side::white))?"true/w":
           (s==cheapshot::score::checkmate(cheapshot::side::black))?"true/b":"false")
