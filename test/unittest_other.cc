@@ -52,7 +52,7 @@ namespace
       {
          if(parent::leaf_check(ctx))
             return true;
-         std::size_t idx=this->ply_count;
+         std::size_t idx=boards.size()-(this->max_plies-ctx.halfmove_count);
          if(boards[idx]!=this->state.board)
          {
             this->pruning.score=0;
@@ -1199,7 +1199,7 @@ namespace
          {
             side t=ctx.get_side();
             ++nodes;
-            uint64_t hash=hhash(board,t,ctx);
+            uint64_t hash=hhash(board,ctx);
             auto state=std::make_tuple(board,t,ctx.ep_info,ctx.castling_rights);
             auto lb = r.lower_bound(hash);
             if(lb!=end(r))
@@ -1244,7 +1244,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       do_until_ply_cutoff<minimax,incremental_hash> cutoff(b,start_context,4,f);
       TimeOperation time_op;
       analyze_position<side::white>(start_context,cutoff);
-      uint64_t initial_hash=hhash(b,side::white,start_context);
+      uint64_t initial_hash=hhash(b,start_context);
       BOOST_CHECK_EQUAL(cutoff.hasher.hash,initial_hash);
       time_op.time_report("incremental hash nodes test",nodes);
    }
@@ -1280,7 +1280,7 @@ namespace
       bool
       leaf_check(const context& ctx)
       {
-         uint64_t complete_hash=hhash(this->state.board,ctx.get_side(),ctx);
+         uint64_t complete_hash=hhash(this->state.board,ctx);
          BOOST_CHECK_EQUAL(hasher.hash,complete_hash);
          return move_checker::leaf_check(ctx);
       }

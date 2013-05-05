@@ -31,6 +31,11 @@ namespace cheapshot
                m.score=score::no_valid_move(other_side(S));
             }
 
+            template<typename Controller>
+            scoped_prune(Controller& ec):
+               scoped_prune(ec.pruning)
+            {}
+
             ~scoped_prune()
             {
                m.score=score::best<S>(old_score,m.score);
@@ -82,6 +87,11 @@ namespace cheapshot
             {
                m.score=score::no_valid_move(other_side(S));
             }
+
+            template<typename Controller>
+            scoped_prune(Controller& ec):
+               scoped_prune(ec.pruning)
+            {}
 
             ~scoped_prune()
             {

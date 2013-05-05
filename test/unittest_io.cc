@@ -487,7 +487,7 @@ BOOST_AUTO_TEST_CASE(pgn_test)
                BOOST_CHECK_EQUAL(r,0);
                s+=n;
                ++it;
-               ++ctx.halfmove_ply;
+               ++ctx.halfmove_count;
             };
 
             std::istringstream test_stream(s);

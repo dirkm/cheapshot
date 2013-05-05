@@ -824,7 +824,7 @@ namespace cheapshot
          ctx.castling_rights|=castling_block_mask<S>(
             get_side<S>(board)[idx(piece::rook)],
             get_side<S>(board)[idx(piece::king)]);
-         ++ctx.halfmove_ply;
+         ++ctx.halfmove_count;
          check_game_state<S>(board,bm,ctx,im);
       }
 
@@ -1144,7 +1144,7 @@ namespace cheapshot
          ++s;
       if(s==sstart)
          throw io_error("moves cannot be empty");
-      ++ctx.halfmove_ply;
+      ++ctx.halfmove_count;
    };
 
    extern void

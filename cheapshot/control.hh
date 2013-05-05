@@ -9,43 +9,16 @@
 
 namespace cheapshot
 {
-   namespace control
-   {
-      // TODO: ply count should be stored in context
-      //   scoped_ply_count has to be dropped and replaced
-      template<typename C>
-      class scoped_ply_count
-      {
-      public:
-         explicit scoped_ply_count(C& ec_):
-            ec(ec_)
-         {
-            ++ec.ply_count;
-         }
-
-         ~scoped_ply_count()
-         {
-            --ec.ply_count;
-         }
-
-         scoped_ply_count(const scoped_ply_count&) = delete;
-         scoped_ply_count& operator=(const scoped_ply_count&) = delete;
-      private:
-         C& ec;
-      };
-   }
-
 // different controls, to be combined in analyze_position
    template<typename Pruning, typename HashController, typename MaterialController, typename Cache>
    class max_ply_cutoff
    {
    public:
-      explicit constexpr max_ply_cutoff(board_t& board, const context& ctx, int max_plies_):
+      explicit constexpr max_ply_cutoff(board_t& board, const context& initctx, int depth):
          state(board),
-         ply_count(0),
-         max_plies(max_plies_),
-         pruning(ctx.get_side()),
-         hasher(board,ctx.get_side(),ctx),
+         max_plies(initctx.halfmove_count+depth),
+         pruning(initctx.get_side()),
+         hasher(board,initctx),
          material(board)
       {}
 
@@ -53,7 +26,7 @@ namespace cheapshot
       leaf_check(const context& ctx)
       {
          // assert_valid_board(board);
-         bool is_leaf_node=(ply_count==max_plies);
+         bool is_leaf_node=(ctx.halfmove_count==max_plies);
          if(is_leaf_node)
          {
             // pruning.score=control::score_material(board);
@@ -63,8 +36,6 @@ namespace cheapshot
       }
 
       board_state state;
-
-      int ply_count;
       const int max_plies;
 
       Pruning pruning;

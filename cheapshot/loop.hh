@@ -322,12 +322,12 @@ namespace cheapshot
    class scoped_make_turn
    {
    public:
-      explicit scoped_make_turn(Controller& ec):
-         sc_ply(ec),
+      explicit scoped_make_turn(Controller& ec, context& ctx):
          sc_hash(ec,hhash_make_turn)
-      {}
+      {
+         ++ctx.halfmove_count;
+      }
    private:
-      control::scoped_ply_count<Controller> sc_ply;
       control::scoped_hash<Controller> sc_hash;
    };
 
@@ -346,11 +346,11 @@ namespace cheapshot
    void
    analyze_position(const context& oldctx, Controller& ec)
    {
-      auto hit_info=try_cache_hit<S>(ec);
+      auto hit_info=try_cache_hit<S>(ec,oldctx);
       if(hit_info.is_hit)
          return;
 
-      control::cache_update<Controller> scoped_caching(ec,hit_info);
+      control::cache_update<Controller> scoped_caching(ec,oldctx,hit_info);
 
       board_t& board=ec.state.board;
       board_metrics& bm=ec.state.bm;
@@ -393,11 +393,10 @@ namespace cheapshot
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
       context ctx=oldctx;
-      ++ctx.halfmove_ply; // TODO: fix
       ctx.ep_info=0_U64;
       scoped_hash scoped_reset_ep(ec,hhash_ep_change0,oldctx.ep_info);
 
-      scoped_make_turn<Controller> scoped_turn(ec);
+      scoped_make_turn<Controller> scoped_turn(ec,ctx);
 
       // en passant captures
       for(auto origin_iter=bit_iterator(
@@ -515,7 +514,7 @@ namespace cheapshot
    recurse_with_cutoff(const context& ctx, Controller& ec)
    {
       {
-         control::scoped_prune<Controller,S> scope(ec.pruning);
+         control::scoped_prune<Controller,S> scope(ec);
          analyze_position<other_side(S)>(ctx,ec);
       }
       return prune_cutoff<S>(ec);

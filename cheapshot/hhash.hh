@@ -127,15 +127,15 @@ namespace cheapshot
    {
       return
          hhash_ep(ctx.ep_info)^
-         hhash_castling(ctx.castling_rights);
+         hhash_castling(ctx.castling_rights)^
+         hhash_turn(ctx.get_side());
    }
 
    inline uint64_t
-   hhash(const board_t& board, side t, const context& ctx)
+   hhash(const board_t& board, const context& ctx)
    {
       return
          hhash(board)^
-         hhash_turn(t)^
          hhash_context(ctx);
    }
 
@@ -143,8 +143,8 @@ namespace cheapshot
    {
       struct incremental_hash
       {
-         incremental_hash(const board_t& board, side t, const context& ctx):
-            hash(hhash(board,t,ctx))
+         incremental_hash(const board_t& board, const context& ctx):
+            hash(hhash(board,ctx))
          {}
 
          uint64_t hash;
@@ -175,7 +175,7 @@ namespace cheapshot
 
       struct noop_hash
       {
-         noop_hash(const board_t& board, side t, const context& ctx){}
+         noop_hash(const board_t& board, const context& ctx){}
 
          struct scoped_hash
          {

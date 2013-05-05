@@ -50,25 +50,25 @@ namespace cheapshot
       // side turn;
       uint64_t ep_info; // en passant
       uint64_t castling_rights; // white and black together
-      int halfmove_ply;
+      int halfmove_count;
       int halfmove_clock; // for 50 moves rule
 
       constexpr side
       get_side()
       {
-         return side(halfmove_ply&1);
+         return side(halfmove_count&1);
       }
 
       void
       set_fullmove(int fullmove_number, side c)
       {
-         halfmove_ply=(fullmove_number-1)*2+(int)idx(c);
+         halfmove_count=(fullmove_number-1)*2+(int)idx(c);
       }
 
       std::pair<int,side >
       get_fullmove_number() const
       {
-         return {1+halfmove_ply/2,get_side()};
+         return {1+halfmove_count/2,get_side()};
       }
    };
 
@@ -76,7 +76,7 @@ namespace cheapshot
    {
       0_U64, /*ep_info*/
       0_U64, /*castling_rights*/
-      0, // halfmove_ply
+      0, // halfmove_count
       0 // halfmove_clock
    };
 
