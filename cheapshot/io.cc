@@ -724,7 +724,7 @@ namespace cheapshot
          {
             max_ply_cutoff<control::minimax,control::noop_hash,
                            control::noop_material,control::noop_cache> ec(board,ctx,1);
-            analyze_position<other_side(S)>(ctx,ec);
+            analyze_position<other_side(S)>(ec,ctx);
             checkmate_analyzed=(ec.pruning.score==score::checkmate(S));
          }
          const bool checkmateflag_set=(im.phase==game_status::checkmate);

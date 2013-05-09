@@ -11,8 +11,6 @@ namespace cheapshot
 {
    namespace control
    {
-      template<typename> struct scoped_ply_count;
-
       template<typename Controller, side S>
       using scoped_prune=typename decltype(Controller::pruning)::template scoped_prune<S>;
 
@@ -333,7 +331,7 @@ namespace cheapshot
 
    template<side, typename Controller>
    int
-   recurse_with_cutoff(const context& ctx, const Controller& ec);
+   recurse_with_cutoff(const Controller& ec, const context& ctx);
 
    // main program loop
    // written as a single big routine because there is a lot of shared state, and performance is critical.
@@ -342,9 +340,11 @@ namespace cheapshot
    // ec = engine_controller
    // ec-state travels up-and-down the gametree
    // oldctx-state only moves down the gametree
+
+   // order of parameters: ec, board, ctx, move_info ...
    template<side S, typename Controller>
    void
-   analyze_position(const context& oldctx, Controller& ec)
+   analyze_position(Controller& ec, const context& oldctx)
    {
       auto hit_info=try_cache_hit<S>(ec,oldctx);
       if(hit_info.is_hit)
@@ -408,7 +408,7 @@ namespace cheapshot
          if(ep_capture!=0_U64)
          {
             scoped_material_change mv(ec,en_passant_info<S>(*origin_iter,ep_capture));
-            if(recurse_with_cutoff<S>(ctx,ec))
+            if(recurse_with_cutoff<S>(ec,ctx))
                return;
          }
       }
@@ -423,7 +423,7 @@ namespace cheapshot
          if(cit.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
          {
             scoped2 mv(ec,castle_info<S>(cit));
-            if(recurse_with_cutoff<S>(ctx,ec))
+            if(recurse_with_cutoff<S>(ec,ctx))
                return;
          }
 
@@ -442,7 +442,7 @@ namespace cheapshot
                   // all promotions
                   scoped_material_change mv2(ec,promotion_material,
                                              promotion_info<S>(prom,*dest_iter));
-                  if(recurse_with_cutoff<S>(ctx,ec))
+                  if(recurse_with_cutoff<S>(ec,ctx))
                      return;
                }
             }
@@ -455,7 +455,7 @@ namespace cheapshot
                // captures
                auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
                scoped_material_change mv(ec,mi);
-               if(recurse_with_cutoff<S>(ctx,ec))
+               if(recurse_with_cutoff<S>(ec,ctx))
                   return;
             }
             for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -467,7 +467,7 @@ namespace cheapshot
                scoped mv(ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
                ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
                scoped_hash scoped_ep_info(ec,hhash_ep_change0,ctx.ep_info);
-               if(recurse_with_cutoff<S>(ctx,ec))
+               if(recurse_with_cutoff<S>(ec,ctx))
                   return;
                ctx.ep_info=0_U64;
             }
@@ -486,7 +486,7 @@ namespace cheapshot
             // captures
             auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
             scoped_material_change mv(ec,mi);
-            if(recurse_with_cutoff<S>(ctx,ec))
+            if(recurse_with_cutoff<S>(ec,ctx))
                return;
          }
          for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
@@ -495,7 +495,7 @@ namespace cheapshot
          {
             // moves
             scoped mv(ec,basic_move_info<S>(moveset.moved_piece,moveset.origin,*dest_iter));
-            if(recurse_with_cutoff<S>(ctx,ec))
+            if(recurse_with_cutoff<S>(ec,ctx))
                return;
          }
       }
@@ -511,26 +511,26 @@ namespace cheapshot
 
    template<side S, typename Controller>
    bool
-   recurse_with_cutoff(const context& ctx, Controller& ec)
+   recurse_with_cutoff(Controller& ec, const context& ctx)
    {
       {
          control::scoped_prune<Controller,S> scope(ec);
-         analyze_position<other_side(S)>(ctx,ec);
+         analyze_position<other_side(S)>(ec,ctx);
       }
       return prune_cutoff<S>(ec);
    }
 
    template<typename Controller>
    inline int
-   score_position(const context& ctx, Controller& ec)
+   score_position(Controller& ec, const context& ctx)
    {
       switch(ctx.get_side())
       {
          case side::white:
-            analyze_position<side::white>(ctx,ec);
+            analyze_position<side::white>(ec,ctx);
             break;
          case side::black:
-            analyze_position<side::black>(ctx,ec);
+            analyze_position<side::black>(ec,ctx);
             break;
       }
       return ec.pruning.score;

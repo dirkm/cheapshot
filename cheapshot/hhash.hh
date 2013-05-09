@@ -96,12 +96,12 @@ namespace cheapshot
       return bit_mixer(premix(t));
    }
 
+   // try std::numeric_constant ??
    // as used in analyze_position
    constexpr uint64_t
    hhash_make_turn()
    {
-      return (hhash_turn(side::white)^
-              hhash_turn(side::black));
+      return hhash_turn(side::white)^hhash_turn(side::black);
    }
 
    inline uint64_t

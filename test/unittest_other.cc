@@ -27,7 +27,7 @@ namespace
    {
       typedef max_ply_cutoff_noop<minimax,ControlsTail...> parent;
 
-      move_checker(const context& ctx, board_t& b, const std::vector<board_t>& additional_boards):
+      move_checker(board_t& b, const context& ctx, const std::vector<board_t>& additional_boards):
          parent(b,ctx,additional_boards.size()+1),
          all_analyzed(false),
          boards{b}
@@ -43,7 +43,7 @@ namespace
          board_t btmp=b;
          make_input_moves(
             btmp,ctx,input_moves,long_algebraic,
-            [this](board_t& b2, context& ctx) mutable { boards.push_back(b2); }
+            [this](board_t& b2, context&) mutable { boards.push_back(b2); }
             );
       }
 
@@ -285,7 +285,6 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
    piece moved_piece=piece::king;
    uint64_t origin=scan_canvas(c,'K');
    uint64_t dest=scan_canvas(c,'p');
-   // uint64_t dest=move_king_simple(scan_canvas(canvas,'K'));
    {
       state_holder h(b);
       scoped_move<move_info2> scope(h,basic_capture_info<side::white>(b,moved_piece,origin,dest));
@@ -559,7 +558,7 @@ namespace
       context ctx=no_castle_context;
       ctx.set_fullmove(1,playing_side);
       max_ply_cutoff_noop<Controls...> cutoff(b,ctx,depth); // TODO: adapt depth
-      score_position(ctx,cutoff);
+      score_position(cutoff,ctx);
       {
          std::ostringstream oss;
          print_board(b,oss);
@@ -643,7 +642,7 @@ BOOST_AUTO_TEST_CASE(game_finish_test)
       context ctx=no_castle_context;
       ctx.set_fullmove(1,side::black);
       max_ply_cutoff_noop<> cutoff(stalemate_board,ctx,1);
-      analyze_position<side::black>(ctx,cutoff);
+      analyze_position<side::black>(cutoff,ctx);
       BOOST_CHECK_EQUAL(cutoff.pruning.score,score::stalemate(side::white));
    }
 }
@@ -671,16 +670,16 @@ BOOST_AUTO_TEST_CASE(analyze_en_passant_test)
    board_t en_passant_after_capture=en_passant_after_capture_board;
    {
       board_t b=en_passant_initial;
-      move_checker<> check(no_castle_context_black,b,
+      move_checker<> check(b,no_castle_context_black,
                            {en_passant_double_move,en_passant_after_capture});
-      analyze_position<side::black>(no_castle_context_black,check);
+      analyze_position<side::black>(check,no_castle_context_black);
       BOOST_CHECK(check.all_analyzed);
    }
    {
       board_t bmirror=mirror(en_passant_initial);
-      move_checker<> check(no_castle_context,bmirror,
+      move_checker<> check(bmirror,no_castle_context,
                            {mirror(en_passant_double_move),mirror(en_passant_after_capture)});
-      analyze_position<side::white>(no_castle_context,check);
+      analyze_position<side::white>(check,no_castle_context);
       BOOST_CHECK(check.all_analyzed);
    }
 }
@@ -718,8 +717,8 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
          "........\n"
          "........\n");
       {
-         move_checker<> check(no_castle_context,promotion_initial,{promotion_mate_queen});
-         analyze_position<side::white>(no_castle_context,check);
+         move_checker<> check(promotion_initial,no_castle_context,{promotion_mate_queen});
+         analyze_position<side::white>(check,no_castle_context);
          BOOST_CHECK(check.all_analyzed);
       }
       {
@@ -732,14 +731,14 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
             "........\n"
             "........\n"
             "........\n");
-         move_checker<> check(no_castle_context,promotion_initial,{promotion_knight});
-         analyze_position<side::white>(no_castle_context,check);
+         move_checker<> check(promotion_initial,no_castle_context,{promotion_knight});
+         analyze_position<side::white>(check,no_castle_context);
          BOOST_CHECK(check.all_analyzed);
       }
       {
          board_t bmirror=mirror(promotion_initial);
-         move_checker<> check(no_castle_context_black,bmirror,{mirror(promotion_mate_queen)});
-         analyze_position<side::black>(no_castle_context_black,check);
+         move_checker<> check(bmirror,no_castle_context_black,{mirror(promotion_mate_queen)});
+         analyze_position<side::black>(check,no_castle_context_black);
          BOOST_CHECK(check.all_analyzed);
          // BOOST_CHECK_EQUAL(check.pruning.score,score::checkmate(side::black));
       }
@@ -756,8 +755,8 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker<> check1(no_castle_context,multiple_promotions_initial,{multiple_promotions1});
-         analyze_position<side::white>(no_castle_context,check1);
+         move_checker<> check1(multiple_promotions_initial,no_castle_context,{multiple_promotions1});
+         analyze_position<side::white>(check1,no_castle_context);
          BOOST_CHECK(check1.all_analyzed);
       }
       {
@@ -770,8 +769,8 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker<> check(no_castle_context,multiple_promotions_initial,{multiple_promotions2});
-         analyze_position<side::white>(no_castle_context,check);
+         move_checker<> check(multiple_promotions_initial,no_castle_context,{multiple_promotions2});
+         analyze_position<side::white>(check,no_castle_context);
          BOOST_CHECK(check.all_analyzed);
       }
       {
@@ -784,8 +783,8 @@ BOOST_AUTO_TEST_CASE(analyze_promotion_test)
             "........\n"
             "........\n"
             ".......K\n");
-         move_checker<> check(no_castle_context,multiple_promotions_initial,{multiple_promotions3});
-         analyze_position<side::white>(no_castle_context,check);
+         move_checker<> check(multiple_promotions_initial,no_castle_context,{multiple_promotions3});
+         analyze_position<side::white>(check,no_castle_context);
          BOOST_CHECK(check.all_analyzed);
       }
    }
@@ -880,8 +879,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          "P.P...P.\n"
          ".R....K.\n");
       {
-         move_checker<> check(no_castle_context,b,{b1,b2,b3,b4,b5});
-         analyze_position<side::white>(no_castle_context,check);
+         move_checker<> check(b,no_castle_context,{b1,b2,b3,b4,b5});
+         analyze_position<side::white>(check,no_castle_context);
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<>(side::black,side::white,5,{b1,b2,b3,b4,b5});
@@ -929,8 +928,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          "PPP..PPP\n"
          "RN..K.NR\n");
       {
-         move_checker<> check(start_context,b,{b1,b2,b3});
-         analyze_position<side::white>(start_context,check);
+         move_checker<> check(b,start_context,{b1,b2,b3});
+         analyze_position<side::white>(check,start_context);
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<>(side::white,side::white,4,{b,b1,b2,b3});
@@ -989,8 +988,8 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          context ctx=start_context;
          ctx.castling_rights|=
             short_castling<side::black>().mask()|long_castling<side::black>().mask();
-         move_checker<> check(ctx,b,{b1,b2,b3});
-         analyze_position<side::white>(ctx,check);
+         move_checker<> check(b,ctx,{b1,b2,b3});
+         analyze_position<side::white>(check,ctx);
          BOOST_CHECK(check.all_analyzed);
       }
       scan_mate<minimax>(side::white,side::white,4,b);
@@ -1056,7 +1055,7 @@ BOOST_AUTO_TEST_CASE(time_mate_check)
    for(long i=0;i<ops;++i)
    {
       max_ply_cutoff_noop<minimax> cutoff(mate_board,no_castle_context,nr_plies);
-      analyze_position<side::white>(no_castle_context,cutoff);
+      analyze_position<side::white>(cutoff,no_castle_context);
    }
    time_op.time_report("mate check (value is significantly less than nps)",ops);
 }
@@ -1080,7 +1079,7 @@ BOOST_AUTO_TEST_CASE(upper_bound_nps)
    for(long i=0;i<ops;++i)
    {
       max_ply_cutoff_noop<minimax> cutoff(caged_kings,no_castle_context,nr_plies);
-      analyze_position<side::white>(no_castle_context,cutoff);
+      analyze_position<side::white>(cutoff,no_castle_context);
    }
    time_op.time_report("caged kings at ply depth 17",ops);
 }
@@ -1106,7 +1105,6 @@ BOOST_AUTO_TEST_CASE(score_material_test)
 
 BOOST_AUTO_TEST_CASE(time_endgame_mate)
 {
-
    board_t rook_queen_mate=scan_board(rook_queen_mate_canvas);
    board_t rook_queen_mate8=scan_board(rook_queen_mate_canvas8);
    {
@@ -1155,6 +1153,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
       time_op.time_report("endgame mate in 8 plies (ab,cache)",ops);
    }
    {
+      TimeOperation time_op;
+      const long ops=runtime_adjusted_ops(2);
+      for(long i=0;i<ops;++i)
+         scan_mate<alphabeta,incremental_hash,incremental_material,cache>
+            (side::white,side::white,8,{rook_queen_mate8});
+      time_op.time_report("endgame mate in 8 plies (ab,cache,material)",ops);
+   }
+   {
       board_t b=cheapshot::scan_board(mate_in_3_canvas);
       TimeOperation time_op;
       const long ops=runtime_adjusted_ops(10);
@@ -1180,7 +1186,7 @@ namespace
       board_t b=initial_board();
       do_until_ply_cutoff<Cutoff> cutoff(b,start_context,depth,f);
       TimeOperation time_op;
-      analyze_position<side::white>(start_context,cutoff);
+      analyze_position<side::white>(cutoff,start_context);
       time_op.time_report(test_name,nodes);
       return nodes;
    }
@@ -1216,7 +1222,7 @@ namespace
       ctx.set_fullmove(1,t);
       TimeOperation time_op;
       do_until_ply_cutoff<minimax> cutoff(b,ctx,depth,fhash);
-      score_position(ctx,cutoff);
+      score_position(cutoff,ctx);
       return {nodes,matches};
    }
 }
@@ -1243,7 +1249,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       board_t b=initial_board();
       do_until_ply_cutoff<minimax,incremental_hash> cutoff(b,start_context,4,f);
       TimeOperation time_op;
-      analyze_position<side::white>(start_context,cutoff);
+      analyze_position<side::white>(cutoff,start_context);
       uint64_t initial_hash=hhash(b,start_context);
       BOOST_CHECK_EQUAL(cutoff.hasher.hash,initial_hash);
       time_op.time_report("incremental hash nodes test",nodes);
@@ -1317,7 +1323,7 @@ namespace
    {
       ctx.set_fullmove(1,t);
       Controller ec(b,ctx,moves);
-      score_position(ctx,ec);
+      score_position(ec,ctx);
    }
 
    template<typename Controller>

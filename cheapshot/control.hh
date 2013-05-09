@@ -28,10 +28,7 @@ namespace cheapshot
          // assert_valid_board(board);
          bool is_leaf_node=(ctx.halfmove_count==max_plies);
          if(is_leaf_node)
-         {
-            // pruning.score=control::score_material(board);
-            pruning.score=0;
-         }
+            pruning.score=material.material;
          return is_leaf_node;
       }
 

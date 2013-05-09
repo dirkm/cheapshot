@@ -6,6 +6,8 @@
 #include <limits>
 #include <unordered_map>
 
+// TODO: caching is not needed close to leave-nodes
+
 namespace cheapshot
 {
    namespace control
