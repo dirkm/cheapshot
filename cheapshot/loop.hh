@@ -135,7 +135,7 @@ namespace cheapshot
    }
 
    template<side S>
-   move_info2
+   constexpr move_info2
    castle_info(const castling_t& ci)
    {
       return {move_info{S,piece::king,ci.king1|ci.king2},
@@ -156,9 +156,8 @@ namespace cheapshot
    constexpr move_info2
    en_passant_info(uint64_t origin, uint64_t destination)
    {
-      // TODO: row & column can be sped up
       return {move_info{S,piece::pawn,origin|destination},
-            move_info{other_side(S),piece::pawn,row(origin)&column(destination)}
+            move_info{other_side(S),piece::pawn,shift_backward<S>(destination,8)}
       };
    }
 
@@ -404,13 +403,10 @@ namespace cheapshot
           origin_iter!=bit_iterator();
           ++origin_iter)
       {
-         uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
-         if(ep_capture!=0_U64)
-         {
-            scoped_material_change mv(ec,en_passant_info<S>(*origin_iter,ep_capture));
-            if(recurse_with_cutoff<S>(ec,ctx))
-               return;
-         }
+         const uint64_t ep_capture=en_passant_capture<S>(*origin_iter,oldctx.ep_info);
+         scoped_material_change mv(ec,en_passant_info<S>(*origin_iter,ep_capture));
+         if(recurse_with_cutoff<S>(ec,ctx))
+            return;
       }
 
       ctx.castling_rights|=castling_block_mask<S>(get_side<S>(board)[idx(piece::rook)],
@@ -431,46 +427,45 @@ namespace cheapshot
       for(auto moveset_it=std::begin(basic_moves);moveset_it!=pawn_moves_end;++moveset_it)
       {
          auto& moveset=*moveset_it;
-         if(promoting_pawns<S>(moveset.destinations))
-            for(bit_iterator dest_iter(moveset.destinations);dest_iter!=bit_iterator(); ++dest_iter)
-            {
-               // pawn to promotion square
-               auto mi=basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter);
-               scoped_material_change mv(ec,potential_capture_material,mi);
-               for(auto prom: piece_promotions)
-               {
-                  // all promotions
-                  scoped_material_change mv2(ec,promotion_material,
-                                             promotion_info<S>(prom,*dest_iter));
-                  if(recurse_with_cutoff<S>(ec,ctx))
-                     return;
-               }
-            }
-         else
+         const uint64_t promotions=moveset.destinations&promoting_pawns<S>(moveset.destinations);
+         for(bit_iterator dest_iter(promotions);
+             dest_iter!=bit_iterator(); ++dest_iter)
          {
-            for(bit_iterator dest_iter(moveset.destinations&bm.opposing<S>());
-                dest_iter!=bit_iterator();
-                ++dest_iter)
+            // pawn to promotion square
+            auto mi=basic_capture_info<S>(board,piece::pawn,moveset.origin,*dest_iter);
+            scoped_material_change mv(ec,potential_capture_material,mi);
+            for(auto prom: piece_promotions)
             {
-               // captures
-               auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
-               scoped_material_change mv(ec,mi);
+               // all promotions
+               scoped_material_change mv2(ec,promotion_material,
+                                          promotion_info<S>(prom,*dest_iter));
                if(recurse_with_cutoff<S>(ec,ctx))
                   return;
             }
-            for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
-                dest_iter!=bit_iterator();
-                ++dest_iter)
-            {
-               //  moves / ep info
-               uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
-               scoped mv(ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
-               ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
-               scoped_hash scoped_ep_info(ec,hhash_ep_change0,ctx.ep_info);
-               if(recurse_with_cutoff<S>(ec,ctx))
-                  return;
-               ctx.ep_info=0_U64;
-            }
+         }
+         moveset.destinations^=promotions;
+         for(bit_iterator dest_iter(moveset.destinations&bm.opposing<S>());
+             dest_iter!=bit_iterator();
+             ++dest_iter)
+         {
+            // captures
+            auto mi=basic_capture_info<S>(board,moveset.moved_piece,moveset.origin,*dest_iter);
+            scoped_material_change mv(ec,mi);
+            if(recurse_with_cutoff<S>(ec,ctx))
+               return;
+         }
+         for(bit_iterator dest_iter(moveset.destinations&~bm.opposing<S>());
+             dest_iter!=bit_iterator();
+             ++dest_iter)
+         {
+            //  moves / ep info
+            uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+            scoped mv(ec,basic_move_info<S>(piece::pawn,moveset.origin,*dest_iter));
+            ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+            scoped_hash scoped_ep_info(ec,hhash_ep_change0,ctx.ep_info);
+            if(recurse_with_cutoff<S>(ec,ctx))
+               return;
+            ctx.ep_info=0_U64;
          }
       }
 

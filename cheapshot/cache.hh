@@ -6,8 +6,6 @@
 #include <limits>
 #include <unordered_map>
 
-// TODO: caching is not needed close to leave-nodes
-
 namespace cheapshot
 {
    namespace control
@@ -88,6 +86,8 @@ namespace cheapshot
          hit_info
          insert(uint64_t hash,int ply_depth)
          {
+// TODO: caching is not needed close to leave-nodes
+// use find if depth less than constant value (maybe 3)
             decltype(transposition_table)::iterator v;
             bool is_new;
             std::tie(v,is_new)=transposition_table.insert(
