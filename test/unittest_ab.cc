@@ -46,7 +46,7 @@ const char* to_string(toy n)
       "b3_0","b3_1","b3_2","b3_3","b3_4","b3_5",
       "w4_0","w4_1","w4_2","w4_3","w4_4","w4_5","w4_6","w4_7","w4_8"};
    return repr[idx(n)];
-};
+}
 
 typedef std::array<std::pair<std::vector<toy>,int>,count<toy>()> tree_t;
 

@@ -620,20 +620,18 @@ namespace cheapshot
    constexpr castling_t
    short_castling() noexcept
    {
-      return {
-         position(5,bottom_index<S>()),position(7,bottom_index<S>()),
-         position(4,bottom_index<S>()),position(6,bottom_index<S>())
-      };
+      return castling_t{.rook1=position(5,bottom_index<S>()),.rook2=position(7,bottom_index<S>()),
+            .king1=position(4,bottom_index<S>()),.king2=position(6,bottom_index<S>())
+            };
    }
 
    template<side S>
    constexpr castling_t
    long_castling() noexcept
    {
-      return{
-         position(0,bottom_index<S>()),position(3,bottom_index<S>()),
-         position(2,bottom_index<S>()),position(4,bottom_index<S>())
-      };
+      return castling_t{.rook1=position(0,bottom_index<S>()),.rook2=position(3,bottom_index<S>()),
+            .king1=position(2,bottom_index<S>()),.king2=position(4,bottom_index<S>())
+            };
    }
 
    // masks must have the same value, independent of the game-history

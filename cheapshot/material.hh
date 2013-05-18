@@ -26,8 +26,8 @@ namespace cheapshot
             }
 
             template<typename Controller>
-            scoped_material(Controller& ec, side c, piece p):
-               scoped_material(ec,(int (*)(side,piece))score::weight,c,p)
+            scoped_material(Controller& ec, side c, piece_t p):
+               scoped_material(ec,(int (*)(side,piece_t))score::weight,c,p)
             {}
 
             ~scoped_material()
@@ -53,7 +53,7 @@ namespace cheapshot
          struct scoped_material
          {
             template<typename Controller>
-            scoped_material(Controller& ec, side c, piece p)
+            scoped_material(Controller& ec, side c, piece_t p)
             {}
 
             template<typename Controller, typename Op, typename... Args>

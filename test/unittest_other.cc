@@ -100,7 +100,7 @@ basic_moves_generator_test(const char* board_layout, const char* captures)
    board_t b=scan_board(board_layout);
    board_metrics bm(b);
    uint64_t r=0;
-   on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+   on_basic_moves<side::white>(b,bm,[&r](piece_t p, uint64_t orig, uint64_t dests){
          r|=dests;
       });
    boost::test_tools::output_test_stream ots;
@@ -166,14 +166,14 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
    {
       board_t b=test_board1;
       board_metrics bm(b);
-      uint64_t r[count<piece>()]={0,0,0,0,0};
-      on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      uint64_t r[count<piece_t>()]={0,0,0,0,0};
+      on_basic_moves<side::white>(b,bm,[&r](piece_t p, uint64_t orig, uint64_t dests){
             r[idx(p)]|=dests;
          });
 
       {
          boost::test_tools::output_test_stream ots;
-         print_position(r[idx(piece::pawn)],ots);
+         print_position(r[idx(piece_t::pawn)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -184,10 +184,10 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
                         "........\n"
                         "........\n"));
       }
-      BOOST_CHECK_EQUAL(r[idx(piece::knight)],0);
+      BOOST_CHECK_EQUAL(r[idx(piece_t::knight)],0);
       {
          boost::test_tools::output_test_stream ots;
-         print_position(r[idx(piece::bishop)],ots);
+         print_position(r[idx(piece_t::bishop)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_position(r[idx(piece::rook)],ots);
+         print_position(r[idx(piece_t::rook)],ots);
          BOOST_CHECK(ots.is_equal(
                         "X.......\n"
                         ".XXXXXXX\n"
@@ -213,7 +213,7 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_position(r[idx(piece::queen)],ots);
+         print_position(r[idx(piece_t::queen)],ots);
          BOOST_CHECK(ots.is_equal(
                         "......X.\n"
                         "......X.\n"
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(moves_generator_test)
       }
       {
          boost::test_tools::output_test_stream ots;
-         print_position(r[idx(piece::king)],ots);
+         print_position(r[idx(piece_t::king)],ots);
          BOOST_CHECK(ots.is_equal(
                         "........\n"
                         "........\n"
@@ -282,7 +282,7 @@ BOOST_AUTO_TEST_CASE(scoped_move_test)
       "......K.\n";
    board_t b=scan_board(c);
 
-   piece moved_piece=piece::king;
+   piece_t moved_piece=piece_t::king;
    uint64_t origin=scan_canvas(c,'K');
    uint64_t dest=scan_canvas(c,'p');
    {
@@ -311,7 +311,7 @@ namespace
       board_metrics bm(board);
       uint64_t own_under_attack=0_U64;
       on_basic_moves<other_side(S)>(
-         board,bm,[&own_under_attack](piece p, uint64_t orig, uint64_t dests)
+         board,bm,[&own_under_attack](piece_t p, uint64_t orig, uint64_t dests)
          {
             own_under_attack|=dests;
          });
@@ -585,15 +585,15 @@ namespace
    }
 
 // Rodzynski-Alekhine, Paris 1913
-   constexpr char canvas_mate_board1[]=(
-      ".......Q\n"
-      "p.pk..pp\n"
-      "...p....\n"
-      "....p...\n"
-      ".P.PP..b\n"
-      "...q.P..\n"
-      "PP.....P\n"
-      "RNB.K..R\n");
+   constexpr char canvas_mate_board1[]=
+                               ".......Q\n"
+                               "p.pk..pp\n"
+                               "...p....\n"
+                               "....p...\n"
+                               ".P.PP..b\n"
+                               "...q.P..\n"
+                               "PP.....P\n"
+                               "RNB.K..R\n";
 }
 
 BOOST_AUTO_TEST_CASE(game_finish_test)
@@ -1039,7 +1039,7 @@ BOOST_AUTO_TEST_CASE(time_walk_moves_test)
    for(long i=0;i<ops;++i)
    {
       board_metrics bm(b);
-      on_basic_moves<side::white>(b,bm,[&r](piece p, uint64_t orig, uint64_t dests){
+      on_basic_moves<side::white>(b,bm,[&r](piece_t p, uint64_t orig, uint64_t dests){
             r|=dests;
          });
    }
@@ -1099,8 +1099,8 @@ BOOST_AUTO_TEST_CASE(score_material_test)
 
    using score::weight;
    BOOST_CHECK_EQUAL(score::material(imbalanced_board),
-                     -(weight(piece::bishop)+weight(piece::knight)+weight(piece::rook))+
-                     weight(piece::pawn));
+                     -(weight(piece_t::bishop)+weight(piece_t::knight)+weight(piece_t::rook))+
+                     weight(piece_t::pawn));
 }
 
 BOOST_AUTO_TEST_CASE(time_endgame_mate)

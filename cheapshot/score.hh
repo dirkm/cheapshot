@@ -53,20 +53,20 @@ namespace cheapshot
       namespace detail
       {
          // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
-         constexpr int weight[count<piece>()-1]=
+         constexpr int weight[count<piece_t>()-1]=
          {
             100, 320, 330, 500, 900 /* kings are neved captured */
          };
       }
 
       constexpr int
-      weight(piece p)
+      weight(piece_t p)
       {
          return detail::weight[idx(p)];
       }
 
       constexpr int
-      weight(side c, piece p)
+      weight(side c, piece_t p)
       {
          return (c==side::white)?
             detail::weight[idx(p)]:
@@ -79,7 +79,7 @@ namespace cheapshot
          int r=0;
          const board_side& white_side=b[idx(side::white)];
          const board_side& black_side=b[idx(side::black)];
-         for(piece p=piece::pawn;p<piece::king;++p)
+         for(piece_t p=piece_t::pawn;p<piece_t::king;++p)
             r+=(count_set_bits(white_side[idx(p)])-
                 (count_set_bits(black_side[idx(p)])))*weight(p);
          return r;

@@ -12,43 +12,43 @@ namespace cheapshot
 {
    namespace
    {
-      typedef std::array<char,count<piece>()> piece_to_character_t;
+      typedef std::array<char,count<piece_t>()> piece_to_character_t;
 
       constexpr piece_to_character_t repr_pieces_white{'P','N','B','R','Q','K'};
       constexpr piece_to_character_t repr_pieces_black{'p','n','b','r','q','k'};
 
-      std::pair<side,piece>
+      std::pair<side,piece_t>
       character_to_piece(char p)
       {
          switch(p)
          {
-            case 'B': return {side::white,piece::bishop};
-            case 'K': return {side::white,piece::king};
-            case 'N': return {side::white,piece::knight};
-            case 'P': return {side::white,piece::pawn};
-            case 'Q': return {side::white,piece::queen};
-            case 'R': return {side::white,piece::rook};
-            case 'b': return {side::black,piece::bishop};
-            case 'k': return {side::black,piece::king};
-            case 'n': return {side::black,piece::knight};
-            case 'p': return {side::black,piece::pawn};
-            case 'q': return {side::black,piece::queen};
-            case 'r': return {side::black,piece::rook};
-            default : return {side::white,piece::count}; // error case
+            case 'B': return {side::white,piece_t::bishop};
+            case 'K': return {side::white,piece_t::king};
+            case 'N': return {side::white,piece_t::knight};
+            case 'P': return {side::white,piece_t::pawn};
+            case 'Q': return {side::white,piece_t::queen};
+            case 'R': return {side::white,piece_t::rook};
+            case 'b': return {side::black,piece_t::bishop};
+            case 'k': return {side::black,piece_t::king};
+            case 'n': return {side::black,piece_t::knight};
+            case 'p': return {side::black,piece_t::pawn};
+            case 'q': return {side::black,piece_t::queen};
+            case 'r': return {side::black,piece_t::rook};
+            default : return {side::white,piece_t::count}; // error case
          }
       }
 
-      piece
+      piece_t
       character_to_moved_piece(char p)
       {
          switch(p)
          {
-            case 'B': return piece::bishop;
-            case 'K': return piece::king;
-            case 'N': return piece::knight;
-            case 'Q': return piece::queen;
-            case 'R': return piece::rook;
-            default : return piece::pawn;
+            case 'B': return piece_t::bishop;
+            case 'K': return piece_t::king;
+            case 'N': return piece_t::knight;
+            case 'Q': return piece_t::queen;
+            case 'R': return piece_t::rook;
+            default : return piece_t::pawn;
          }
       }
 
@@ -264,9 +264,9 @@ namespace cheapshot
          for(uint8_t j=0;j<8;++j,++canvas)
          {
             side c;
-            piece p;
+            piece_t p;
             std::tie(c,p)=character_to_piece(*canvas);
-            if(p!=piece::count)
+            if(p!=piece_t::count)
                b[idx(c)][idx(p)]|=canvaspos_to_bitmask(i,j);
             else
                assert(*canvas=='.');
@@ -294,9 +294,9 @@ namespace cheapshot
                else
                {
                   side c;
-                  piece p;
+                  piece_t p;
                   std::tie(c,p)=character_to_piece(*rs);
-                  if(p!=piece::count)
+                  if(p!=piece_t::count)
                      b[idx(c)][idx(p)]|=canvaspos_to_bitmask(i,j);
                   else
                   {
@@ -516,10 +516,10 @@ namespace cheapshot
          // params below may not be initialized, depending on move type
          bool is_capture;
          game_status phase;
-         cheapshot::piece moving_piece;
+         cheapshot::piece_t piece;
          uint64_t origin;
          uint64_t destination;
-         cheapshot::piece promoting_piece;
+         cheapshot::piece_t promoting_piece;
       };
 
       std::ostream&
@@ -544,7 +544,7 @@ namespace cheapshot
                break;
          };
          return os;
-      };
+      }
 
       bool
       skip_string(const char*& s, const char* s2)
@@ -564,7 +564,7 @@ namespace cheapshot
             ++s;
             im.type=move_type::promotion;
             im.promoting_piece=character_to_moved_piece(*s);
-            if(im.promoting_piece==piece::pawn)
+            if(im.promoting_piece==piece_t::pawn)
                throw io_error("invalid promotion");
             ++s;
          }
@@ -596,8 +596,8 @@ namespace cheapshot
             im={move_type::short_castling};
          else
          {
-            im.moving_piece=character_to_moved_piece(*s);
-            if(im.moving_piece!=piece::pawn)
+            im.piece=character_to_moved_piece(*s);
+            if(im.piece!=piece_t::pawn)
                ++s;
             if(fmt.move_fmt!=format::move::long_algebraic)
             {
@@ -644,7 +644,7 @@ namespace cheapshot
             im.destination=scan_algpos(s);
          }
          if((fmt.ep_fmt==format::ep::annotated) &&
-            (im.moving_piece==piece::pawn) && (im.is_capture==true) &&
+            (im.piece==piece_t::pawn) && (im.is_capture==true) &&
             skip_string(s,ep_notation))
             im.type=move_type::ep_capture;
          scan_move_suffix(im,s);
@@ -655,7 +655,7 @@ namespace cheapshot
       detect_ep_capture(input_move& im, const context& ctx)
       {
          if((im.type==move_type::normal) &&
-            (im.moving_piece==piece::pawn) &&
+            (im.piece==piece_t::pawn) &&
             (im.destination==ctx.ep_info) &&
             im.is_capture)
             im.type=move_type::ep_capture;
@@ -666,7 +666,7 @@ namespace cheapshot
       possible_origins(const board_t& board, const board_metrics& bm, const input_move& im)
       {
          const uint64_t obstacles=bm.all_pieces();
-         if(im.moving_piece==piece::pawn)
+         if(im.piece==piece_t::pawn)
          {
             if(im.destination&bm.opposing<S>())
                return reverse_capture_pawn<S>(im.destination,obstacles);
@@ -674,7 +674,7 @@ namespace cheapshot
                return reverse_move_pawn<S>(im.destination,obstacles);
          }
          else
-            return basic_piece_move_generators()[idx(im.moving_piece)-1](im.destination,obstacles);
+            return basic_piece_move_generators()[idx(im.piece)-1](im.destination,obstacles);
       }
 
       template<side S>
@@ -689,7 +689,7 @@ namespace cheapshot
       void
       narrow_origin(input_move& im, const board_t& board, uint64_t possible_origins)
       {
-         im.origin&=get_side<S>(board)[idx(im.moving_piece)];
+         im.origin&=get_side<S>(board)[idx(im.piece)];
          if(im.origin==0_U64)
             throw io_error("trying to move a missing piece");
          im.origin&=possible_origins;
@@ -702,7 +702,7 @@ namespace cheapshot
       is_king_under_attack(const board_t& board, const board_metrics& bm)
       {
          uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
-         return (own_under_attack & get_side<S>(board)[idx(piece::king)]) != 0_U64;
+         return (own_under_attack & get_side<S>(board)[idx(piece_t::king)]) != 0_U64;
       }
 
       // TODO: stop with stalemate as well
@@ -754,7 +754,7 @@ namespace cheapshot
       make_move(board_t& board, context& ctx, input_move& im)
       {
          board_metrics bm(board);
-         uint64_t oldpawnloc=get_side<S>(board)[idx(piece::pawn)];
+         uint64_t oldpawnloc=get_side<S>(board)[idx(piece_t::pawn)];
 
          if(im.type==move_type::long_castling)
             make_castling_move<S>(board,bm,ctx,long_castling<S>());
@@ -783,7 +783,7 @@ namespace cheapshot
                {
                   if(!destination_occupied)
                      throw io_error("trying to capture a missing piece");
-                  move_info2 mi2=basic_capture_info<S>(board,im.moving_piece,im.origin,im.destination);
+                  move_info2 mi2=basic_capture_info<S>(board,im.piece,im.origin,im.destination);
                   for(auto m: mi2)
                      make_move(board,bm,m);
                }
@@ -791,7 +791,7 @@ namespace cheapshot
                {
                   if(destination_occupied)
                      throw io_error("capture without indication with 'x'");
-                  move_info mi=basic_move_info<S>(im.moving_piece,im.origin,im.destination);
+                  move_info mi=basic_move_info<S>(im.piece,im.origin,im.destination);
                   make_move(board,bm,mi);
                }
                if(im.type==move_type::promotion)
@@ -806,7 +806,7 @@ namespace cheapshot
             bool valid_position=!is_king_under_attack<S>(board,bm);
             for(++originit;originit!=bit_iterator();++originit)
             {
-               move_info mi{S,im.moving_piece,im.origin|*originit};
+               auto mi=move_info{.turn=S,.piece=im.piece,.mask=im.origin|*originit};
                make_move(board,bm,mi);
                if(is_king_under_attack<S>(board,bm))
                   make_move(board,bm,mi);
@@ -820,10 +820,10 @@ namespace cheapshot
             if(!valid_position)
                throw io_error("move-attempt results in self-check");
          }
-         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece::pawn)]);
+         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece_t::pawn)]);
          ctx.castling_rights|=castling_block_mask<S>(
-            get_side<S>(board)[idx(piece::rook)],
-            get_side<S>(board)[idx(piece::king)]);
+            get_side<S>(board)[idx(piece_t::rook)],
+            get_side<S>(board)[idx(piece_t::king)]);
          ++ctx.halfmove_count;
          check_game_state<S>(board,bm,ctx,im);
       }

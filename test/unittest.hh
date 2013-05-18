@@ -18,7 +18,7 @@
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::bit_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_t)
-BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::side);
+BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::side)
 
 namespace cheapshot
 {
@@ -52,28 +52,23 @@ namespace cheapshot
       "........\n"
       "....K...\n";
 
-   constexpr cheapshot::context no_castle_context=
+   constexpr cheapshot::context no_castle_context
    {
-      0_U64, /*ep_info*/
-      (cheapshot::short_castling<cheapshot::side::white>().mask()|
-       cheapshot::long_castling<cheapshot::side::white>().mask()|
-       cheapshot::short_castling<cheapshot::side::black>().mask()|
-       cheapshot::long_castling<cheapshot::side::black>().mask()),
-      /*castling_rights*/
-      0, // halfmove_ply
-      0 // halfmove clock
+      .ep_info=0_U64,
+      .castling_rights=(cheapshot::short_castling<cheapshot::side::white>().mask()|
+                        cheapshot::long_castling<cheapshot::side::white>().mask()|
+                        cheapshot::short_castling<cheapshot::side::black>().mask()|
+                        cheapshot::long_castling<cheapshot::side::black>().mask()),
+      .halfmove_count=0,
+      .halfmove_clock=0
    };
 
-   constexpr cheapshot::context no_castle_context_black=
+   constexpr cheapshot::context no_castle_context_black
    {
-      0_U64, /*ep_info*/
-      (cheapshot::short_castling<cheapshot::side::white>().mask()|
-       cheapshot::long_castling<cheapshot::side::white>().mask()|
-       cheapshot::short_castling<cheapshot::side::black>().mask()|
-       cheapshot::long_castling<cheapshot::side::black>().mask()),
-      /*castling_rights*/
-      1, // halfmove_ply
-      0 // halfmove clock
+      .ep_info=no_castle_context.ep_info,
+      .castling_rights=no_castle_context.castling_rights,
+      .halfmove_count=1,
+      .halfmove_clock=0
    };
 
 // TODO: constexpr
@@ -81,7 +76,7 @@ namespace cheapshot
    runtime_adjusted_ops(long ops, long divisor=4, long multiplier=1)
    {
       return std::max((ops*multiplier)/divisor,1L);
-   };
+   }
 
    constexpr uint64_t
    to_usec(const timeval& t)

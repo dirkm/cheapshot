@@ -26,8 +26,8 @@ BOOST_AUTO_TEST_CASE( cache_test )
 {
    using namespace control;
    cache c;
-   cache_holder ch{{10},{1_U64},5};
-   context ctx{0_U64 /*ep*/,0_U64 /*castling*/,1 /*count*/ ,2 /*clock*/};
+   cache_holder ch{{.score=10},{.hash=1_U64},.max_plies=5};
+   context ctx{.ep_info=0_U64,.castling_rights=0_U64,.halfmove_count=1,.halfmove_clock=2};
    {
       cache::hit_info hi=c.try_cache_hit<side::white>(ch,ctx);
       BOOST_CHECK(!hi.is_hit);

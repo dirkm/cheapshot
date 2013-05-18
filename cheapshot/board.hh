@@ -22,16 +22,16 @@ namespace cheapshot
       return idx(T::count);
    }
 
-   enum class piece: uint8_t { pawn, knight, bishop, rook, queen, king, count };
+   enum class piece_t: uint8_t { pawn, knight, bishop, rook, queen, king, count };
 
-   inline piece
-   operator++(piece& rs)
+   inline piece_t
+   operator++(piece_t& rs)
    {
-      rs=piece(idx(rs)+1);
+      rs=piece_t(idx(rs)+1);
       return rs;
    }
 
-   typedef std::array<uint64_t,count<piece>()> board_side;
+   typedef std::array<uint64_t,count<piece_t>()> board_side;
 
    // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
@@ -72,12 +72,12 @@ namespace cheapshot
       }
    };
 
-   constexpr context start_context=
+   constexpr context start_context
    {
-      0_U64, /*ep_info*/
-      0_U64, /*castling_rights*/
-      0, // halfmove_count
-      0 // halfmove_clock
+      .ep_info=0_U64,
+      .castling_rights=0_U64,
+      .halfmove_count=0,
+      .halfmove_clock=0
    };
 
    constexpr board_side init_white_side={
@@ -171,8 +171,8 @@ namespace cheapshot
          }
          bsmap^=r;
          assert(count_set_bits(bsmap)<=16); // no more than 16 pieces per side
-         assert(is_single_bit(bs[idx(piece::king)])); // exactly one king
-         assert(count_set_bits(bs[idx(piece::pawn)])<=8);
+         assert(is_single_bit(bs[idx(piece_t::king)])); // exactly one king
+         assert(count_set_bits(bs[idx(piece_t::pawn)])<=8);
       }
    }
 

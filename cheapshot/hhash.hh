@@ -49,7 +49,7 @@ namespace cheapshot
    }
 
    constexpr uint64_t
-   hhash(side c, piece pc, uint64_t p)
+   hhash(side c, piece_t pc, uint64_t p)
    {
       using namespace detail;
       return bit_mixer(premix(c)^premix(idx(pc))^p);
@@ -59,7 +59,7 @@ namespace cheapshot
    hhash(side c,const board_side& bs)
    {
       uint64_t r=0_U64;
-      for(piece pc=piece::pawn;pc<piece::count;++pc)
+      for(piece_t pc=piece_t::pawn;pc<piece_t::count;++pc)
       {
          uint64_t p=bs[idx(pc)];
          r^=hhash(c,pc,p);
