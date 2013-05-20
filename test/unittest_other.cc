@@ -4,7 +4,6 @@
 #include "test/unittest.hh"
 
 #include "cheapshot/control.hh"
-#include "cheapshot/hhash.hh"
 #include "cheapshot/io.hh"
 #include "cheapshot/loop.hh"
 
@@ -557,7 +556,7 @@ namespace
    {
       context ctx=no_castle_context;
       ctx.set_fullmove(1,playing_side);
-      max_ply_cutoff_noop<Controls...> cutoff(b,ctx,depth); // TODO: adapt depth
+      max_ply_cutoff_noop<Controls...> cutoff(b,ctx,depth);
       score_position(cutoff,ctx);
       {
          std::ostringstream oss;

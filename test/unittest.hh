@@ -11,7 +11,7 @@
 
 #include <ctime>
 #include <cstring>
-#include <iostream>
+#include <iosfwd>
 #include <sys/time.h>
 #include <sys/resource.h>
 

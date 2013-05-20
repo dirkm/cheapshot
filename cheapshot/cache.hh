@@ -43,6 +43,7 @@ namespace cheapshot
             return try_cache_hit<S>(ec.pruning.score,ec.hasher.hash,ec.max_plies-ctx.halfmove_count);
          }
 
+      private:
          template<side S>
          hit_info
          try_cache_hit(int& score, uint64_t hash, int ply_depth)
@@ -57,6 +58,7 @@ namespace cheapshot
             return hi;
          }
 
+      public:
          struct cache_update
          {
          public:
@@ -82,6 +84,9 @@ namespace cheapshot
             cache_update(const cache_update&) = delete;
             cache_update& operator=(const cache_update&) = delete;
          };
+
+         cache(const cache&) = delete;
+         cache& operator=(const cache&) = delete;
       private:
          hit_info
          insert(uint64_t hash,int ply_depth)
@@ -123,6 +128,10 @@ namespace cheapshot
             cache_update(const cache_update&) = delete;
             cache_update& operator=(const cache_update&) = delete;
          };
+
+         noop_cache() = default;
+         noop_cache(const noop_cache&) = delete;
+         noop_cache& operator=(const noop_cache&) = delete;
       };
    }
 

@@ -88,7 +88,8 @@ namespace cheapshot
                m.score=score::no_valid_move(other_side(S));
             }
 
-            template<typename Controller>
+            template<typename Controller,
+                     typename OnlyIfExists = decltype(Controller::pruning)>
             scoped_prune(Controller& ec):
                scoped_prune(ec.pruning)
             {}
