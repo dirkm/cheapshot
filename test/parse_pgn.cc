@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <cstring>
+#include <forward_list>
 #include <fstream>
 #include <iostream>
-#include <list>
 
 #include <getopt.h>
 
@@ -22,7 +22,7 @@ namespace
       int ind=1;
       bool print_all=false;
       print_format format=print_format::fen;
-      using gplist=std::list<std::tuple<int,int,cheapshot::side>>;
+      using gplist=std::forward_list<std::tuple<int,int,cheapshot::side> >;
       gplist to_print;
    };
 
@@ -59,6 +59,7 @@ namespace
       int game=1;
       int move=1;
       cheapshot::side mc=cheapshot::side::white;
+      auto to_print_loc=po.to_print.cbefore_begin();
 
       while(1)
       {
@@ -101,7 +102,7 @@ namespace
             case 'p':
                if(po.print_all)
                   throw option_error("print-all is selected, adding individual moves not allowed");
-               po.to_print.emplace_back(game,move,mc);
+               to_print_loc=po.to_print.emplace_after(to_print_loc,game,move,mc);
                break;
             case 'a':
                po.print_all=true;
@@ -131,11 +132,10 @@ namespace
          // std::cout << "game: " << game << " pos: " << pos << " side to move: " << to_char(c) << std::endl;
          if(po.print_all) return true;
          const auto current=std::make_tuple(game,pos,c);
-         auto it=std::begin(po.to_print);
-         while((it!=std::end(po.to_print))&&(*it<=current))
+         while(!po.to_print.empty()&&(po.to_print.front()<=current))
          {
-            bool is_hit=(*it==current);
-            it=po.to_print.erase(it);
+            bool is_hit=(po.to_print.front()==current);
+            po.to_print.pop_front();
             if(is_hit)
                return true;
             else
