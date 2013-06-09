@@ -60,7 +60,7 @@ namespace cheapshot
       }
 
       void
-      print_partial_algpos(uint64_t p, std::ostream& os)
+      print_partial_algpos(uint64_t p, uint64_t mask, std::ostream& os)
       {
          // TODO
       }
@@ -169,9 +169,25 @@ namespace cheapshot
    }
 
    extern char
-   to_char(side c)
+   to_char(side t)
    {
-      return (c==side::white)?'w':'b';
+      return (t==side::white)?'w':'b';
+   }
+
+   extern side
+   to_side(char c)
+   {
+      switch(c)
+      {
+         case 'w': return side::white;
+         case 'b': return side::black;
+         default:
+         {
+            std::stringstream oss;
+            oss << "unexpected character as color: '" << c << "'";
+            throw io_error(oss.str());
+         }
+      }
    }
 
    extern void
@@ -328,18 +344,7 @@ namespace cheapshot
          side
          scan_color(const char*& rs)
          {
-            char ch=*rs++;
-            switch (ch)
-            {
-               case 'w': return side::white;
-               case 'b': return side::black;
-               default:
-               {
-                  std::stringstream oss;
-                  oss << "unexpected character as color: '" << ch << "'";
-                  throw io_error(oss.str());
-               }
-            }
+            return to_side(*rs++);
          }
 
          struct {castling_t type; char repr;} constexpr castling_representations[]=

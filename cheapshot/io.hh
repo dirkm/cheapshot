@@ -15,7 +15,10 @@ namespace cheapshot
    typedef std::array<char,64> canvas_t;
 
    extern char
-   to_char(side c);
+   to_char(side t);
+
+   extern side
+   to_side(char c);
 
    extern void
    fill_canvas(uint64_t p,canvas_t& canvas,char piece_repr) noexcept;

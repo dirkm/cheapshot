@@ -9,6 +9,8 @@
 using namespace cheapshot;
 using namespace cheapshot::control;
 
+// TODO: measure branching factor
+
 namespace
 {
    struct stat_cache: cache
@@ -20,10 +22,8 @@ namespace
       try_cache_hit(Controller& ec, const context& ctx)
       {
          hit_info hi=cache::try_cache_hit<S>(ec,ctx);
-         if(hi.is_hit)
-            ++hits;
-         else
-            ++misses;
+         hits+=hi.is_hit;
+         misses+=!hi.is_hit;
          return hi;
       }
 
@@ -33,7 +33,7 @@ namespace
       void
       print_results(std::ostream& os) const
       {
-         os << "cache hits:" << hits
+         os << " cache hits:" << hits
             << " misses:" << misses
             << " hit ratio:" << float(hits)/(hits+misses)
             << std::endl;
@@ -49,12 +49,9 @@ namespace
       bool cutoff()
       {
          bool r=alphabeta::template cutoff<S>();
-         if(r)
-            ++cutoffs;
-         else
-            ++nocutoffs;
+         cutoffs+=r;
+         nocutoffs+=!r;
          return r;
-
       }
 
       int cutoffs=0;
@@ -63,7 +60,7 @@ namespace
       void
       print_results(std::ostream& os) const
       {
-         os << "pruning cutoffs:" << cutoffs
+         os << " pruning cutoffs:" << cutoffs
             << " no cutoff:" << nocutoffs
             << " hit ratio:" << float(cutoffs)/(cutoffs+nocutoffs)
             << std::endl;
@@ -78,9 +75,10 @@ BOOST_AUTO_TEST_CASE(cache_stat_test)
    board_t b=initial_board();
    context ctx=start_context;
    const int plies=9;
+   TimeOperation time_op;
    max_ply_cutoff<stat_alphabeta,incremental_hash,noop_material,stat_cache> cutoff(b,ctx,plies);
    score_position(cutoff,ctx);
-   std::cout << "init position with " << plies << " plies" << std::endl;
+   time_op.time_report("stats for init position with 9 plies",1);
    cutoff.pruning.print_results(std::cout);
    cutoff.cache.print_results(std::cout);
 }
