@@ -107,8 +107,7 @@ namespace cheapshot
    inline uint64_t
    hhash_ep_change0(uint64_t ep_info)
    {
-      if(ep_info) return hhash_ep(ep_info)^hhash_ep(0_U64);
-      else return 0_U64;
+      return hhash_ep(ep_info)^hhash_ep(0_U64);
    }
 
    inline uint64_t
@@ -157,7 +156,7 @@ namespace cheapshot
                hashref(ec.hasher.hash),
                oldhash(hashref)
             {
-               hashref^=hashfun(std::forward<Args>(args)...);
+               ec.hasher.make_hash(hashfun,std::forward<Args>(args)...);
             }
 
             ~scoped_hash()
@@ -171,6 +170,13 @@ namespace cheapshot
             uint64_t& hashref;
             uint64_t oldhash;
          };
+
+         template<typename HashFun, typename... Args>
+         void
+         make_hash(const HashFun& hashfun, Args&&...  args)
+         {
+            hash^=hashfun(std::forward<Args>(args)...);
+         }
       };
 
       struct noop_hash
@@ -186,7 +192,18 @@ namespace cheapshot
             scoped_hash(const scoped_hash&) = delete;
             scoped_hash& operator=(const scoped_hash&) = delete;
          };
+
+         template<typename HashFun, typename... Args>
+         void
+         make_hash(const HashFun& hashfun, Args&&...  args) {}
       };
+   }
+
+   template<typename Controller, typename HashFun, typename... Args>
+   void
+   make_hash(Controller& ec, const HashFun& hashfun, Args&&... args)
+   {
+      ec.hasher.make_hash(hashfun,std::forward<Args>(args)...);
    }
 } // cheapshot
 

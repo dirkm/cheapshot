@@ -485,13 +485,20 @@ namespace cheapshot
 
    template<side S>
    constexpr uint64_t
-   capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
+   reverse_capture_with_pawn(uint64_t s)
    {
       using namespace detail;
       return
-         (shift_forward<S>(unalias_backward<S>(s),7)|
-          shift_forward<S>(unalias_forward<S>(s),9))&
-         obstacles;
+         shift_backward<S>(unalias_forward<S>(s),7)|
+         shift_backward<S>(unalias_backward<S>(s),9);
+   }
+
+   template<side S>
+   constexpr uint64_t
+   capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
+   {
+      return
+         reverse_capture_with_pawn<other_side(S)>(s)&obstacles;
    }
 
    namespace detail
@@ -517,7 +524,6 @@ namespace cheapshot
             (shift_backward<S>(single_pawn_move&(~obstacles)&third_row,8))|
             single_pawn_move;
       }
-
    }
 
    template<side S>
@@ -535,16 +541,6 @@ namespace cheapshot
    slide_and_capture_with_pawn(uint64_t s, uint64_t obstacles) noexcept
    {
       return slide_pawn<S>(s,obstacles)|capture_with_pawn<S>(s,obstacles);
-   }
-
-   template<side S>
-   constexpr uint64_t
-   reverse_capture_pawn(uint64_t s, uint64_t obstacles)
-   {
-      using namespace detail;
-      return
-         shift_backward<S>(unalias_forward<S>(s),7)|
-         shift_backward<S>(unalias_backward<S>(s),9);
    }
 
    template<side S>

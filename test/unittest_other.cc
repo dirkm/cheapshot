@@ -1258,7 +1258,7 @@ BOOST_AUTO_TEST_CASE(control_timing_test)
       int nodes, matches;
       std::tie(nodes,matches)=compare_hashes(side::white,initial_board(),5);
       BOOST_CHECK_EQUAL(nodes,206604);
-      BOOST_CHECK_EQUAL(matches,97342);
+      BOOST_CHECK_EQUAL(matches,128808);
       //  cutoff: 6 // duration 50s
       // BOOST_CHECK_EQUAL(nodes,5072213);
       // BOOST_CHECK_EQUAL(matches,3661173);

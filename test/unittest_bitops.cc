@@ -544,9 +544,9 @@ reverse_move_capture_pawn_check(const char* canvas)
    obstacles|=obstacles_origins;
    origin_moves|=obstacles_origins;
    BOOST_CHECK_EQUAL(reverse_move_pawn<side::white>(pawn,obstacles),origin_moves);
-   BOOST_CHECK_EQUAL(reverse_capture_pawn<side::white>(pawn,obstacles),origin_captures);
+   BOOST_CHECK_EQUAL(reverse_capture_with_pawn<side::white>(pawn),origin_captures);
    BOOST_CHECK_EQUAL(reverse_move_pawn<side::black>(mirror(pawn),mirror(obstacles)),mirror(origin_moves));
-   BOOST_CHECK_EQUAL(reverse_capture_pawn<side::black>(mirror(pawn),mirror(obstacles)),mirror(origin_captures));
+   BOOST_CHECK_EQUAL(reverse_capture_with_pawn<side::black>(mirror(pawn)),mirror(origin_captures));
 }
 
 

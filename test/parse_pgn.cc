@@ -116,14 +116,11 @@ namespace
       po.to_print.sort();
       return po;
    }
-}
 
-namespace
-{
    class check_printable
    {
    public:
-      check_printable(parse_options& po_):
+      explicit check_printable(parse_options& po_):
          po(po_)
       {}
 
@@ -138,8 +135,9 @@ namespace
             po.to_print.pop_front();
             if(is_hit)
                return true;
-            else
-               entries_missed=true;
+            std::cerr << "unreachable position -- game: " << game
+                      << " pos: " << pos << " side to move: " << to_char(c) << std::endl;
+            entries_missed=true;
          }
          return false;
       }
@@ -163,30 +161,31 @@ main(int argc, const char* argv[])
    {
       check_printable is_printable(po);
 
-      int gamenr=0;
+      int game=0;
       int pos=0;
       int total_pos=0;
-      auto on_game=[&gamenr,&pos,&total_pos]()
+      auto on_game=[&game,&pos,&total_pos]()
          {
-            ++gamenr;
+            ++game;
             total_pos+=pos;
          };
 
-      auto on_pos=[&po,&pos,&gamenr,&is_printable](cheapshot::board_t& board, cheapshot::context& ctx)
+      auto on_pos=[&po,&pos,&game,&is_printable](cheapshot::board_t& board, cheapshot::context& ctx)
          {
             cheapshot::side c;
             std::tie(pos,c)=ctx.get_fullmove_number();
-            if(is_printable(gamenr,pos,c))
+            if(is_printable(game,pos,c))
             {
-               if(po.format==print_format::board)
+               switch(po.format)
                {
-                  std::cout << "game: " << gamenr << " pos: " << pos << " side to move: " << to_char(c) << std::endl;
-                  cheapshot::print_board(board,std::cout);
-               }
-               else
-               {
-                  std::cout << "game: " << gamenr << std::endl;
-                  cheapshot::print_fen(board,ctx,std::cout);
+                  case print_format::board:
+                     std::cout << "game: " << game << " pos: " << pos << " side to move: " << to_char(c) << std::endl;
+                     cheapshot::print_board(board,std::cout);
+                     break;
+                  case print_format::fen:
+                     std::cout << "game: " << game << std::endl;
+                     cheapshot::print_fen(board,ctx,std::cout);
+                     break;
                }
                std::cout << std::endl;
             }
@@ -204,7 +203,7 @@ main(int argc, const char* argv[])
 
       total_pos+=pos;
 
-      std::cout << "succesfully parsed " << gamenr << " games, "
+      std::cout << "succesfully parsed " << game << " games, "
                 << total_pos << " total positions"
                 << std::endl;
 

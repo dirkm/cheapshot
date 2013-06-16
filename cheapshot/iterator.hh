@@ -7,7 +7,6 @@
 
 namespace cheapshot
 {
-
    class bit_iterator
       : public std::iterator<
       std::forward_iterator_tag,uint64_t, std::ptrdiff_t,uint64_t*,uint64_t /* value instead of ref*/>

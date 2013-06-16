@@ -674,7 +674,7 @@ namespace cheapshot
          if(im.piece==piece_t::pawn)
          {
             if(im.destination&bm.opposing<S>())
-               return reverse_capture_pawn<S>(im.destination,obstacles);
+               return reverse_capture_with_pawn<S>(im.destination);
             else
                return reverse_move_pawn<S>(im.destination,obstacles);
          }
@@ -684,10 +684,9 @@ namespace cheapshot
 
       template<side S>
       uint64_t
-      possible_origins_ep(const board_t& board, const board_metrics& bm, const input_move& im)
+      possible_origins_ep(const input_move& im)
       {
-         const uint64_t obstacles=bm.all_pieces();
-         return reverse_capture_pawn<S>(im.destination,obstacles);
+         return reverse_capture_with_pawn<S>(im.destination);
       }
 
       template<side S>
@@ -769,7 +768,7 @@ namespace cheapshot
          {
             uint64_t origins=(im.type!=move_type::ep_capture)?
                possible_origins<S>(board, bm,im):
-               possible_origins_ep<S>(board, bm,im);
+               possible_origins_ep<S>(im);
             narrow_origin<S>(im,board,origins);
             bit_iterator originit(im.origin);
             im.origin=*originit;
