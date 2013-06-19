@@ -325,11 +325,11 @@ namespace cheapshot
    };
 
    template<side, typename Controller>
-   int
+   bool
    recurse_with_cutoff(const Controller& ec, const context& ctx);
 
    template<typename Analyzer>
-   bool
+   __attribute__((warn_unused_result)) bool
    recurse_destinations_with_cutoff(uint64_t destinations, uint64_t opposing, Analyzer& an)
    {
       for(bit_iterator dest_iter(destinations&opposing);dest_iter!=bit_iterator();
@@ -352,7 +352,7 @@ namespace cheapshot
          origin(origin_)
       {}
 
-      bool
+      __attribute__((warn_unused_result)) bool
       move_with_cutoff(uint64_t dest)
       {
          uint64_t oldpawnloc=get_side<S>(ec.state.board)[idx(piece_t::pawn)];
@@ -371,7 +371,7 @@ namespace cheapshot
          return false;
       }
 
-      bool
+      __attribute__((warn_unused_result)) bool
       capture_with_cutoff(uint64_t dest)
       {
          auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,origin,dest);
@@ -385,7 +385,7 @@ namespace cheapshot
          return capture_with_pawn<other_side(S)>(king,ec.state.bm.obstacles());
       }
 
-      bool
+      __attribute__((warn_unused_result)) bool
       ep_capture_with_cutoff(uint64_t ep_info)
       {
          const uint64_t ep_capture=en_passant_capture<S>(origin,ep_info);
@@ -393,7 +393,7 @@ namespace cheapshot
          return recurse_with_cutoff<S>(ec,ctx);
       }
 
-      bool
+      __attribute__((warn_unused_result)) bool
       promotions_with_cutoff(uint64_t dest)
       {
          // pawn to promotion square
@@ -424,14 +424,14 @@ namespace cheapshot
          origin(origin_)
       {}
 
-      bool
+      __attribute__((warn_unused_result)) bool
       move_with_cutoff(uint64_t dest)
       {
          scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(p,origin,dest));
          return recurse_with_cutoff<S>(ec,ctx);
       }
 
-      bool
+      __attribute__((warn_unused_result)) bool
       capture_with_cutoff(uint64_t dest)
       {
          auto mi=basic_capture_info<S>(ec.state.board,p,origin,dest);
@@ -574,7 +574,7 @@ namespace cheapshot
    }
 
    template<side S, typename Controller>
-   bool // TODO: force this value to be checked by compiler attribute
+   __attribute__((warn_unused_result)) bool
    recurse_with_cutoff(Controller& ec, const context& ctx)
    {
       {

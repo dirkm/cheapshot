@@ -101,13 +101,17 @@ namespace cheapshot
    constexpr uint64_t
    shift_backward<side::black>(uint64_t l, uint8_t r) noexcept {return l<<r;}
 
-   template<side S=side::white>
+   template<side S>
    constexpr uint8_t
-   bottom_index() noexcept { return uint8_t(S) * 7; }
+   abs_index(uint8_t) noexcept;
 
-   template<side S=side::white>
+   template<>
    constexpr uint8_t
-   top_index() noexcept { return bottom_index<other_side(S)>(); }
+   abs_index<side::white>(uint8_t n) noexcept {return n;}
+
+   template<>
+   constexpr uint8_t
+   abs_index<side::black>(uint8_t n) noexcept {return 7-n;}
 
    namespace detail
    // not considered as part of the API, because too specific, dangerous, or prone to change
@@ -381,23 +385,50 @@ namespace cheapshot
       constexpr uint64_t
       unalias_forward(uint64_t p)
       {
-         return p&~column_with_number(top_index<S>());
+         return p&~column_with_number(abs_index<S>(7));
       }
 
       template<side S=side::white>
       constexpr uint64_t
       unalias_backward(uint64_t p)
       {
-         return p&~column_with_number(bottom_index<S>());
+         return p&~column_with_number(abs_index<S>(0));
+      }
+
+      template<side S=side::white>
+      constexpr uint64_t
+      unalias_forward2(uint64_t p)
+      {
+         return p&~(column_with_number(abs_index<S>(6))|column_with_number(abs_index<S>(7)));
+      }
+
+      template<side S=side::white>
+      constexpr uint64_t
+      unalias_backward2(uint64_t p)
+      {
+         return p&~(column_with_number(abs_index<S>(0))|column_with_number(abs_index<S>(1)));
+      }
+
+      constexpr uint64_t
+      split_with_unalias(uint64_t p)
+      {
+         return
+            shift_forward(detail::unalias_forward(p),1)|
+            shift_backward(detail::unalias_backward(p),1);
+      }
+
+      constexpr uint64_t
+      split_with_unalias2(uint64_t p)
+      {
+         return
+            shift_forward(detail::unalias_forward2(p),2)|
+            shift_backward(detail::unalias_backward2(p),2);
       }
 
       constexpr uint64_t
       widen_with_unalias(uint64_t p)
       {
-         return
-            shift_forward(detail::unalias_forward(p),1)|
-            shift_backward(detail::unalias_backward(p),1)|
-            p;
+         return split_with_unalias(p)|p;
       }
    }
 
@@ -406,8 +437,8 @@ namespace cheapshot
    {
       using namespace detail;
       return
-         aliased_split(aliased_split(s,2)&row(s),8)|
-         aliased_split(aliased_split(s,1)&row(s),16);
+         aliased_split(split_with_unalias2(s),8)|
+         aliased_split(split_with_unalias(s),16);
    }
 
 // with obstacles to get uniform interface
@@ -421,8 +452,7 @@ namespace cheapshot
    move_king_simple(uint64_t s) noexcept
    {
       using namespace detail;
-      return
-         aliased_widen(widen_with_unalias(s),8);
+      return aliased_widen(widen_with_unalias(s),8);
    }
 
 // with obstacles to get uniform interface
@@ -505,23 +535,19 @@ namespace cheapshot
    {
       template<side S>
       constexpr uint64_t
-      slide_2_squares(
-         uint64_t single_pawn_move, uint64_t obstacles, uint64_t third_row
-         =shift_forward<S>(row_with_number(bottom_index<S>()),2*8)) noexcept
+      slide_2_squares(uint64_t single_pawn_move, uint64_t obstacles) noexcept
       {
          return
-            (shift_forward<S>(single_pawn_move&third_row,8)&~obstacles)|
+            (shift_forward<S>(single_pawn_move&row_with_number(abs_index<S>(2)),8)&~obstacles)|
             single_pawn_move;
       }
 
       template<side S>
       constexpr uint64_t
-      reverse_slide_2_squares(
-         uint64_t single_pawn_move, uint64_t obstacles, uint64_t third_row
-         =shift_forward<S>(row_with_number(bottom_index<S>()),2*8)) noexcept
+      reverse_slide_2_squares(uint64_t single_pawn_move, uint64_t obstacles) noexcept
       {
          return
-            (shift_backward<S>(single_pawn_move&(~obstacles)&third_row,8))|
+            shift_backward<S>(single_pawn_move&(~obstacles)&row_with_number(abs_index<S>(2)),8)|
             single_pawn_move;
       }
    }
@@ -580,7 +606,7 @@ namespace cheapshot
    promoting_pawns(uint64_t s) noexcept
    {
       // last row
-      return s&row_with_number(top_index<S>());
+      return s&row_with_number(abs_index<S>(7));
    }
 
    struct castling_t
@@ -616,8 +642,8 @@ namespace cheapshot
    constexpr castling_t
    short_castling() noexcept
    {
-      return castling_t{.rook1=position(5,bottom_index<S>()),.rook2=position(7,bottom_index<S>()),
-            .king1=position(4,bottom_index<S>()),.king2=position(6,bottom_index<S>())
+      return castling_t{.rook1=position(5,abs_index<S>(0)),.rook2=position(7,abs_index<S>(0)),
+            .king1=position(4,abs_index<S>(0)),.king2=position(6,abs_index<S>(0))
             };
    }
 
@@ -625,26 +651,27 @@ namespace cheapshot
    constexpr castling_t
    long_castling() noexcept
    {
-      return castling_t{.rook1=position(0,bottom_index<S>()),.rook2=position(3,bottom_index<S>()),
-            .king1=position(2,bottom_index<S>()),.king2=position(4,bottom_index<S>())
+      return castling_t{.rook1=position(0,abs_index<S>(0)),.rook2=position(3,abs_index<S>(0)),
+            .king1=position(2,abs_index<S>(0)),.king2=position(4,abs_index<S>(0))
             };
    }
 
+   // TODO: timings
    // masks must have the same value, independent of the game-history
    //  because they are used as input for hashing
    template<side S>
    constexpr uint64_t
    castling_block_mask(uint64_t rooks, uint64_t king,
-                       uint64_t rooks_init_pos=(position(0,bottom_index<S>())|
-                                                position(7,bottom_index<S>())),
-                       uint64_t king_init_pos=position(4,bottom_index<S>()))
+                       uint64_t rooks_init_pos=(position(0,abs_index<S>(0))|
+                                                position(7,abs_index<S>(0))),
+                       uint64_t king_init_pos=position(4,abs_index<S>(0)))
    {
       using namespace detail;
       return
          aliased_split(
             aliased_widen((~rooks&rooks_init_pos)|(~king&king_init_pos),1),
             2)&
-         (position(3,bottom_index<S>())|position(5,bottom_index<S>()));
+         (position(3,abs_index<S>(0))|position(5,abs_index<S>(0)));
    }
 
 } // cheapshot
