@@ -796,6 +796,19 @@ BOOST_AUTO_TEST_CASE(time_moves)
    time_move(&move_king,80000000,"move king");
 }
 
+BOOST_AUTO_TEST_CASE(time_castle_mask)
+{
+   long ops=runtime_adjusted_ops(100000000);
+   volatile uint64_t rooks=1_U64|1_U64<<8;
+   volatile uint64_t king=1_U64<<4;
+   __attribute__((unused)) volatile uint64_t r;
+   TimeOperation time_op;
+   for(long i=0;i<ops;++i)
+      r=castling_block_mask<side::white>(rooks,king);
+   time_op.time_report("castling block mask",ops);
+}
+
+
 BOOST_AUTO_TEST_CASE(time_count_set_bits)
 {
    __attribute__((unused)) volatile uint64_t r;
