@@ -18,9 +18,12 @@ namespace cheapshot
       {
          constexpr int limit=(std::numeric_limits<int>::max()/2)+1;
          constexpr int no_valid_move=-(limit>>1); // TODO: can be set to -limit
-         constexpr int repeat=(-no_valid_move)>>1;
-         constexpr int checkmate=repeat>>1;
-         constexpr int stalemate=checkmate>>1;
+         constexpr int checkmate=(-no_valid_move)>>1;
+         constexpr int repeat=checkmate>>1;
+         constexpr int stalemate=repeat>>1;
+         // constexpr int repeat=(-no_valid_move)>>1;
+         // constexpr int checkmate=repeat>>1;
+         // constexpr int stalemate=checkmate>>1;
       }
 
       constexpr int abs_score(side c, int sc)

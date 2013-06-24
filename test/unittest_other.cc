@@ -260,6 +260,9 @@ BOOST_AUTO_TEST_CASE(hash_test)
    BOOST_CHECK_EQUAL(bit_mixer_runtime(0x12345678_U64),detail::bit_mixer(0x12345678_U64));
 }
 
+namespace
+{
+
 struct state_holder
 {
    explicit state_holder(board_t& b):
@@ -267,6 +270,8 @@ struct state_holder
    {};
    board_state state;
 };
+
+}
 
 BOOST_AUTO_TEST_CASE(scoped_move_test)
 {
@@ -996,19 +1001,19 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
       scan_mate<alphabeta,incremental_hash,noop_material,cache>
          (side::white,side::white,4,b);
    }
-   // {
-   //    board_t b=scan_board(
-   //       ".......Q\n"
-   //       "ppp..N..\n"
-   //       "..n...r.\n"
-   //       "....pb..\n"
-   //       ".....pk.\n"
-   //       "...q....\n"
-   //       "......P.\n"
-   //       "..B.R..K\n"
-   //      );
-   //    scan_mate<side::white,max_ply_cutoff<alphabeta,noop_hash> >(side::white,10,b);
-   // }
+   {
+      board_t b=scan_board(
+         ".......Q\n"
+         "ppp..N..\n"
+         "..n...r.\n"
+         "....pb..\n"
+         ".....pk.\n"
+         "...q....\n"
+         "......P.\n"
+         "..B.R..K\n"
+        );
+      scan_mate<alphabeta,noop_hash>(side::white,side::white,10,b);
+   }
 }
 
 // mostly used for simple cache-testing
@@ -1123,14 +1128,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
    }
    {
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(20);
+      const long ops=runtime_adjusted_ops(800);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta>(side::black,side::white,7,rook_queen_mate);
       time_op.time_report("endgame mate in 7 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(10);
+      const long ops=runtime_adjusted_ops(400);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta,incremental_hash,noop_material,cache>
             (side::black,side::white,7,{rook_queen_mate});
@@ -1138,14 +1143,14 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
    }
    {
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(2);
+      const long ops=runtime_adjusted_ops(40);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta>(side::white,side::white,8,{rook_queen_mate8});
       time_op.time_report("endgame mate in 8 plies (ab)",ops);
    }
    {
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(2);
+      const long ops=runtime_adjusted_ops(40);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta,incremental_hash,noop_material,cache>
             (side::white,side::white,8,{rook_queen_mate8});
@@ -1153,7 +1158,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
    }
    {
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(2);
+      const long ops=runtime_adjusted_ops(40);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta,incremental_hash,incremental_material,cache>
             (side::white,side::white,8,{rook_queen_mate8});
@@ -1162,7 +1167,7 @@ BOOST_AUTO_TEST_CASE(time_endgame_mate)
    {
       board_t b=cheapshot::scan_board(mate_in_3_canvas);
       TimeOperation time_op;
-      const long ops=runtime_adjusted_ops(10);
+      const long ops=runtime_adjusted_ops(800);
       for(long i=0;i<ops;++i)
          scan_mate<alphabeta>(side::white,side::white,6,b);
       // minimax
@@ -1363,6 +1368,66 @@ namespace
 BOOST_AUTO_TEST_CASE(incremental_material_test)
 {
    play_tests<material_checker>();
+}
+
+BOOST_AUTO_TEST_CASE(origins_with_check_test)
+{
+   board_t b=scan_board(
+      "........\n"
+      "pp..rkpp\n"
+      "n...b...\n"
+      ".....p..\n"
+      "..P.p...\n"
+      "PN..P.PP\n"
+      ".....P..\n"
+      "...R.BK.\n");
+
+   state_holder sh(b);
+   context ctx=no_castle_context;
+   {
+      analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::bishop);
+      uint64_t bishop_checks=ap.origins_with_check();
+      const char cvs_bishop[]=
+         "....X.X.\n"
+         ".....X..\n"
+         "....X.X.\n"
+         ".......X\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(scan_canvas(cvs_bishop,'X'),bishop_checks);
+   }
+
+   {
+      analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::knight);
+      uint64_t knight_checks=ap.origins_with_check();
+      const char cvs_knight[]=
+         "...X...X\n"
+         "........\n"
+         "...X...X\n"
+         "....X.X.\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(scan_canvas(cvs_knight,'X'),knight_checks);
+   }
+
+   {
+      analyze_pawn<side::black,state_holder> ap(sh,ctx);
+      uint64_t pawn_checks=ap.origins_with_check();
+      const char cvs_pawn[]=
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         ".....X.X\n"
+         "........\n";
+      BOOST_CHECK_EQUAL(scan_canvas(cvs_pawn,'X'),pawn_checks);
+   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

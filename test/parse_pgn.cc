@@ -48,8 +48,12 @@ namespace
          " TWIC format\n"
          " eol comments\n"
          " inline comments\n"
-         "The main omission is variations within brackets"
-                << std::endl;
+         "The main omission is variations within brackets\n\n"
+         "  -g, --game=NR        game number\n"
+         "  -m, --move=NR        move number\n"
+         "  -s, --side=S         side (w/b)\n"
+         "  -f, --format=FMT     format used for printing fen/f or algebraic/a\n"
+         "  -p, --print          print defined position\n";
    }
 
    parse_options

@@ -52,9 +52,9 @@ namespace cheapshot
       struct alphabeta
       {
          explicit constexpr alphabeta(side c):
-            alpha(-score::limit(side::white)),
-            score(-score::limit(c)),
-            beta(-score::limit(side::black))
+            alpha(score::checkmate(side::black)),
+            score(score::checkmate(other_side(c))),
+            beta(score::checkmate(side::white))
          {}
          int alpha;
          int score;

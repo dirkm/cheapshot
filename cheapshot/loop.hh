@@ -328,21 +328,6 @@ namespace cheapshot
    bool
    recurse_with_cutoff(const Controller& ec, const context& ctx);
 
-   template<typename Analyzer>
-   __attribute__((warn_unused_result)) bool
-   recurse_destinations_with_cutoff(uint64_t origin, uint64_t destinations, uint64_t opposing, Analyzer& an)
-   {
-      for(bit_iterator dest_iter(destinations&opposing);dest_iter!=bit_iterator();
-          ++dest_iter)
-         if(an.capture_with_cutoff(origin,*dest_iter))
-            return true;
-      for(bit_iterator dest_iter(destinations&~opposing);dest_iter!=bit_iterator();
-          ++dest_iter)
-         if(an.move_with_cutoff(origin,*dest_iter))
-            return true;
-      return false;
-   }
-
    template<side S,typename Controller>
    struct analyze_pawn
    {
@@ -379,9 +364,10 @@ namespace cheapshot
       }
 
       uint64_t
-      origins_with_check(uint64_t king)
+      origins_with_check() const
       {
-         return capture_with_pawn<other_side(S)>(king,ec.state.bm.obstacles());
+         uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
+         return reverse_capture_with_pawn<S>(king);
       }
 
       __attribute__((warn_unused_result)) bool
@@ -437,9 +423,10 @@ namespace cheapshot
       }
 
       uint64_t
-      origins_with_check(uint64_t king)
+      origins_with_check() const
       {
-         return basic_move_generators<other_side(S)>()[p](king,ec.state.bm.obstacles());
+         uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
+         return basic_piece_move_generators()[idx(p)-1](king,ec.state.bm.all_pieces());
       }
 
       Controller& ec;
@@ -479,7 +466,7 @@ namespace cheapshot
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
       auto basic_moves_end(begin(basic_moves));
-      decltype(basic_moves)::const_iterator pawn_moves_end;
+      decltype(basic_moves)::iterator pawn_moves_end;
       uint64_t opponent_under_attack{0_U64};
 
       // fill variables defined above
@@ -511,7 +498,8 @@ namespace cheapshot
 
       context ctx=oldctx;
       ctx.ep_info=0_U64;
-      scoped_make_turn<Controller> scoped_turn(ec,ctx); // scope will restore hashes with make_hash below as well
+      // this scope closes hashes generated through make_hash below as well
+      scoped_make_turn<Controller> scoped_turn(ec,ctx);
 
       // en passant captures
       if(oldctx.ep_info)
@@ -538,28 +526,85 @@ namespace cheapshot
             if(analyze_castle_with_cutoff<S>(ec,ctx,cit))
                return;
 
-      // pawns
-      for(decltype(basic_moves)::const_iterator msit=std::begin(basic_moves);
-          msit!=pawn_moves_end;++msit)
+      // checks
+      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
+         // promotions
          analyze_pawn<S,Controller> ap(ec,ctx);
          const uint64_t promotions=msit->destinations&promoting_pawns<S>(msit->destinations);
+         msit->destinations^=promotions;
          for(bit_iterator dest_iter(promotions);dest_iter!=bit_iterator(); ++dest_iter)
             if(ap.promotions_with_cutoff(msit->origin,*dest_iter))
                return;
 
-         uint64_t dests=msit->destinations^promotions;
-         if(recurse_destinations_with_cutoff(msit->origin,dests,bm.opposing<S>(),ap))
-            return;
+         uint64_t dests=msit->destinations&ap.origins_with_check();
+         msit->destinations^=dests;
+         uint64_t dests_captures=dests&bm.opposing<S>();
+
+         for(bit_iterator dest_iter(dests_captures);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+               return;
+
+         dests^=dests_captures;
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.move_with_cutoff(msit->origin,*dest_iter))
+               return;
       }
 
-      // pieces
-      for(decltype(basic_moves)::const_iterator msit=pawn_moves_end;
-          msit!=basic_moves_end;++msit)
+      for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
          analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         if(recurse_destinations_with_cutoff(msit->origin,msit->destinations,bm.opposing<S>(),ap))
-            return;
+         uint64_t dests=msit->destinations&ap.origins_with_check();
+         msit->destinations^=dests;
+         uint64_t dests_captures=dests&bm.opposing<S>();
+         dests^=dests_captures;
+         for(bit_iterator dest_iter(dests_captures);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+               return;
+
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.move_with_cutoff(msit->origin,*dest_iter))
+               return;
+      }
+
+      // captures
+      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+      {
+         analyze_pawn<S,Controller> ap(ec,ctx);
+         uint64_t dests=msit->destinations&bm.opposing<S>();
+         msit->destinations^=dests;
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+               return;
+      }
+
+      for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
+      {
+         analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
+         uint64_t dests=msit->destinations&bm.opposing<S>();
+         msit->destinations^=dests;
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+               return;
+      }
+
+      // moves
+      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+      {
+         analyze_pawn<S,Controller> ap(ec,ctx);
+         uint64_t dests=msit->destinations;
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.move_with_cutoff(msit->origin,*dest_iter))
+               return;
+      }
+
+      for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
+      {
+         analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
+         uint64_t dests=msit->destinations;
+         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.move_with_cutoff(msit->origin,*dest_iter))
+               return;
       }
 
       if(score==score::no_valid_move(S))
