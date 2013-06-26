@@ -673,7 +673,6 @@ namespace cheapshot
             2)&
          (position(3,abs_index<S>(0))|position(5,abs_index<S>(0)));
    }
-
 } // cheapshot
 
 #endif

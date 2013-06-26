@@ -324,6 +324,15 @@ namespace cheapshot
       control::scoped_hash<Controller> sc_hash;
    };
 
+   inline
+   uint64_t
+   cut_mask(uint64_t& v, uint64_t mask)
+   {
+      mask&=v;
+      v^=mask;
+      return mask;
+   }
+
    template<side, typename Controller>
    bool
    recurse_with_cutoff(const Controller& ec, const context& ctx);
@@ -527,42 +536,39 @@ namespace cheapshot
                return;
 
       // checks
-      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
-         // promotions
          analyze_pawn<S,Controller> ap(ec,ctx);
-         const uint64_t promotions=msit->destinations&promoting_pawns<S>(msit->destinations);
-         msit->destinations^=promotions;
-         for(bit_iterator dest_iter(promotions);dest_iter!=bit_iterator(); ++dest_iter)
-            if(ap.promotions_with_cutoff(msit->origin,*dest_iter))
-               return;
+         uint64_t origins_with_check=ap.origins_with_check();
+         for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+         {
+            // promotions
+            const uint64_t promotions=cut_mask(msit->destinations,promoting_pawns<S>(msit->destinations));
+            for(bit_iterator dest_iter(promotions);dest_iter!=bit_iterator(); ++dest_iter)
+               if(ap.promotions_with_cutoff(msit->origin,*dest_iter))
+                  return;
 
-         uint64_t dests=msit->destinations&ap.origins_with_check();
-         msit->destinations^=dests;
-         uint64_t dests_captures=dests&bm.opposing<S>();
+            uint64_t checks=cut_mask(msit->destinations,origins_with_check);
+            uint64_t checks_capture=cut_mask(checks,bm.opposing<S>());
+            for(bit_iterator dest_iter(checks_capture);dest_iter!=bit_iterator();++dest_iter)
+               if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+                  return;
 
-         for(bit_iterator dest_iter(dests_captures);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
-               return;
-
-         dests^=dests_captures;
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.move_with_cutoff(msit->origin,*dest_iter))
-               return;
+            for(bit_iterator dest_iter(checks);dest_iter!=bit_iterator();++dest_iter)
+               if(ap.move_with_cutoff(msit->origin,*dest_iter))
+                  return;
+         }
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
          analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         uint64_t dests=msit->destinations&ap.origins_with_check();
-         msit->destinations^=dests;
-         uint64_t dests_captures=dests&bm.opposing<S>();
-         dests^=dests_captures;
-         for(bit_iterator dest_iter(dests_captures);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
+         uint64_t checks=cut_mask(msit->destinations,ap.origins_with_check());
+         uint64_t checks_capture=cut_mask(checks,bm.opposing<S>());
+         for(bit_iterator dest_iter(checks_capture);dest_iter!=bit_iterator();++dest_iter)
+            if(ap.capture_with_cutoff(msit->origin,*dest_iter)) // todo, make it take a move_set
                return;
 
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+         for(bit_iterator dest_iter(checks);dest_iter!=bit_iterator();++dest_iter)
             if(ap.move_with_cutoff(msit->origin,*dest_iter))
                return;
       }
@@ -571,9 +577,8 @@ namespace cheapshot
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
          analyze_pawn<S,Controller> ap(ec,ctx);
-         uint64_t dests=msit->destinations&bm.opposing<S>();
-         msit->destinations^=dests;
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+         uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
+         for(bit_iterator dest_iter(captures);dest_iter!=bit_iterator();++dest_iter)
             if(ap.capture_with_cutoff(msit->origin,*dest_iter))
                return;
       }
@@ -581,9 +586,8 @@ namespace cheapshot
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
          analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         uint64_t dests=msit->destinations&bm.opposing<S>();
-         msit->destinations^=dests;
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+         uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
+         for(bit_iterator dest_iter(captures);dest_iter!=bit_iterator();++dest_iter)
             if(ap.capture_with_cutoff(msit->origin,*dest_iter))
                return;
       }
@@ -592,8 +596,7 @@ namespace cheapshot
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
          analyze_pawn<S,Controller> ap(ec,ctx);
-         uint64_t dests=msit->destinations;
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+         for(bit_iterator dest_iter(msit->destinations);dest_iter!=bit_iterator();++dest_iter)
             if(ap.move_with_cutoff(msit->origin,*dest_iter))
                return;
       }
@@ -601,8 +604,7 @@ namespace cheapshot
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
          analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         uint64_t dests=msit->destinations;
-         for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator();++dest_iter)
+         for(bit_iterator dest_iter(msit->destinations);dest_iter!=bit_iterator();++dest_iter)
             if(ap.move_with_cutoff(msit->origin,*dest_iter))
                return;
       }

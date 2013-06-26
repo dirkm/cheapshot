@@ -21,9 +21,6 @@ namespace cheapshot
          constexpr int checkmate=(-no_valid_move)>>1;
          constexpr int repeat=checkmate>>1;
          constexpr int stalemate=repeat>>1;
-         // constexpr int repeat=(-no_valid_move)>>1;
-         // constexpr int checkmate=repeat>>1;
-         // constexpr int stalemate=checkmate>>1;
       }
 
       constexpr int abs_score(side c, int sc)
