@@ -1,0 +1,83 @@
+Date: Fri Aug  9 18:00:18 CEST 2013
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++-4.8.1-pre
+COLLECT_LTO_WRAPPER=/home/dirk/local/libexec/gcc/x86_64-unknown-linux-gnu/4.8.1/lto-wrapper
+Target: x86_64-unknown-linux-gnu
+Configured with: ./configure --prefix=/home/dirk/local --program-suffix=-4.8.1-pre --enable-languages=c,c++
+Thread model: posix
+gcc version 4.8.1 20130520 (prerelease) (GCC) 
+CFlags: -g -O3  -I. -std=c++11 -march=native -mtune=native -Wall
+Cpus: 
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+model name	: Pentium(R) Dual-Core CPU       T4200  @ 2.00GHz
+Last git commit: 
+commit 5e6398d484339efe1b62380250df9eb473241c7e
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Wed Jun 26 22:13:26 2013 +0200
+
+    cleanup
+Tests
+Running 47 test cases...
+board pos
+ real time:0.228 user time:0.228 system time:0 ops/sec:6.57895e+08
+slide pawn up
+ real time:0.052 user time:0.052 system time:0 ops/sec:4.80769e+08
+slide pawn down
+ real time:0.052 user time:0.052 system time:0 ops/sec:4.80769e+08
+capture with pawn up
+ real time:0.044 user time:0.044 system time:0 ops/sec:5.68182e+08
+capture with pawn down
+ real time:0.044 user time:0.044 system time:0 ops/sec:5.68182e+08
+knight jump
+ real time:0.12 user time:0.12 system time:0 ops/sec:2.08333e+08
+slide bishop
+ real time:0.192 user time:0.192 system time:0 ops/sec:5.20833e+07
+slide rook
+ real time:0.152 user time:0.152 system time:0 ops/sec:6.57895e+07
+slide queen
+ real time:0.148 user time:0.148 system time:0 ops/sec:3.37838e+07
+move king
+ real time:0.072 user time:0.072 system time:0 ops/sec:2.77778e+08
+castling block mask
+ real time:0.088 user time:0.088 system time:0 ops/sec:2.84091e+08
+count set bits
+ real time:0.26 user time:0.26 system time:0 ops/sec:7.69231e+07
+move set walk
+ real time:0.16 user time:0.156 system time:0.004 ops/sec:9.375e+06
+mate check (value is significantly less than nps)
+ real time:0.132 user time:0.132 system time:0 ops/sec:189394
+caged kings at ply depth 17
+ real time:0.192 user time:0.192 system time:0 ops/sec:5.20833
+endgame mate in 7 plies
+ real time:0.488 user time:0.488 system time:0 ops/sec:2.04918
+endgame mate in 7 plies (cache)
+ real time:0.208 user time:0.204 system time:0.004 ops/sec:4.80769
+endgame mate in 7 plies (ab)
+ real time:0.16 user time:0.16 system time:0 ops/sec:1250
+endgame mate in 7 plies (ab,cache)
+ real time:0.188 user time:0.188 system time:0 ops/sec:531.915
+endgame mate in 8 plies (ab)
+ real time:0.212 user time:0.212 system time:0 ops/sec:47.1698
+endgame mate in 8 plies (ab,cache)
+ real time:0.076 user time:0.076 system time:0 ops/sec:131.579
+endgame mate in 8 plies (ab,cache,material)
+ real time:0.076 user time:0.076 system time:0 ops/sec:131.579
+middlegame mate in 6 plies (ab)
+ real time:0.148 user time:0.148 system time:0 ops/sec:1351.35
+minimax nodes test
+ real time:0.056 user time:0.056 system time:0 ops/sec:166482
+alphabeta nodes test
+ real time:0.392 user time:0.392 system time:0 ops/sec:831819
+incremental hash nodes test
+ real time:0.06 user time:0.06 system time:0 ops/sec:155383
+all-at-once hashes from start position
+ real time:1.6 user time:1.588 system time:0.012 ops/sec:129128
+all-at-once hashes in endgame mating position
+ real time:0.972 user time:0.964 system time:0.008 ops/sec:506812
+parse pgn games
+ real time:0.248 user time:0.248 system time:0 ops/sec:7560.48
+stats for init position with 9 plies
+ real time:1.16 user time:1.132 system time:0.028 ops/sec:0.862069
+ pruning cutoffs:120933 no cutoff:1521971 hit ratio:0.0736093
+ cache hits:660296 misses:982609 hit ratio:0.401908
