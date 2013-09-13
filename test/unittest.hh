@@ -88,7 +88,8 @@ namespace cheapshot
    throw_errno_as_runtime_error(const char* prefix)
    {
       char errormsg[256];
-      strerror_r(errno,errormsg,sizeof(errormsg));
+      if(strerror_r(errno,errormsg,sizeof(errormsg))==nullptr)
+         std::strcpy(errormsg,"unknown error number");
       std::ostringstream oss;
       oss << prefix << ": '" << errormsg << "'";
       throw std::runtime_error(oss.str());

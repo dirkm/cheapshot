@@ -40,7 +40,7 @@ namespace cheapshot
    }
 
    constexpr std::array<move_generator_t,count<piece_t>()-1>
-   basic_piece_move_generators()
+      basic_piece_move_generators()
    {
       return {jump_knight,
             slide_bishop,
@@ -51,7 +51,7 @@ namespace cheapshot
    }
 
    constexpr std::array<piece_t,4> piece_promotions={
-         piece_t::queen,piece_t::knight,piece_t::rook,piece_t::bishop};
+      piece_t::queen,piece_t::knight,piece_t::rook,piece_t::bishop};
 
    template<side S>
    constexpr std::array<castling_t,2>
@@ -338,110 +338,103 @@ namespace cheapshot
    recurse_with_cutoff(const Controller& ec, const context& ctx);
 
    template<side S,typename Controller>
-   struct analyze_pawn
+   __attribute__((warn_unused_result)) bool
+   pawn_move_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
    {
-      analyze_pawn(Controller& ec_, context& ctx_):
-         ec(ec_),
-         ctx(ctx_)
-      {}
-
-      __attribute__((warn_unused_result)) bool
-      move_with_cutoff(uint64_t origin, uint64_t dest)
+      uint64_t oldpawnloc=get_side<S>(ec.state.board)[idx(piece_t::pawn)];
+      scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(piece_t::pawn,ms.origin,dest));
+      ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(ec.state.board)[idx(piece_t::pawn)]);
+      if(ctx.ep_info)
       {
-         uint64_t oldpawnloc=get_side<S>(ec.state.board)[idx(piece_t::pawn)];
-         scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(piece_t::pawn,origin,dest));
-         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(ec.state.board)[idx(piece_t::pawn)]);
-         if(ctx.ep_info)
-         {
-            // limit ep_info to actual captures
-            constexpr side OS=other_side(S);
-            ctx.ep_info=capture_with_pawn<OS>(get_side<OS>(ec.state.board)[idx(piece_t::pawn)],ctx.ep_info);
-            make_hash(ec,hhash_ep_change0,ctx.ep_info);
-         }
-         if(recurse_with_cutoff<S>(ec,ctx))
-            return true;
-         ctx.ep_info=0_U64;
-         return false;
+         // limit ep_info to actual captures
+         constexpr side OS=other_side(S);
+         ctx.ep_info=capture_with_pawn<OS>(get_side<OS>(ec.state.board)[idx(piece_t::pawn)],ctx.ep_info);
+         make_hash(ec,hhash_ep_change0,ctx.ep_info);
       }
-
-      __attribute__((warn_unused_result)) bool
-      capture_with_cutoff(uint64_t origin, uint64_t dest)
-      {
-         auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,origin,dest);
-         scoped_move_hash_material<Controller> mv(ec,mi);
-         return recurse_with_cutoff<S>(ec,ctx);
-      }
-
-      uint64_t
-      origins_with_check() const
-      {
-         uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
-         return reverse_capture_with_pawn<S>(king);
-      }
-
-      __attribute__((warn_unused_result)) bool
-      ep_capture_with_cutoff(uint64_t origin, uint64_t ep_info)
-      {
-         const uint64_t ep_capture=en_passant_capture<S>(origin,ep_info);
-         scoped_move_hash_material<Controller> mv(ec,en_passant_info<S>(origin,ep_capture));
-         return recurse_with_cutoff<S>(ec,ctx);
-      }
-
-      __attribute__((warn_unused_result)) bool
-      promotions_with_cutoff(uint64_t origin, uint64_t dest)
-      {
-         // pawn to promotion square
-         auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,origin,dest);
-         scoped_move_hash_material<Controller> mv(ec,potential_capture_material,mi);
-         for(auto prom: piece_promotions)
-         {
-            // all promotions
-            scoped_move_hash_material<Controller> mv2(ec,promotion_material,promotion_info<S>(prom,dest));
-            if(recurse_with_cutoff<S>(ec,ctx))
-               return true;
-         }
-         return false;
-      }
-
-      Controller& ec;
-      context& ctx;
-   };
+      if(recurse_with_cutoff<S>(ec,ctx))
+         return true;
+      ctx.ep_info=0_U64;
+      return false;
+   }
 
    template<side S,typename Controller>
-   struct analyze_piece
+   __attribute__((warn_unused_result)) bool
+   pawn_capture_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
    {
-      analyze_piece(Controller& ec_, context& ctx_, piece_t p_):
-         ec(ec_),
-         ctx(ctx_),
-         p(p_)
-      {}
+      auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,ms.origin,dest);
+      scoped_move_hash_material<Controller> mv(ec,mi);
+      return recurse_with_cutoff<S>(ec,ctx);
+   }
 
-      __attribute__((warn_unused_result)) bool
-      move_with_cutoff(uint64_t origin, uint64_t dest)
+   template<side S,typename Controller>
+   uint64_t
+   pawn_origins_with_check(const Controller& ec)
+   {
+      uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
+      return reverse_capture_with_pawn<S>(king);
+   }
+
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   ep_capture_with_cutoff(Controller& ec, context& ctx, uint64_t origin, uint64_t ep_info)
+   {
+      const uint64_t ep_capture=en_passant_capture<S>(origin,ep_info);
+      scoped_move_hash_material<Controller> mv(ec,en_passant_info<S>(origin,ep_capture));
+      return recurse_with_cutoff<S>(ec,ctx);
+   }
+
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   promotions_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
+   {
+      // pawn to promotion square
+      auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,ms.origin,dest);
+      scoped_move_hash_material<Controller> mv(ec,potential_capture_material,mi);
+      for(auto prom: piece_promotions)
       {
-         scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(p,origin,dest));
-         return recurse_with_cutoff<S>(ec,ctx);
+         // all promotions
+         scoped_move_hash_material<Controller> mv2(ec,promotion_material,promotion_info<S>(prom,dest));
+         if(recurse_with_cutoff<S>(ec,ctx))
+            return true;
       }
+      return false;
+   }
 
-      __attribute__((warn_unused_result)) bool
-      capture_with_cutoff(uint64_t origin, uint64_t dest)
-      {
-         auto mi=basic_capture_info<S>(ec.state.board,p,origin,dest);
-         scoped_move_hash_material<Controller> mv(ec,mi);
-         return recurse_with_cutoff<S>(ec,ctx);
-      }
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   move_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
+   {
+      scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(ms.piece,ms.origin,dest));
+      return recurse_with_cutoff<S>(ec,ctx);
+   }
 
-      uint64_t
-      origins_with_check() const
-      {
-         uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
-         return basic_piece_move_generators()[idx(p)-1](king,ec.state.bm.all_pieces());
-      }
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   capture_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
+   {
+      auto mi=basic_capture_info<S>(ec.state.board,ms.piece,ms.origin,dest);
+      scoped_move_hash_material<Controller> mv(ec,mi);
+      return recurse_with_cutoff<S>(ec,ctx);
+   }
 
-      Controller& ec;
-      context& ctx;
-      piece_t p;
-   };
+   template<side S,typename Controller>
+   uint64_t
+   piece_origins_with_check(const Controller& ec,piece_t piece)
+   {
+      uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
+      return basic_piece_move_generators()[idx(piece)-1](king,ec.state.bm.all_pieces());
+   }
+
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   on_destinations(Controller& ec, context& ctx, const move_set& ms, uint64_t dests,
+                   bool (*on_dest)(Controller& ec, context& ctx, const move_set& ms, uint64_t dest))
+   {
+      for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator(); ++dest_iter)
+         if(on_dest(ec,ctx,ms,*dest_iter))
+            return true;
+      return false;
+   }
 
    template<side S,typename Controller>
    bool analyze_castle_with_cutoff(Controller& ec, const context& ctx, const castling_t& c)
@@ -518,8 +511,7 @@ namespace cheapshot
              oit!=bit_iterator();
              ++oit)
          {
-            analyze_pawn<S,Controller> ap(ec,ctx);
-            if(ap.ep_capture_with_cutoff(*oit,oldctx.ep_info))
+            if(ep_capture_with_cutoff<S>(ec,ctx,*oit,oldctx.ep_info))
                return;
          }
       }
@@ -537,76 +529,63 @@ namespace cheapshot
 
       // checks
       {
-         analyze_pawn<S,Controller> ap(ec,ctx);
-         uint64_t origins_with_check=ap.origins_with_check();
+         uint64_t origins_with_check=pawn_origins_with_check<S>(ec);
          for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
          {
             // promotions
             const uint64_t promotions=cut_mask(msit->destinations,promoting_pawns<S>(msit->destinations));
-            for(bit_iterator dest_iter(promotions);dest_iter!=bit_iterator(); ++dest_iter)
-               if(ap.promotions_with_cutoff(msit->origin,*dest_iter))
-                  return;
+            if(on_destinations<S>(ec,ctx,*msit,promotions,promotions_with_cutoff<S,Controller>))
+               return;
 
-            uint64_t checks=cut_mask(msit->destinations,origins_with_check);
-            uint64_t checks_capture=cut_mask(checks,bm.opposing<S>());
-            for(bit_iterator dest_iter(checks_capture);dest_iter!=bit_iterator();++dest_iter)
-               if(ap.capture_with_cutoff(msit->origin,*dest_iter))
-                  return;
+            uint64_t checks_move=cut_mask(msit->destinations,origins_with_check);
+            uint64_t checks_capture=cut_mask(checks_move,bm.opposing<S>());
 
-            for(bit_iterator dest_iter(checks);dest_iter!=bit_iterator();++dest_iter)
-               if(ap.move_with_cutoff(msit->origin,*dest_iter))
-                  return;
+            if(on_destinations<S>(ec,ctx,*msit,checks_capture,pawn_capture_with_cutoff<S,Controller>))
+               return;
+
+            if(on_destinations<S>(ec,ctx,*msit,checks_move,pawn_move_with_cutoff<S,Controller>))
+               return;
          }
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
-         analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         uint64_t checks=cut_mask(msit->destinations,ap.origins_with_check());
-         uint64_t checks_capture=cut_mask(checks,bm.opposing<S>());
-         for(bit_iterator dest_iter(checks_capture);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.capture_with_cutoff(msit->origin,*dest_iter)) // todo, make it take a move_set
-               return;
+         uint64_t checks_move=cut_mask(msit->destinations,piece_origins_with_check<S>(ec,msit->piece));
+         uint64_t checks_capture=cut_mask(checks_move,bm.opposing<S>());
 
-         for(bit_iterator dest_iter(checks);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.move_with_cutoff(msit->origin,*dest_iter))
-               return;
+         if(on_destinations<S>(ec,ctx,*msit,checks_capture,capture_with_cutoff<S,Controller>))
+            return;
+
+         if(on_destinations<S>(ec,ctx,*msit,checks_move,move_with_cutoff<S,Controller>))
+            return;
       }
 
       // captures
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
-         analyze_pawn<S,Controller> ap(ec,ctx);
          uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
-         for(bit_iterator dest_iter(captures);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
-               return;
+         if(on_destinations<S>(ec,ctx,*msit,captures,pawn_capture_with_cutoff<S,Controller>))
+            return;
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
-         analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
          uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
-         for(bit_iterator dest_iter(captures);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.capture_with_cutoff(msit->origin,*dest_iter))
-               return;
+         if(on_destinations<S>(ec,ctx,*msit,captures,capture_with_cutoff<S,Controller>))
+            return;
       }
 
       // moves
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
-         analyze_pawn<S,Controller> ap(ec,ctx);
-         for(bit_iterator dest_iter(msit->destinations);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.move_with_cutoff(msit->origin,*dest_iter))
-               return;
+         if(on_destinations<S>(ec,ctx,*msit,msit->destinations,pawn_move_with_cutoff<S,Controller>))
+            return;
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
-         analyze_piece<S,Controller> ap(ec,ctx,msit->piece);
-         for(bit_iterator dest_iter(msit->destinations);dest_iter!=bit_iterator();++dest_iter)
-            if(ap.move_with_cutoff(msit->origin,*dest_iter))
-               return;
+         if(on_destinations<S>(ec,ctx,*msit,msit->destinations,move_with_cutoff<S,Controller>))
+            return;
       }
 
       if(score==score::no_valid_move(S))

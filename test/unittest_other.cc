@@ -1383,10 +1383,9 @@ BOOST_AUTO_TEST_CASE(origins_with_check_test)
       "...R.BK.\n");
 
    state_holder sh(b);
-   context ctx=no_castle_context;
    {
-      analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::bishop);
-      uint64_t bishop_checks=ap.origins_with_check();
+      // analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::bishop);
+      uint64_t bishop_checks=piece_origins_with_check<side::white>(sh,piece_t::bishop);
       const char cvs_bishop[]=
          "....X.X.\n"
          ".....X..\n"
@@ -1400,8 +1399,8 @@ BOOST_AUTO_TEST_CASE(origins_with_check_test)
    }
 
    {
-      analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::knight);
-      uint64_t knight_checks=ap.origins_with_check();
+      // analyze_piece<side::white,state_holder> ap(sh,ctx,piece_t::knight);
+      uint64_t knight_checks=piece_origins_with_check<side::white>(sh,piece_t::knight);
       const char cvs_knight[]=
          "...X...X\n"
          "........\n"
@@ -1415,8 +1414,7 @@ BOOST_AUTO_TEST_CASE(origins_with_check_test)
    }
 
    {
-      analyze_pawn<side::black,state_holder> ap(sh,ctx);
-      uint64_t pawn_checks=ap.origins_with_check();
+      uint64_t pawn_checks=pawn_origins_with_check<side::black>(sh);
       const char cvs_pawn[]=
          "........\n"
          "........\n"
