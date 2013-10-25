@@ -263,13 +263,13 @@ BOOST_AUTO_TEST_CASE(hash_test)
 namespace
 {
 
-struct state_holder
-{
-   explicit state_holder(board_t& b):
-      state(b)
-   {};
-   board_state state;
-};
+   struct state_holder
+   {
+      explicit state_holder(board_t& b):
+         state(b)
+      {};
+      board_state state;
+   };
 
 }
 
@@ -1011,7 +1011,7 @@ BOOST_AUTO_TEST_CASE(find_mate_test)
          "...q....\n"
          "......P.\n"
          "..B.R..K\n"
-        );
+         );
       scan_mate<alphabeta,noop_hash>(side::white,side::white,10,b);
    }
 }

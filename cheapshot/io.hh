@@ -85,6 +85,8 @@ namespace cheapshot
 
    extern void
    make_input_move(board_t& board, context& ctx, const char* s, format fmt);
+
+   // typedef void (*on_position_t)(board_t& board, context& ctx); // TODO: look at function pointer speed
    using on_position_t=const std::function<void (board_t& board, context& ctx)>;
    const auto null_pos=[](board_t& board, context& ctx){};
 
@@ -96,10 +98,15 @@ namespace cheapshot
    using pgn_attributes=std::vector<std::pair<std::string,std::string> >;
 
    using on_consume_move_t=std::function<void (const char*& s, context& ctx)>;
-   extern const on_consume_move_t naive_consume_move; // simple scan without validity check
+
+   // simple scan without validity check
+   extern void
+   naive_consume_move(const char*& s, context& ctx);
 
    using on_attribute_t=std::function<void (const std::string& attrname, const std::string& attrval)>;
-   const auto null_attr=[](const std::string&, const std::string&){};
+
+   inline void
+   null_attr(const std::string&, const std::string&){};
 
    namespace pgn
    {

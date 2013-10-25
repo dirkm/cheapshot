@@ -95,17 +95,6 @@ namespace cheapshot
       on_piece_moves<S>(board,bm,op);
    }
 
-   // complete info about a move, meant to be shortlived
-   // only valid for a single board
-   struct move_info
-   {
-      side turn;
-      piece_t piece;
-      uint64_t mask;
-   };
-
-   typedef std::array<move_info,2> move_info2;
-
    template<side S>
    constexpr move_info
    basic_move_info(piece_t p, uint64_t origin, uint64_t destination)
@@ -427,8 +416,9 @@ namespace cheapshot
 
    template<side S,typename Controller>
    __attribute__((warn_unused_result)) bool
-   on_destinations(Controller& ec, context& ctx, const move_set& ms, uint64_t dests,
-                   bool (*on_dest)(Controller& ec, context& ctx, const move_set& ms, uint64_t dest))
+   iterate_with_cutoff(uint64_t dests,
+                       bool (*on_dest)(Controller& ec, context& ctx, const move_set& ms, uint64_t dest),
+                       Controller& ec, context& ctx, const move_set& ms)
    {
       for(bit_iterator dest_iter(dests);dest_iter!=bit_iterator(); ++dest_iter)
          if(on_dest(ec,ctx,ms,*dest_iter))
@@ -534,16 +524,16 @@ namespace cheapshot
          {
             // promotions
             const uint64_t promotions=cut_mask(msit->destinations,promoting_pawns<S>(msit->destinations));
-            if(on_destinations<S>(ec,ctx,*msit,promotions,promotions_with_cutoff<S,Controller>))
+            if(iterate_with_cutoff<S>(promotions,promotions_with_cutoff<S,Controller>,ec,ctx,*msit))
                return;
 
             uint64_t checks_move=cut_mask(msit->destinations,origins_with_check);
             uint64_t checks_capture=cut_mask(checks_move,bm.opposing<S>());
 
-            if(on_destinations<S>(ec,ctx,*msit,checks_capture,pawn_capture_with_cutoff<S,Controller>))
+            if(iterate_with_cutoff<S>(checks_capture,pawn_capture_with_cutoff<S,Controller>,ec,ctx,*msit))
                return;
 
-            if(on_destinations<S>(ec,ctx,*msit,checks_move,pawn_move_with_cutoff<S,Controller>))
+            if(iterate_with_cutoff<S>(checks_move,pawn_move_with_cutoff<S,Controller>,ec,ctx,*msit))
                return;
          }
       }
@@ -553,10 +543,10 @@ namespace cheapshot
          uint64_t checks_move=cut_mask(msit->destinations,piece_origins_with_check<S>(ec,msit->piece));
          uint64_t checks_capture=cut_mask(checks_move,bm.opposing<S>());
 
-         if(on_destinations<S>(ec,ctx,*msit,checks_capture,capture_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(checks_capture,capture_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
 
-         if(on_destinations<S>(ec,ctx,*msit,checks_move,move_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(checks_move,move_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
       }
 
@@ -564,27 +554,27 @@ namespace cheapshot
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
          uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
-         if(on_destinations<S>(ec,ctx,*msit,captures,pawn_capture_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(captures,pawn_capture_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
          uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
-         if(on_destinations<S>(ec,ctx,*msit,captures,capture_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(captures,capture_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
       }
 
       // moves
       for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
-         if(on_destinations<S>(ec,ctx,*msit,msit->destinations,pawn_move_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(msit->destinations,pawn_move_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
       }
 
       for(decltype(basic_moves)::iterator msit=pawn_moves_end;msit!=basic_moves_end;++msit)
       {
-         if(on_destinations<S>(ec,ctx,*msit,msit->destinations,move_with_cutoff<S,Controller>))
+         if(iterate_with_cutoff<S>(msit->destinations,move_with_cutoff<S,Controller>,ec,ctx,*msit))
             return;
       }
 

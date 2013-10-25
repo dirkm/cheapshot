@@ -186,6 +186,21 @@ namespace cheapshot
       board_metrics bm;
    };
 
+   // complete info about a move, meant to be shortlived
+   // only valid for a single board
+   // does not give info about the move type
+   struct move_info
+   {
+      // side turn; // TODO is this needed
+      piece_t piece;
+      uint64_t mask;
+   };
+
+   // 2 move_infos are enough for castling, captures but not for promotions
+   typedef std::array<move_info,2> move_info2;
+
+   enum class move_type { normal, long_castling, short_castling, promotion, ep_capture};
+
 } // cheapshot
 
 #endif

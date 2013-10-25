@@ -30,7 +30,7 @@ namespace
 
 BOOST_AUTO_TEST_SUITE(io_suite)
 
-BOOST_AUTO_TEST_CASE(init_board_test )
+BOOST_AUTO_TEST_CASE(init_board_test)
 {
    boost::test_tools::output_test_stream ots;
    board_t b= initial_board();
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(init_board_test )
    BOOST_CHECK(ots.is_equal(initial_canvas));
 }
 
-BOOST_AUTO_TEST_CASE(canvas_test )
+BOOST_AUTO_TEST_CASE(canvas_test)
 {
    boost::test_tools::output_test_stream ots;
    static constexpr char test_canvas[]=
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(scan_fen_test)
 BOOST_AUTO_TEST_CASE(input_move_test)
 {
    {
-      auto mytest=[](const std::vector<const char*>& moves, format fmt)
+      auto test_make_moves=[](const std::vector<const char*>& moves, format fmt)
          {
             board_t b=initial_board();
             context ctx=start_context;
@@ -182,13 +182,13 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             print_board(b,ots);
             BOOST_CHECK(ots.is_equal(expected));
          };
-      mytest({"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"},
+      test_make_moves({"e2-e4","e7-e5","Ng1-f3","Nb8-c6","Bf1-c4","Ng8-f6","O-O"},
              long_algebraic);
-      mytest({"e4","e5","Nf3","Nc6","Bc4","Nf6","O-O"},
+      test_make_moves({"e4","e5","Nf3","Nc6","Bc4","Nf6","O-O"},
              short_algebraic);
    }
    {
-      auto mytest=[](const std::vector<const char*>& moves, format fmt)
+      auto test_make_moves=[](const std::vector<const char*>& moves, format fmt)
          {
             board_t b=en_passant_initial_board;
             context ctx=start_context;
@@ -196,9 +196,9 @@ BOOST_AUTO_TEST_CASE(input_move_test)
             make_input_moves(b,ctx,moves,fmt);
             BOOST_CHECK_EQUAL(b,en_passant_after_capture_board);
          };
-      mytest({"d7-d5","e5xd6ep"},long_algebraic);
-      mytest({"d5","exd6ep"},short_algebraic);
-      mytest({"d5","exd6"},pgn_format);
+      test_make_moves({"d7-d5","e5xd6ep"},long_algebraic);
+      test_make_moves({"d5","exd6ep"},short_algebraic);
+      test_make_moves({"d5","exd6"},pgn_format);
    }
    {
       const board_t b=scan_board(
@@ -210,18 +210,18 @@ BOOST_AUTO_TEST_CASE(input_move_test)
          "........\n"
          "........\n"
          ".......K\n");
-      auto mytest=[&b](const char* move, format fmt)
+      auto test_make_moves=[&b](const char* move, format fmt)
          {
             board_t b2=b;
             context ctx=start_context;
             make_input_move(b2,ctx,move,fmt);
          };
-      mytest("b7-b8=Q",long_algebraic);
-      mytest("b7xc8=Q+",long_algebraic);
-      mytest("b8=N",short_algebraic);
-      mytest("b8=Q",short_algebraic);
-      mytest("bxc8=Q+",short_algebraic);
-      mytest("b8=N",short_algebraic);
+      test_make_moves("b7-b8=Q",long_algebraic);
+      test_make_moves("b7xc8=Q+",long_algebraic);
+      test_make_moves("b8=N",short_algebraic);
+      test_make_moves("b8=Q",short_algebraic);
+      test_make_moves("bxc8=Q+",short_algebraic);
+      test_make_moves("b8=N",short_algebraic);
    }
 
    const board_t simple_mate=scan_board(
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(input_move_test)
       ".......R\n");
 
    {
-      auto mytest=[&simple_mate](const char* move, format fmt)
+      auto test_make_moves=[&simple_mate](const char* move, format fmt)
          {
             board_t b=simple_mate;
             context ctx=no_castle_context;
@@ -250,8 +250,8 @@ BOOST_AUTO_TEST_CASE(input_move_test)
                                  "........\n"
                                  "........\n"));
          };
-      mytest("Rh1-h8#",long_algebraic);
-      mytest("Rh8#",short_algebraic);
+      test_make_moves("Rh1-h8#",long_algebraic);
+      test_make_moves("Rh8#",short_algebraic);
    }
    {
       auto test_input_exception=[](const char* move, format fmt, const char* msg)

@@ -6,16 +6,12 @@ $(EXEC): $(LIBCHEAPSHOT)
 
 test: unittest ct_test tool_test
 
-# object-files explicitely generated, to view the assembly
-$~unittest_bitops.o: $(call depend, $~unittest_bitops.cc)
-$~unittest_other.o: $(call depend, $~unittest_other.cc)
-$~unittest_io.o: $(call depend, $~unittest_io.cc)
-$~unittest_ab.o: $(call depend, $~unittest_ab.cc)
+UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_other.cc $~unittest_io.cc $~unittest_ab.cc $~unittest_compress.cc
 
 $~unittest: LDFLAGS += -lboost_unit_test_framework
 
-$~unittest: $~unittest_bitops.o $~unittest_other.o $~unittest_io.o $~unittest_ab.o $~unittest_cache.o $~unittest_stat.o
-	$(CXX) $& $(LDFLAGS) -o $@ $(LIBS)
+$~unittest: $(call depend, $(UNITTEST_SRC))
+	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
 
 $~print_position: $(call depend, $~print_position.cc)
 	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
@@ -29,7 +25,7 @@ $~print_fen: $(call depend, $~print_fen.cc)
 $~parse_pgn: $(call depend, $~parse_pgn.cc)
 	$(CXX) $& $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIBS)
 
-.PHONY: test unittest ct_test test_report
+.PHONY: test unittest currenttest ct_test test_report
 
 unittest: $~unittest
 	$^ --catch_system_errors=0

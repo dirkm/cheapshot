@@ -509,8 +509,6 @@ namespace cheapshot
 
    namespace
    {
-      enum class move_type { normal, long_castling, short_castling, promotion, ep_capture};
-
       constexpr char long_castling_notation[]="O-O-O";
       constexpr char short_castling_notation[]="O-O";
       constexpr char ep_notation[]="ep";
@@ -1141,7 +1139,7 @@ namespace cheapshot
       }
    }
 
-   const on_consume_move_t naive_consume_move=[](const char*& s, context& ctx)
+   void naive_consume_move(const char*& s, context& ctx)
    {
       const char* sstart=s;
       while(std::isgraph(*s))
@@ -1150,6 +1148,16 @@ namespace cheapshot
          throw io_error("moves cannot be empty");
       ++ctx.halfmove_count;
    };
+
+   // const on_consume_move_t naive_consume_move=[](const char*& s, context& ctx)
+   // {
+   //    const char* sstart=s;
+   //    while(std::isgraph(*s))
+   //       ++s;
+   //    if(s==sstart)
+   //       throw io_error("moves cannot be empty");
+   //    ++ctx.halfmove_count;
+   // };
 
    extern void
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute,
