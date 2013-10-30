@@ -1,23 +1,24 @@
 #ifndef CHEAPSHOT_BOARD_HH
 #define CHEAPSHOT_BOARD_HH
 
-#include <array>
-
 #include "cheapshot/bitops.hh"
 #include "cheapshot/iterator.hh"
+
+#include <array>
+#include <type_traits>
 
 namespace cheapshot
 {
    template<typename T>
-   constexpr std::size_t
-   idx(T t)
+   constexpr auto
+   idx(T t) -> typename std::underlying_type<T>::type
    {
-      return (std::size_t)t; // TODO: use std::underlying_type<T>::type
+      return static_cast<typename std::underlying_type<T>::type>(t);
    }
 
    template<typename T>
-   constexpr std::size_t
-   count()
+   constexpr auto
+   count() -> typename std::underlying_type<T>::type
    {
       return idx(T::count);
    }
@@ -62,7 +63,7 @@ namespace cheapshot
       void
       set_fullmove(int fullmove_number, side c)
       {
-         halfmove_count=(fullmove_number-1)*2+(int)idx(c);
+         halfmove_count=(fullmove_number-1)*2+idx(c);
       }
 
       std::pair<int,side >
@@ -134,7 +135,7 @@ namespace cheapshot
    inline uint64_t
    obstacles(const board_side& bs)
    {
-      uint64_t r=0;
+      uint64_t r=0_U64;
       for(uint64_t p: bs)
          r|=p;
       return r;
@@ -191,7 +192,7 @@ namespace cheapshot
    // does not give info about the move type
    struct move_info
    {
-      // side turn; // TODO is this needed
+      side turn;
       piece_t piece;
       uint64_t mask;
    };
@@ -199,7 +200,8 @@ namespace cheapshot
    // 2 move_infos are enough for castling, captures but not for promotions
    typedef std::array<move_info,2> move_info2;
 
-   enum class move_type { normal, long_castling, short_castling, promotion, ep_capture};
+   enum class move_type { normal, castling, promotion, ep_capture};
+   enum class castling_type {short_castling, long_castling};
 
 } // cheapshot
 

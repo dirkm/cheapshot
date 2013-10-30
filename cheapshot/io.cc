@@ -116,18 +116,18 @@ namespace cheapshot
          char ch=*rs;
          if(is_column_char(ch))
          {
-            // returns a column if a column-digit is given
+            // sets a column if a column-digit is given
             r&=column_with_algebraic_number(ch);
             ++rs;
             ch=*rs;
          }
          if(is_row_char(ch))
          {
-            // returns a row if only rownumber is given
+            // intersects with a row if a rownumber is given
             r&=row_with_algebraic_number(ch);
             ++rs;
          }
-         // returns a field if both are given
+         // contains a field if both are given
          return r;
       }
 
@@ -513,16 +513,25 @@ namespace cheapshot
       constexpr char short_castling_notation[]="O-O";
       constexpr char ep_notation[]="ep";
 
-      struct input_move
+      struct normal_input_params
       {
-         move_type type;
          // params below may not be initialized, depending on move type
          bool is_capture;
-         game_status phase;
          cheapshot::piece_t piece;
          uint64_t origin;
          uint64_t destination;
          cheapshot::piece_t promoting_piece;
+      };
+
+      struct input_move
+      {
+         move_type type;
+         union
+         {
+            normal_input_params params;
+            castling_type castling_params;
+         };
+         game_status phase;
       };
 
       std::ostream&
@@ -530,20 +539,19 @@ namespace cheapshot
       {
          switch(im.type)
          {
-            case move_type::long_castling:
-               os << long_castling_notation;
-               break;
-            case move_type::short_castling:
-               os << short_castling_notation;
+            case move_type::castling:
+               os << ((im.castling_params==castling_type::long_castling)?
+                      long_castling_notation:short_castling_notation);
                break;
             default:
-               print_algpos(im.origin,os);
-               os << (im.is_capture?'x':'-');
-               print_algpos(im.destination,os);
+               const normal_input_params& nip=im.params;
+               print_algpos(nip.origin,os);
+               os << (nip.is_capture?'x':'-');
+               print_algpos(nip.destination,os);
                if(im.type==move_type::ep_capture)
                   os << ep_notation;
                else if(im.type==move_type::promotion)
-                  os << "="<<repr_pieces_white[idx(im.promoting_piece)];
+                  os << "="<<repr_pieces_white[idx(nip.promoting_piece)];
                break;
          };
          return os;
@@ -566,8 +574,8 @@ namespace cheapshot
          {
             ++s;
             im.type=move_type::promotion;
-            im.promoting_piece=character_to_moved_piece(*s);
-            if(im.promoting_piece==piece_t::pawn)
+            im.params.promoting_piece=character_to_moved_piece(*s);
+            if(im.params.promoting_piece==piece_t::pawn)
                throw io_error("invalid promotion");
             ++s;
          }
@@ -591,16 +599,22 @@ namespace cheapshot
       scan_input_move(const char*& s, const format fmt)
       {
          input_move im;
-         im.type=move_type::normal; // for now
-         im.is_capture=false; // for now
          if(skip_string(s,"O-O-O"))
-            im={move_type::long_castling};
-         else if (skip_string(s,"O-O"))
-            im={move_type::short_castling};
+         {
+            im.type=move_type::castling;
+            im.castling_params=castling_type::long_castling;
+         }
+         else if(skip_string(s,"O-O"))
+         {
+            im.type=move_type::castling;
+            im.castling_params=castling_type::short_castling;
+         }
          else
          {
-            im.piece=character_to_moved_piece(*s);
-            if(im.piece!=piece_t::pawn)
+            im.type=move_type::normal;
+            im.params.is_capture=false; // for now
+            im.params.piece=character_to_moved_piece(*s);
+            if(im.params.piece!=piece_t::pawn)
                ++s;
             if(fmt.move_fmt!=format::move::long_algebraic)
             {
@@ -611,23 +625,23 @@ namespace cheapshot
                   scan_move_suffix(im,s);
                   if((s!=sstart)||!std::isgraph(*s))
                   {
-                     im.origin=~0_U64;
-                     im.destination=pos1;
+                     im.params.origin=~0_U64;
+                     im.params.destination=pos1;
                      return im;
                   }
                }
-               im.origin=pos1;
+               im.params.origin=pos1;
             }
             else
             {
-               im.origin=scan_algpos(s);
+               im.params.origin=scan_algpos(s);
             }
             char sep=*s;
             switch(sep)
             {
                case 'x':
                   ++s;
-                  im.is_capture=true;
+                  im.params.is_capture=true;
                   break;
                case '-':
                   if(fmt.move_fmt!=format::move::short_algebraic)
@@ -644,12 +658,13 @@ namespace cheapshot
                   }
                   break;
             }
-            im.destination=scan_algpos(s);
+            im.params.destination=scan_algpos(s);
+            if((fmt.ep_fmt==format::ep::annotated) &&
+               (im.params.piece==piece_t::pawn) &&
+               im.params.is_capture &&
+               skip_string(s,ep_notation))
+               im.type=move_type::ep_capture;
          }
-         if((fmt.ep_fmt==format::ep::annotated) &&
-            (im.piece==piece_t::pawn) && (im.is_capture==true) &&
-            skip_string(s,ep_notation))
-            im.type=move_type::ep_capture;
          scan_move_suffix(im,s);
          return im;
       }
@@ -658,15 +673,15 @@ namespace cheapshot
       detect_ep_capture(input_move& im, const context& ctx)
       {
          if((im.type==move_type::normal) &&
-            (im.piece==piece_t::pawn) &&
-            (im.destination==ctx.ep_info) &&
-            im.is_capture)
+            (im.params.piece==piece_t::pawn) &&
+            (im.params.destination==ctx.ep_info) &&
+            im.params.is_capture)
             im.type=move_type::ep_capture;
       }
 
       template<side S>
       uint64_t
-      possible_origins(const board_t& board, const board_metrics& bm, const input_move& im)
+      possible_origins(const board_t& board, const board_metrics& bm, const normal_input_params& im)
       {
          const uint64_t obstacles=bm.all_pieces();
          if(im.piece==piece_t::pawn)
@@ -682,14 +697,14 @@ namespace cheapshot
 
       template<side S>
       uint64_t
-      possible_origins_ep(const input_move& im)
+      possible_origins_ep(const normal_input_params& im)
       {
          return reverse_capture_with_pawn<S>(im.destination);
       }
 
       template<side S>
       void
-      narrow_origin(input_move& im, const board_t& board, uint64_t possible_origins)
+      narrow_origin(normal_input_params& im, const board_t& board, uint64_t possible_origins)
       {
          im.origin&=get_side<S>(board)[idx(im.piece)];
          if(im.origin==0_U64)
@@ -758,34 +773,35 @@ namespace cheapshot
          board_metrics bm(board);
          uint64_t oldpawnloc=get_side<S>(board)[idx(piece_t::pawn)];
 
-         if(im.type==move_type::long_castling)
-            make_castling_move<S>(board,bm,ctx,long_castling<S>());
-         else if(im.type==move_type::short_castling)
-            make_castling_move<S>(board,bm,ctx,short_castling<S>());
+         if(im.type==move_type::castling)
+            make_castling_move<S>(
+               board,bm,ctx,(im.castling_params==castling_type::short_castling)?
+               short_castling<S>():long_castling<S>());
          else
          {
+            normal_input_params& nip=im.params;
             uint64_t origins=(im.type!=move_type::ep_capture)?
-               possible_origins<S>(board, bm,im):
-               possible_origins_ep<S>(im);
-            narrow_origin<S>(im,board,origins);
-            bit_iterator originit(im.origin);
-            im.origin=*originit;
+               possible_origins<S>(board,bm,nip):
+               possible_origins_ep<S>(nip);
+            narrow_origin<S>(nip,board,origins);
+            bit_iterator originit(nip.origin);
+            nip.origin=*originit;
             if(im.type==move_type::ep_capture)
             {
-               if(im.destination!=ctx.ep_info)
+               if(nip.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
-               move_info2 mi2=en_passant_info<S>(im.origin,im.destination);
+               move_info2 mi2=en_passant_info<S>(nip.origin,nip.destination);
                for(auto m: mi2)
                   make_move(board,bm,m);
             }
             else
             {
-               bool destination_occupied=im.destination&bm.opposing<S>();
-               if(im.is_capture)
+               bool destination_occupied=nip.destination&bm.opposing<S>();
+               if(nip.is_capture)
                {
                   if(!destination_occupied)
                      throw io_error("trying to capture a missing piece");
-                  move_info2 mi2=basic_capture_info<S>(board,im.piece,im.origin,im.destination);
+                  move_info2 mi2=basic_capture_info<S>(board,nip.piece,nip.origin,nip.destination);
                   for(auto m: mi2)
                      make_move(board,bm,m);
                }
@@ -793,14 +809,14 @@ namespace cheapshot
                {
                   if(destination_occupied)
                      throw io_error("capture without indication with 'x'");
-                  move_info mi=basic_move_info<S>(im.piece,im.origin,im.destination);
+                  move_info mi=basic_move_info<S>(nip.piece,nip.origin,nip.destination);
                   make_move(board,bm,mi);
                }
                if(im.type==move_type::promotion)
                {
-                  if(!promoting_pawns<S>(im.destination))
+                  if(!promoting_pawns<S>(nip.destination))
                      throw io_error("promotion only allowed on last row");
-                  move_info2 mi2=promotion_info<S>(im.promoting_piece,im.destination);
+                  move_info2 mi2=promotion_info<S>(nip.promoting_piece,nip.destination);
                   for(auto m: mi2)
                      make_move(board,bm,m);
                }
@@ -808,7 +824,7 @@ namespace cheapshot
             bool valid_position=!is_king_under_attack<S>(board,bm);
             for(++originit;originit!=bit_iterator();++originit)
             {
-               auto mi=move_info{.turn=S,.piece=im.piece,.mask=im.origin|*originit};
+               auto mi=move_info{.turn=S,.piece=nip.piece,.mask=nip.origin|*originit};
                make_move(board,bm,mi);
                if(is_king_under_attack<S>(board,bm))
                   make_move(board,bm,mi);
@@ -1148,16 +1164,6 @@ namespace cheapshot
          throw io_error("moves cannot be empty");
       ++ctx.halfmove_count;
    };
-
-   // const on_consume_move_t naive_consume_move=[](const char*& s, context& ctx)
-   // {
-   //    const char* sstart=s;
-   //    while(std::isgraph(*s))
-   //       ++s;
-   //    if(s==sstart)
-   //       throw io_error("moves cannot be empty");
-   //    ++ctx.halfmove_count;
-   // };
 
    extern void
    parse_pgn(std::istream& is, const on_attribute_t& on_attribute,

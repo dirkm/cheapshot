@@ -15,7 +15,7 @@ namespace
       using std::runtime_error::runtime_error;
    };
 
-   enum print_format {fen, board};
+   enum class print_format {fen, board};
 
    struct parse_options
    {
@@ -92,12 +92,12 @@ namespace
                break;
             case 'g':
                game=std::atoi(optarg);
-               if(game<0)
+               if(game<1)
                   throw option_error("game number should be bigger than 0");
                break;
             case 'm':
                move=std::atoi(optarg);
-               if(move<0)
+               if(move<1)
                   throw option_error("move number should be bigger than 0");
                break;
             case 's':
@@ -109,9 +109,9 @@ namespace
                to_print_loc=po.to_print.emplace_after(to_print_loc,game,move,mc);
                break;
             case 'a':
-               po.print_all=true;
                if(!po.to_print.empty())
                   throw option_error("print-all and selecting-some-positions are mutually exclusive");
+               po.print_all=true;
                break;
             case '?':
                throw option_error("missing argument");
