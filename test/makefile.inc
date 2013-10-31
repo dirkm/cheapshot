@@ -8,8 +8,6 @@ test: unittest ct_test tool_test
 
 UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_other.cc $~unittest_io.cc $~unittest_ab.cc $~unittest_compress.cc
 
-$~unittest: $(call depend, $(UNITTEST_SRC))
-
 $~unittest: LDFLAGS += -lboost_unit_test_framework
 
 $~unittest: $(call depend, $(UNITTEST_SRC)) $(UNITTEST_SRC:.cc=.o)

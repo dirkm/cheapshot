@@ -117,7 +117,7 @@ namespace cheapshot
          if(is_column_char(ch))
          {
             // sets a column if a column-digit is given
-            r&=column_with_algebraic_number(ch);
+            r=column_with_algebraic_number(ch);
             ++rs;
             ch=*rs;
          }
@@ -1155,7 +1155,8 @@ namespace cheapshot
       }
    }
 
-   void naive_consume_move(const char*& s, context& ctx)
+   extern void
+   naive_consume_move(const char*& s, context& ctx)
    {
       const char* sstart=s;
       while(std::isgraph(*s))
@@ -1256,7 +1257,7 @@ namespace cheapshot
    }
 
 // debugging aid
-   void
+   extern void
    dump_board(const char* heading, const board_t& board, int score, side t)
    {
       std::cerr << heading;

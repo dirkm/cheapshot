@@ -53,10 +53,11 @@ namespace cheapshot
    }
 
    template<move_type MT>
-   inline compressed_move compress_move(const board_t& board, const move_info& mi);
+   compressed_move
+   compress_move(const board_t& board, const move_info& mi);
 
    template<move_type MT>
-   inline compressed_move
+   compressed_move
    compress_move(const board_t& board, const move_info& mi)
    {
       compressed_move cm;
