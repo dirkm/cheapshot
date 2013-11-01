@@ -3,8 +3,10 @@
 
 #include "cheapshot/bitops.hh"
 #include "cheapshot/board.hh"
+#include "cheapshot/cache.hh"
 #include "cheapshot/hhash.hh"
 #include "cheapshot/iterator.hh"
+#include "cheapshot/prune.hh"
 #include "cheapshot/score.hh"
 
 namespace cheapshot

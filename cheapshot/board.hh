@@ -197,6 +197,15 @@ namespace cheapshot
       uint64_t mask;
    };
 
+   inline bool
+   operator==(const move_info& l,const move_info& r)
+   {
+      return
+         (l.turn==r.turn) &&
+         (l.piece==r.piece) &&
+         (l.mask==r.mask);
+   }
+
    // 2 move_infos are enough for castling, captures but not for promotions
    typedef std::array<move_info,2> move_info2;
 
