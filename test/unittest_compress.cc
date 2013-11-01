@@ -20,13 +20,6 @@ struct uncompress_check: on_uncompress
    void
    on_capture(board_t& board, const move_info2& mi2)
    {
-      std::cout << "side0: " << to_char(mi2[0].turn) << std::endl;
-      std::cout << "side1: " << to_char(mi2[1].turn) << std::endl;
-      std::cout << "side0: " << std::hex << mi2[0].mask << std::endl;
-      std::cout << "side1: " << std::hex << mi2[1].mask << std::endl;
-      std::cout << "checked side0: " << std::hex << checked_mi2[0].mask << std::endl;
-      std::cout << "checked side1: " << std::hex << checked_mi2[1].mask << std::endl;
-
       BOOST_CHECK_EQUAL(checked_mi2,mi2);
    }
 
@@ -36,16 +29,23 @@ struct uncompress_check: on_uncompress
       BOOST_CHECK_EQUAL(checked_ep_mi2,ep_mi2);
    }
 
+   void
+   on_castling(board_t& board, const move_info2& castle_mi2)
+   {
+      BOOST_CHECK_EQUAL(checked_castle_mi2,castle_mi2);
+   }
+
    move_info checked_mi;
    move_info2 checked_mi2;
    move_info2 checked_ep_mi2;
+   move_info2 checked_castle_mi2;
 };
 
 namespace
 {
    board_t compress_init_board=scan_board(
-      "r.qk...r\n"
-      "p.p.ppp.\n"
+      "r.q.k..r\n"
+      "p.pp.ppp\n"
       "..Q.....\n"
       "......Pp\n"
       "........\n"
@@ -100,5 +100,20 @@ BOOST_AUTO_TEST_CASE(ep_capture_compress_test)
    uncompress_move(check,b,side::white,cm);
 }
 
+BOOST_AUTO_TEST_CASE(castle_compress_test)
+{
+   board_t b=compress_init_board;
+   move_info2 castle_mi2{
+      move_info{.turn=side::black,.piece=piece_t::king,
+            .mask=algpos('e',8)|algpos('h',8)}
+      ,move_info{.turn=side::black,.piece=piece_t::rook,
+             .mask=algpos('h',8)|algpos('f',8)}
+   };
+
+   compressed_move cm=compressed_move::make_castle(move_type::castling,b,castle_mi2);
+   uncompress_check check;
+   check.checked_castle_mi2=castle_mi2;
+   uncompress_move(check,b,side::black,cm);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

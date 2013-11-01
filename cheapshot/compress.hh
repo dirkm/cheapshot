@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cheapshot/io.hh>
 
+// TODO: simplest that seems to work
+
 namespace cheapshot
 {
    struct orig_dest
@@ -49,21 +51,13 @@ namespace cheapshot
    compress_flippos(const board_t& board, const move_info& mi)
    {
       uint64_t origin=board[idx(mi.turn)][idx(mi.piece)]&mi.mask;
-      std::cout << "origin: " << (int)get_board_pos(origin) << std::endl;
       return orig_dest{get_board_pos(origin),0};
    }
 
    inline orig_dest
    compress_movepos(const board_t& board, const move_info& mi)
    {
-      std::cout << "origin mask hex: " << std::hex << mi.mask << std::endl;
-      std::cout << "turn: " << to_char(mi.turn) << std::endl;
-      std::cout << "piece: " << (int)idx(mi.piece) << std::endl;
-      std::cout << "piece layout: " << board[idx(mi.turn)][idx(mi.piece)] << std::endl;
       uint64_t origin=board[idx(mi.turn)][idx(mi.piece)]&mi.mask;
-      std::cout << "origin move hex: " << std::hex << origin << std::endl;
-      std::cout << "origin move: " << (int)get_board_pos(origin) << std::endl;
-      assert(origin!=0);
       uint64_t destination=origin^mi.mask;
       return orig_dest{get_board_pos(origin),get_board_pos(destination)};
    }
