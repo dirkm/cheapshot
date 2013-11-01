@@ -681,25 +681,25 @@ namespace cheapshot
 
       template<side S>
       uint64_t
-      possible_origins(const board_t& board, const board_metrics& bm, const normal_input_params& im)
+      possible_origins(const board_t& board, const board_metrics& bm, const normal_input_params& nip)
       {
          const uint64_t obstacles=bm.all_pieces();
-         if(im.piece==piece_t::pawn)
+         if(nip.piece==piece_t::pawn)
          {
-            if(im.destination&bm.opposing<S>())
-               return reverse_capture_with_pawn<S>(im.destination);
+            if(nip.destination&bm.opposing<S>())
+               return reverse_capture_with_pawn<S>(nip.destination);
             else
-               return reverse_move_pawn<S>(im.destination,obstacles);
+               return reverse_move_pawn<S>(nip.destination,obstacles);
          }
          else
-            return basic_piece_move_generators()[idx(im.piece)-1](im.destination,obstacles);
+            return basic_piece_move_generators()[idx(nip.piece)-1](nip.destination,obstacles);
       }
 
       template<side S>
       uint64_t
-      possible_origins_ep(const normal_input_params& im)
+      possible_origins_ep(const normal_input_params& nip)
       {
-         return reverse_capture_with_pawn<S>(im.destination);
+         return reverse_capture_with_pawn<S>(nip.destination);
       }
 
       template<side S>

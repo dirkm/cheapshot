@@ -23,17 +23,6 @@ namespace cheapshot
       };
    };
 
-   struct compressed_move
-   {
-      uint64_t move_type:2;
-      uint64_t p1:12;
-      uint64_t p2:12;
-      uint64_t promotion:2;
-   };
-
-   static_assert(sizeof(compressed_move)<=sizeof(uint64_t),
-                 "sizeof(compressed_move)>sizeof(uint64_t)");
-
    inline orig_dest
    compress_movepos(const board_t& board, const move_info& mi)
    {
@@ -52,42 +41,91 @@ namespace cheapshot
             return move_info{.turn=s,.piece=p,.mask=pos};
    }
 
-   template<move_type MT>
-   compressed_move
-   compress_move(const board_t& board, const move_info& mi);
-
-   template<move_type MT>
-   compressed_move
-   compress_move(const board_t& board, const move_info& mi)
+   struct compressed_move
    {
-      compressed_move cm;
-      cm.move_type=static_cast<uint64_t>(move_type::normal);
-      cm.p1=compress_movepos(board,mi).to_value();
-      cm.p2=0U;
-      cm.promotion=0U;
-      return cm;
-   }
+      compressed_move(const board_t& board, const move_info& mi):
+         compressed_move(move_type::normal,compress_movepos(board,mi).to_value())
+      {}
 
-   template<move_type MT>
-   inline compressed_move
-   compress_move(const board_t& board,move_info2& mi)
+      compressed_move(move_type mt, const board_t& board, const move_info2& mi):
+         compressed_move(mt,
+                         compress_movepos(board,mi[0]).to_value(),
+                         compress_movepos(board,mi[1]).to_value())
+      {}
+
+      void
+      add_promotion(piece_t p){
+         promotion=idx(p);
+      }
+
+      uint64_t type:2;
+      uint64_t p1:12;
+      uint64_t p2:12;
+      uint64_t promotion:3; // TODO: could be done in 2
+
+   private:
+      compressed_move(move_type mt, int p1_, int p2_=0, int promotion_=0):
+         type(idx(mt)),
+         p1(p1_),
+         p2(p2_),
+         promotion(promotion_)
+      {}
+   };
+
+   static_assert(sizeof(compressed_move)<=sizeof(uint64_t),
+                 "sizeof(compressed_move)>sizeof(uint64_t)");
+
+
+   struct on_uncompress
    {
-      compressed_move cm;
-      cm.move_type=static_cast<uint64_t>(move_type::normal);
-      cm.p1=compress_movepos(board,mi[0]).to_value();
-      cm.p1=compress_movepos(board,mi[1]).to_value();
-      cm.p2=0U;
-      cm.promotion=0U;
-      return cm;
-   }
+      static void
+      on_normal_move(board_t& board, const move_info& mi){}
 
+      static void
+      on_capture(board_t& board, const move_info2& mi){}
+
+      static void
+      on_castling(board_t& board, const move_info2& mi){}
+
+      static void
+      on_ep_capture(board_t& board, const move_info2& mi){}
+
+      static void
+      with_promotion(piece_t promotion){}
+   };
+
+   template<typename OnUncompress>
    inline void // probably done by callbacks
-   uncompress_move(const board_t& board, side s, compressed_move cm)
+   uncompress_move(board_t& board, side s, compressed_move cm)
    {
-      // return {
-      //    index_to_move(board,s,od.idx_origin),
-      //    index_to_move(board,s,od.idx_destination)
-      // };
+      move_type mt=static_cast<move_type>(cm.type);
+      move_info mi=uncompress_movepos(board,s,cm.p1);
+      if(!cm.p2)
+      {
+         OnUncompress::on_normal_move(board,mi);
+      }
+      else
+      {
+         if(mt==move_type::castling)
+         {
+            move_info2 mi2={mi,uncompress_movepos(board,s,cm.p2)};
+            OnUncompress::on_castling(board,mi2);
+            return;
+         }
+         else
+         {
+            move_info2 mi2={mi,uncompress_movepos(board,other_side(s),cm.p2)};
+            if(mt==move_type::ep_capture)
+            {
+               OnUncompress::on_ep_capture(board,mi2);
+               return;
+            }
+            else
+               OnUncompress::on_capture(board,mi2);
+         }
+      }
+      if(cm.promotion)
+         OnUncompress::with_promotion(static_cast<piece_t>(cm.promotion));
    }
 }
 

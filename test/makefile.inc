@@ -6,7 +6,8 @@ $(EXEC): $(LIBCHEAPSHOT)
 
 test: unittest ct_test tool_test
 
-UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_other.cc $~unittest_io.cc $~unittest_ab.cc $~unittest_compress.cc
+UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_other.cc $~unittest_io.cc \
+	$~unittest_ab.cc $~unittest_compress.cc $~unittest_stat.cc
 
 $~unittest: LDFLAGS += -lboost_unit_test_framework
 
