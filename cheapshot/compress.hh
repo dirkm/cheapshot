@@ -8,9 +8,28 @@
 
 namespace cheapshot
 {
+   namespace detail
+   {
+      template<typename U, typename V>
+      union union_caster
+      {
+         U u;
+         V v;
+      };
+   }
+
+   template<typename U, typename V>
+   V
+   union_caster(U u)
+   {
+        detail::union_caster<U,V> r;
+        r.u=u;
+        return r.v;
+   }
+
    struct compressed_poschange
    {
-      uint16_t piece:3;
+      uint16_t piecenr:3;
       uint16_t idx_origin:6; // (number from 0-63)
       uint16_t idx_destination:6;
 
@@ -19,31 +38,35 @@ namespace cheapshot
 
       static compressed_poschange
       from_value(uint16_t v);
-   };
 
-   namespace detail
-   {
-      union compressed_poschange_caster
+      inline move_info
+      uncompress_flippos(side s) const
       {
-         compressed_poschange p;
-         uint16_t v:15;
-      };
-   }
+         uint64_t pos1=1_U64<<idx_origin;
+         piece_t piece=static_cast<piece_t>(piecenr);
+         return move_info{.turn=s,.piece=piece,.mask=pos1};
+      }
+
+      inline move_info
+      uncompress_movepos(side s) const
+      {
+         move_info mi=uncompress_flippos(s);
+         uint64_t pos2=1_U64<<idx_destination;
+         mi.mask|=pos2;
+         return mi;
+      }
+   };
 
    inline uint16_t
    compressed_poschange::to_value() const
    {
-      detail::compressed_poschange_caster r;
-      r.p=*this;
-      return r.v;
+      return union_caster<compressed_poschange,uint16_t>(*this);
    };
 
    inline compressed_poschange
    compressed_poschange::from_value(uint16_t v)
    {
-      detail::compressed_poschange_caster r;
-      r.v=v;
-      return r.p;
+      return union_caster<uint16_t,compressed_poschange>(v);
    };
 
    inline compressed_poschange
@@ -62,27 +85,28 @@ namespace cheapshot
          idx(mi.piece),get_board_pos(p1),get_board_pos(p2)};
    }
 
-   inline move_info
-   uncompress_flippos(side s, uint32_t x)
+   struct on_uncompress
    {
-      compressed_poschange cp=compressed_poschange::from_value(x);
-      uint64_t pos1=1_U64<<cp.idx_origin;
-      piece_t piece=static_cast<piece_t>(cp.piece);
-      return move_info{.turn=s,.piece=piece,.mask=pos1};
-   }
+      static void
+      on_simple(const move_info& mi){}
 
-   inline move_info
-   uncompress_movepos(side s, uint32_t x)
-   {
-      compressed_poschange cp=compressed_poschange::from_value(x);
-      uint64_t pos1=1_U64<<cp.idx_origin;
-      uint64_t pos2=1_U64<<cp.idx_destination;
-      piece_t piece=static_cast<piece_t>(cp.piece);
-      return move_info{.turn=s,.piece=piece,.mask=pos1|pos2};
-   }
+      static void
+      on_capture(const move_info2& mi){}
+
+      static void
+      on_castling(const move_info2& mi){}
+
+      static void
+      on_ep_capture(const move_info2& mi){}
+
+      static void
+      with_promotion(piece_t promotion){}
+   };
 
    struct compressed_move
    {
+      compressed_move() = default;
+
       compressed_move(const move_info& mi):
          compressed_move(move_type::normal,compress_movepos(mi).to_value())
       {}
@@ -104,13 +128,57 @@ namespace cheapshot
       }
 
       void
-      add_promotion(piece_t promotion)
+      with_promotion(piece_t promotion)
       {
          type=idx(move_type::promotion);
          compressed_poschange cp=compressed_poschange::from_value(p1);
-         cp.piece=idx(promotion);
+         cp.piecenr=idx(promotion);
          p1=cp.to_value();
       }
+
+      template<typename OnUncompress>
+      inline void
+      uncompress_move(OnUncompress& handler, side s) const
+      {
+         move_type mt=static_cast<move_type>(type);
+         move_info mi=
+            compressed_poschange::from_value(p1).uncompress_movepos(s);
+         piece_t piece_promotion;
+         if(mt==move_type::promotion)
+         {
+            piece_promotion=mi.piece;
+            mi.piece=piece_t::pawn;
+         }
+
+         if(!p2)
+            handler.on_simple(mi);
+         else if(mt==move_type::castling)
+         {
+            move_info2 mi2{mi,compressed_poschange::from_value(p2).uncompress_movepos(s)};
+            handler.on_castling(mi2);
+            return;
+         }
+         else
+         {
+            move_info2 mi2{mi,compressed_poschange::from_value(p2).uncompress_flippos(other_side(s))};
+            if(mt==move_type::ep_capture)
+            {
+                  handler.on_ep_capture(mi2);
+                  return;
+            }
+            else
+               handler.on_capture(mi2);
+         }
+
+         if(mt==move_type::promotion)
+            handler.with_promotion(piece_promotion);
+      }
+
+      uint32_t
+      to_value() const;
+
+      static compressed_move
+      from_value(uint32_t v);
 
       uint32_t type:2;
       // in case of a promotion, p1.piece contains the promoted piece
@@ -129,60 +197,17 @@ namespace cheapshot
    static_assert(sizeof(compressed_move)<=sizeof(uint32_t),
                  "sizeof(compressed_move)>sizeof(uint32_t)");
 
-   struct on_uncompress
+   inline uint32_t
+   compressed_move::to_value() const
    {
-      static void
-      on_simple(const move_info& mi){}
-
-      static void
-      on_capture(const move_info2& mi){}
-
-      static void
-      on_castling(const move_info2& mi){}
-
-      static void
-      on_ep_capture(const move_info2& mi){}
-
-      static void
-      with_promotion(piece_t promotion){}
+      return union_caster<compressed_move,uint32_t>(*this);
    };
 
-   template<typename OnUncompress>
-   inline void
-   uncompress_move(OnUncompress& handler, side s, compressed_move cm)
+   inline compressed_move
+   compressed_move::from_value(uint32_t v)
    {
-      move_type mt=static_cast<move_type>(cm.type);
-      move_info mi=uncompress_movepos(s,cm.p1);
-      piece_t piece_promotion;
-      if(mt==move_type::promotion)
-      {
-         piece_promotion=mi.piece;
-         mi.piece=piece_t::pawn;
-      }
-
-      if(!cm.p2)
-         handler.on_simple(mi);
-      else if(mt==move_type::castling)
-      {
-         move_info2 mi2{mi,uncompress_movepos(s,cm.p2)};
-         handler.on_castling(mi2);
-         return;
-      }
-      else
-      {
-         move_info2 mi2{mi,uncompress_flippos(other_side(s),cm.p2)};
-         if(mt==move_type::ep_capture)
-         {
-               handler.on_ep_capture(mi2);
-               return;
-         }
-         else
-            handler.on_capture(mi2);
-      }
-
-      if(mt==move_type::promotion)
-         handler.with_promotion(piece_promotion);
-   }
+      return union_caster<uint32_t,compressed_move>(v);
+   };
 }
 
 #endif

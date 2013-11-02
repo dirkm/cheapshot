@@ -18,9 +18,10 @@
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::bit_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_iterator)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::board_t)
-BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::side)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::move_info)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::move_info2)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::piece_t)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(cheapshot::side)
 
 namespace cheapshot
 {
