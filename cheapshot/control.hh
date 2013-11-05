@@ -33,6 +33,7 @@ namespace cheapshot
       }
 
       board_state state;
+      // cache_data // TODO (ply_depth, alpha cutoff move, score)
       const int max_plies;
 
       Pruning pruning;

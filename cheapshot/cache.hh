@@ -12,9 +12,9 @@ namespace cheapshot
    {
       struct transposition_info
       {
-         int score;
-         int ply_depth;
-         // move_info principal_move; // TODO
+         int score; // 20 bits
+         int ply_depth; // 12 bits
+         // compressed_move principal_move; // 32 bits
       };
 
       inline bool
@@ -25,9 +25,11 @@ namespace cheapshot
 
       struct cache
       {
+         // typedef cache_data // TODO
+
          cache()
          {
-            transposition_table.reserve(100000); // TODO
+            transposition_table.reserve(1000000); // TODO
          }
 
          struct hit_info
@@ -42,7 +44,6 @@ namespace cheapshot
          {
             return try_cache_hit<S>(ec.pruning.score,ec.hasher.hash,ec.max_plies-ctx.halfmove_count);
          }
-
       private:
          template<side S>
          hit_info
@@ -65,25 +66,30 @@ namespace cheapshot
             template<typename Controller>
             cache_update(const Controller& ec, const context& ctx, hit_info& hi_):
                hi(hi_),
-               score(ec.pruning.score),
-               ply_depth(ec.max_plies-ctx.halfmove_count)
-            {}
+               score(ec.pruning.score)
+            {
+               hi.val.ply_depth=ec.max_plies-ctx.halfmove_count;
+            }
 
             ~cache_update()
             {
-               // assert(!hi.is_hit);
-               hi.val.ply_depth=ply_depth;
                hi.val.score=score;
             }
-
          private:
             hit_info& hi;
             const int& score;
-            int ply_depth;
 
             cache_update(const cache_update&) = delete;
             cache_update& operator=(const cache_update&) = delete;
          };
+
+
+         // struct identity_hash
+         // {
+         //    uint64_t operator()(uint64_t n) const noexcept {return n;}
+         // };
+
+         std::unordered_map<uint64_t,transposition_info> transposition_table;
 
          cache(const cache&) = delete;
          cache& operator=(const cache&) = delete;
@@ -91,8 +97,8 @@ namespace cheapshot
          hit_info
          insert(uint64_t hash,int ply_depth)
          {
-// TODO: caching is not needed close to leave-nodes
-// use find if depth less than constant value (maybe 3)
+            // TODO: caching is not needed close to leave-nodes
+            // use find if depth less than constant value (maybe 3)
             decltype(transposition_table)::iterator v;
             bool is_new;
             std::tie(v,is_new)=transposition_table.insert(
@@ -100,9 +106,6 @@ namespace cheapshot
             bool is_hit=!is_new && !is_shallow_cache(ply_depth,v->second.ply_depth);
             return hit_info{v->second,is_hit};
          }
-
-         std::unordered_map<uint64_t,transposition_info> transposition_table;
-         // std::map<uint64_t,transposition_info> transposition_table;
       };
 
       struct noop_cache
@@ -140,6 +143,18 @@ namespace cheapshot
    {
       return ec.cache.template try_cache_hit<S>(ec,ctx);
    }
+
+   struct move_with_promotion
+   {
+      move_info2 mi;
+      piece_t promotion;
+   };
+
+   template<side S, typename Controller, typename MI>
+   void on_alpha_cutoff(Controller& ec, const MI& mi){}
+
+   template<side S, typename Controller>
+   void on_alpha_cutoff(Controller& ec, const move_with_promotion& mv_prom){}
 }
 
 #endif

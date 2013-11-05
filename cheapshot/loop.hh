@@ -26,6 +26,8 @@ namespace cheapshot
       using cache_update=typename decltype(Controller::cache)::cache_update;
    }
 
+   // helpers to apply bitops on the entire board
+
    typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
 
    template<side S>
@@ -98,6 +100,19 @@ namespace cheapshot
    }
 
    template<side S>
+   uint64_t
+   generate_own_under_attack(const board_t& board, const board_metrics& bm)
+   {
+      uint64_t own_under_attack=0_U64;
+      on_basic_moves<other_side(S)>(
+         board,bm,[&own_under_attack](piece_t p, uint64_t orig, uint64_t dests)
+         {
+            own_under_attack|=dests;
+         });
+      return own_under_attack;
+   }
+
+   template<side S>
    constexpr move_info
    basic_move_info(piece_t p, uint64_t origin, uint64_t destination)
    {
@@ -167,6 +182,13 @@ namespace cheapshot
       make_move(bm.pieces[idx(mi.turn)],mi.mask);
    }
 
+   inline void
+   make_move(board_t& board, board_metrics& bm, const move_info2& mi)
+   {
+      make_move(board,bm,mi[0]);
+      make_move(board,bm,mi[1]);
+   }
+
    inline
    uint64_t
    hhash(board_t& board, const move_info& mi)
@@ -185,20 +207,30 @@ namespace cheapshot
       return hhash(board,mi[0])^hhash(board,mi[1]);
    }
 
-   template<typename>
-   class scoped_move;
+   inline
+   uint64_t
+   cut_mask(uint64_t& v, uint64_t mask)
+   {
+      mask&=v;
+      v^=mask;
+      return mask;
+   }
 
-   template<>
-   class scoped_move<move_info>
+   // scoped_moves: get undone in the destructor
+
+   template<typename MoveInfo>
+   class scoped_move
    {
    public:
       template<typename Controller>
-      scoped_move(Controller& ec, const move_info& mi_):
+      scoped_move(Controller& ec, const MoveInfo& mi_):
          mi(mi_),
          state(ec.state)
       {
          move();
       }
+
+      MoveInfo mi;
 
       ~scoped_move()
       {
@@ -213,76 +245,47 @@ namespace cheapshot
          make_move(state.board,state.bm,mi);
       }
 
-      move_info mi;
       board_state& state;
    };
 
-   template<>
-   class scoped_move<move_info2>
-   {
-   public:
-      template<typename Controller>
-      scoped_move(Controller& ec, const move_info2& mi):
-         scoped_move0(ec,mi[0]),
-         scoped_move1(ec,mi[1])
-      {}
-   private:
-      scoped_move<move_info> scoped_move0;
-      scoped_move<move_info> scoped_move1;
-   };
-
-   template<side S>
+   template<side S,typename Controller>
    uint64_t
-   generate_own_under_attack(const board_t& board, const board_metrics& bm)
+   pawn_origins_with_check(const Controller& ec)
    {
-      uint64_t own_under_attack=0_U64;
-      on_basic_moves<other_side(S)>(
-         board,bm,[&own_under_attack](piece_t p, uint64_t orig, uint64_t dests)
-         {
-            own_under_attack|=dests;
-         });
-      return own_under_attack;
+      uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
+      return reverse_capture_with_pawn<S>(king);
    }
-
-   struct move_set
-   {
-      piece_t piece;
-      uint64_t origin;
-      uint64_t destinations;
-   };
 
    // specialized helpers for use within analyze_position
    template<typename Controller, typename MoveInfo>
-   class scoped_move_hash
+   class scoped_move_hash: public scoped_move<MoveInfo>
    {
    private:
       typedef uint64_t(*hash_fun_t)(board_t& board, const MoveInfo& mi);
    public:
       scoped_move_hash(Controller& ec, const MoveInfo& mi):
-         sc_move(ec,mi),
+         scoped_move<MoveInfo>(ec,mi),
          sc_hash(ec,(hash_fun_t)hhash,ec.state.board,mi)
       {}
    private:
-      scoped_move<MoveInfo> sc_move;
       control::scoped_hash<Controller> sc_hash;
    };
 
    template<typename Controller>
-   class scoped_move_hash_material
+   class scoped_move_hash_material: public scoped_move_hash<Controller,move_info2>
    {
    public:
       scoped_move_hash_material(Controller& ec, const move_info2& capture):
-         sc_mvhash(ec,capture),
+         scoped_move_hash<Controller,move_info2>(ec,capture),
          sc_material(ec,capture[1].turn,capture[1].piece)
       {}
 
       template<typename Op>
       scoped_move_hash_material(Controller& ec, const Op& op, const move_info2& mi2):
-         sc_mvhash(ec,mi2),
+         scoped_move_hash<Controller,move_info2>(ec,mi2),
          sc_material(ec,op,mi2)
       {}
    private:
-      scoped_move_hash<Controller,move_info2> sc_mvhash;
       control::scoped_material<Controller> sc_material;
    };
 
@@ -315,18 +318,18 @@ namespace cheapshot
       control::scoped_hash<Controller> sc_hash;
    };
 
-   inline
-   uint64_t
-   cut_mask(uint64_t& v, uint64_t mask)
-   {
-      mask&=v;
-      v^=mask;
-      return mask;
-   }
+   // different kind of moves with recursion
 
-   template<side, typename Controller>
+   struct move_set
+   {
+      piece_t piece;
+      uint64_t origin;
+      uint64_t destinations;
+   };
+
+   template<side, typename Controller, typename MoveInfo>
    bool
-   recurse_with_cutoff(const Controller& ec, const context& ctx);
+   recurse_with_cutoff(const Controller& ec, const context& ctx, const MoveInfo& mi);
 
    template<side S,typename Controller>
    __attribute__((warn_unused_result)) bool
@@ -342,7 +345,7 @@ namespace cheapshot
          ctx.ep_info=capture_with_pawn<OS>(get_side<OS>(ec.state.board)[idx(piece_t::pawn)],ctx.ep_info);
          make_hash(ec,hhash_ep_change0,ctx.ep_info);
       }
-      if(recurse_with_cutoff<S>(ec,ctx))
+      if(recurse_with_cutoff<S>(ec,ctx,mv.mi))
          return true;
       ctx.ep_info=0_U64;
       return false;
@@ -354,15 +357,7 @@ namespace cheapshot
    {
       auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,ms.origin,dest);
       scoped_move_hash_material<Controller> mv(ec,mi);
-      return recurse_with_cutoff<S>(ec,ctx);
-   }
-
-   template<side S,typename Controller>
-   uint64_t
-   pawn_origins_with_check(const Controller& ec)
-   {
-      uint64_t king=get_side<other_side(S)>(ec.state.board)[idx(piece_t::king)];
-      return reverse_capture_with_pawn<S>(king);
+      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -371,7 +366,7 @@ namespace cheapshot
    {
       const uint64_t ep_capture=en_passant_capture<S>(origin,ep_info);
       scoped_move_hash_material<Controller> mv(ec,en_passant_info<S>(origin,ep_capture));
-      return recurse_with_cutoff<S>(ec,ctx);
+      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -385,7 +380,7 @@ namespace cheapshot
       {
          // all promotions
          scoped_move_hash_material<Controller> mv2(ec,promotion_material,promotion_info<S>(prom,dest));
-         if(recurse_with_cutoff<S>(ec,ctx))
+         if(recurse_with_cutoff<S>(ec,ctx,move_with_promotion{mv.mi,prom}))
             return true;
       }
       return false;
@@ -396,7 +391,7 @@ namespace cheapshot
    move_with_cutoff(Controller& ec, context& ctx, const move_set& ms, uint64_t dest)
    {
       scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(ms.piece,ms.origin,dest));
-      return recurse_with_cutoff<S>(ec,ctx);
+      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -405,7 +400,7 @@ namespace cheapshot
    {
       auto mi=basic_capture_info<S>(ec.state.board,ms.piece,ms.origin,dest);
       scoped_move_hash_material<Controller> mv(ec,mi);
-      return recurse_with_cutoff<S>(ec,ctx);
+      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -432,10 +427,11 @@ namespace cheapshot
    bool analyze_castle_with_cutoff(Controller& ec, const context& ctx, const castling_t& c)
    {
       scoped_move_hash<Controller,move_info2> mv(ec,castle_info<S>(c));
-      return recurse_with_cutoff<S>(ec,ctx);
+      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
    };
 
    // main program loop
+
    // written as a single big routine because there is a lot of shared state, and performance is critical.
 
    // Behaviour can be tuned through the Controller template-parameter
@@ -598,6 +594,16 @@ namespace cheapshot
          analyze_position<other_side(S)>(ec,ctx);
       }
       return prune_cutoff<S>(ec);
+   }
+
+   template<side S, typename Controller, typename MoveInfo>
+   __attribute__((warn_unused_result)) bool
+   recurse_with_cutoff(Controller& ec, const context& ctx, const MoveInfo& mi)
+   {
+      bool r=recurse_with_cutoff<S>(ec,ctx);
+      if(r)
+         on_alpha_cutoff<S>(ec,mi);
+      return r;
    }
 
    template<typename Controller>

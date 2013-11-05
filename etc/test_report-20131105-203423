@@ -1,0 +1,85 @@
+Date: Die Nov  5 20:34:23 CET 2013
+Compiler info:
+Using built-in specs.
+COLLECT_GCC=g++-4.8
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/4.8/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu/Linaro 4.8.1-10ubuntu8' --with-bugurl=file:///usr/share/doc/gcc-4.8/README.Bugs --enable-languages=c,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-4.8 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --with-gxx-include-dir=/usr/include/c++/4.8 --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-4.8-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-4.8-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-4.8-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 4.8.1 (Ubuntu/Linaro 4.8.1-10ubuntu8) 
+CFlags: -g -O3  -I. -std=c++11 -march=native -mtune=native -Wall
+Cpus: 
+model name	: Intel(R) Pentium(R) CPU 997 @ 1.60GHz
+model name	: Intel(R) Pentium(R) CPU 997 @ 1.60GHz
+Last git commit: 
+commit ca59c513963fb3c72ba001e64697900728bfe729
+Author: dirk <dirkmoermans@gmail.com>
+Date:   Tue Nov 5 20:33:56 2013 +0100
+
+    preparation to store the principal move variation
+Tests
+Running 53 test cases...
+board pos
+ real time:0.186701 user time:0.185912 system time:0.000789 ops/sec:8.03424e+08
+slide pawn up
+ real time:0.064037 user time:0.064021 system time:1.6e-05 ops/sec:3.90399e+08
+slide pawn down
+ real time:0.064042 user time:0.064033 system time:9e-06 ops/sec:3.90369e+08
+capture with pawn up
+ real time:0.048026 user time:0.048021 system time:5e-06 ops/sec:5.20551e+08
+capture with pawn down
+ real time:0.052029 user time:0.052025 system time:4e-06 ops/sec:4.80501e+08
+knight jump
+ real time:0.136089 user time:0.136081 system time:8e-06 ops/sec:1.83703e+08
+slide bishop
+ real time:0.204096 user time:0.204091 system time:5e-06 ops/sec:4.89966e+07
+slide rook
+ real time:0.160094 user time:0.160091 system time:3e-06 ops/sec:6.24633e+07
+slide queen
+ real time:0.164099 user time:0.160106 system time:0.003993 ops/sec:3.04694e+07
+move king
+ real time:0.072043 user time:0.072041 system time:2e-06 ops/sec:2.77612e+08
+castling block mask
+ real time:0.100051 user time:0.10005 system time:1e-06 ops/sec:2.49873e+08
+count set bits
+ real time:0.024014 user time:0.024013 system time:1e-06 ops/sec:8.32847e+08
+move set walk
+ real time:0.192108 user time:0.192107 system time:1e-06 ops/sec:7.80811e+06
+mate check (value is significantly less than nps)
+ real time:0.148071 user time:0.14807 system time:1e-06 ops/sec:168838
+caged kings at ply depth 17
+ real time:0.208116 user time:0.208115 system time:1e-06 ops/sec:4.80501
+endgame mate in 7 plies
+ real time:0.53233 user time:0.528328 system time:0.004002 ops/sec:1.87853
+endgame mate in 7 plies (cache)
+ real time:0.131989 user time:0.131989 system time:0 ops/sec:7.57639
+endgame mate in 7 plies (ab)
+ real time:0.16806 user time:0.16806 system time:0 ops/sec:1190.05
+endgame mate in 7 plies (ab,cache)
+ real time:0.36413 user time:0.364129 system time:1e-06 ops/sec:274.627
+endgame mate in 8 plies (ab)
+ real time:0.208119 user time:0.208118 system time:1e-06 ops/sec:48.0494
+endgame mate in 8 plies (ab,cache)
+ real time:0.096026 user time:0.096026 system time:0 ops/sec:104.138
+endgame mate in 8 plies (ab,cache,material)
+ real time:0.100029 user time:0.100028 system time:1e-06 ops/sec:99.971
+middlegame mate in 6 plies (ab)
+ real time:0.168082 user time:0.168082 system time:0 ops/sec:1189.9
+minimax nodes test
+ real time:0.060026 user time:0.060026 system time:0 ops/sec:155316
+alphabeta nodes test
+ real time:0.440242 user time:0.44024 system time:2e-06 ops/sec:740668
+incremental hash nodes test
+ real time:0.06804 user time:0.06804 system time:0 ops/sec:137022
+all-at-once hashes from start position
+ real time:1.8204 user time:1.8204 system time:1e-06 ops/sec:113494
+all-at-once hashes in endgame mating position
+ real time:0.980009 user time:0.980009 system time:0 ops/sec:502670
+parse pgn games
+ real time:0.27614 user time:0.276139 system time:1e-06 ops/sec:6790.03
+compress uncompress cycle
+ real time:0.116059 user time:0.116059 system time:0 ops/sec:2.15408e+08
+stats for init position with 9 plies
+ real time:0.783989 user time:0.767988 system time:0.016001 ops/sec:1.27553
+ pruning cutoffs:98925 no cutoff:1567398 hit ratio:0.0593672
+ cache size:877434 cache hits:788661 misses:877663 hit ratio:0.473294

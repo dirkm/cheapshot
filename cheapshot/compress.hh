@@ -2,29 +2,17 @@
 #define CHEAPSHOT_COMPRESS_HH
 
 #include "cheapshot/board.hh"
-
-#include <iostream>
 #include <cheapshot/io.hh>
 
 namespace cheapshot
 {
-   namespace detail
-   {
-      template<typename U, typename V>
-      union union_caster
-      {
-         U u;
-         V v;
-      };
-   }
-
    template<typename U, typename V>
    V
-   union_caster(U u)
+   union_cast(U u)
    {
-        detail::union_caster<U,V> r;
-        r.u=u;
-        return r.v;
+      union {U u;V v;} r;
+      r.u=u;
+      return r.v;
    }
 
    struct compressed_poschange
@@ -34,10 +22,16 @@ namespace cheapshot
       uint16_t idx_destination:6;
 
       uint16_t
-      to_value() const;
+      to_value() const
+      {
+         return union_cast<compressed_poschange,uint16_t>(*this);
+      }
 
       static compressed_poschange
-      from_value(uint16_t v);
+      from_value(uint16_t v)
+      {
+         return union_cast<uint16_t,compressed_poschange>(v);
+      };
 
       inline move_info
       uncompress_flippos(side s) const
@@ -55,18 +49,6 @@ namespace cheapshot
          mi.mask|=pos2;
          return mi;
       }
-   };
-
-   inline uint16_t
-   compressed_poschange::to_value() const
-   {
-      return union_caster<compressed_poschange,uint16_t>(*this);
-   };
-
-   inline compressed_poschange
-   compressed_poschange::from_value(uint16_t v)
-   {
-      return union_caster<uint16_t,compressed_poschange>(v);
    };
 
    inline compressed_poschange
@@ -175,10 +157,16 @@ namespace cheapshot
       }
 
       uint32_t
-      to_value() const;
+      to_value() const
+      {
+         return union_cast<compressed_move,uint32_t>(*this);
+      }
 
       static compressed_move
-      from_value(uint32_t v);
+      from_value(uint32_t v)
+      {
+         return union_cast<uint32_t,compressed_move>(v);
+      };
 
       uint32_t type:2;
       // in case of a promotion, p1.piece contains the promoted piece
@@ -196,18 +184,6 @@ namespace cheapshot
 
    static_assert(sizeof(compressed_move)<=sizeof(uint32_t),
                  "sizeof(compressed_move)>sizeof(uint32_t)");
-
-   inline uint32_t
-   compressed_move::to_value() const
-   {
-      return union_caster<compressed_move,uint32_t>(*this);
-   };
-
-   inline compressed_move
-   compressed_move::from_value(uint32_t v)
-   {
-      return union_caster<uint32_t,compressed_move>(v);
-   };
 }
 
 #endif

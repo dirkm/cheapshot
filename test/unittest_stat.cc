@@ -33,7 +33,8 @@ namespace
       void
       print_results(std::ostream& os) const
       {
-         os << " cache hits:" << hits
+         os << " cache size:" << transposition_table.size()
+            << " cache hits:" << hits
             << " misses:" << misses
             << " hit ratio:" << float(hits)/(hits+misses)
             << std::endl;
