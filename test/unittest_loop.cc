@@ -1,11 +1,11 @@
+#include "cheapshot/loop.hh" // reversed to test if headers are self-contained
+#include "cheapshot/io.hh"
+#include "cheapshot/control.hh"
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/output_test_stream.hpp>
 
 #include "test/unittest.hh"
-
-#include "cheapshot/control.hh"
-#include "cheapshot/io.hh"
-#include "cheapshot/loop.hh"
 
 #include <map>
 

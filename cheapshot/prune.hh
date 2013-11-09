@@ -26,7 +26,7 @@ namespace cheapshot
          {
             scoped_prune(minimax& m_):
                m(m_),
-               old_score(m.score)
+               level_score(m.score)
             {
                m.score=score::no_valid_move(other_side(S));
             }
@@ -36,16 +36,22 @@ namespace cheapshot
                scoped_prune(ec.pruning)
             {}
 
+            bool
+            is_increase() const
+            {
+               return score::less<S>(level_score,m.score);
+            }
+
             ~scoped_prune()
             {
-               m.score=score::best<S>(old_score,m.score);
+               m.score=score::best<S>(level_score,m.score);
             }
 
             scoped_prune(const scoped_prune&) = delete;
             scoped_prune& operator=(const scoped_prune&) = delete;
          private:
             minimax& m;
-            int old_score;
+            int level_score;
          };
       };
 
@@ -75,15 +81,16 @@ namespace cheapshot
          alphabeta(const alphabeta&) = delete;
          alphabeta& operator=(const alphabeta&) = delete;
 
+
          template<side S>
          class scoped_prune
          {
          public:
             scoped_prune(alphabeta& m_):
                m(m_),
-               old_treshold(m.template treshold<S>()),
-               old_score(m.score),
-               old_treshold_other(m.template treshold<other_side(S)>())
+               level_treshold(m.template treshold<S>()),
+               level_score(m.score),
+               level_treshold_other(m.template treshold<other_side(S)>())
             {
                m.score=score::no_valid_move(other_side(S));
             }
@@ -94,11 +101,17 @@ namespace cheapshot
                scoped_prune(ec.pruning)
             {}
 
+            bool
+            is_increase() const
+            {
+               return score::less<S>(level_treshold,m.score);
+            }
+
             ~scoped_prune()
             {
-               m.score=score::best<S>(old_score,m.score);
-               m.template treshold<S>()=score::best<S>(old_treshold,m.score);
-               m.template treshold<other_side(S)>()=old_treshold_other;
+               m.score=score::best<S>(level_score,m.score);
+               m.template treshold<S>()=score::best<S>(level_treshold,m.score);
+               m.template treshold<other_side(S)>()=level_treshold_other;
             }
 
             scoped_prune(const scoped_prune&) = delete;
@@ -106,9 +119,9 @@ namespace cheapshot
          private:
 
             alphabeta& m;
-            int old_treshold;
-            int old_score;
-            int old_treshold_other;
+            int level_treshold;
+            int level_score;
+            int level_treshold_other;
          };
       };
 

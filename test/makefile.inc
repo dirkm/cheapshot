@@ -6,7 +6,7 @@ $(EXEC): $(LIBCHEAPSHOT)
 
 test: unittest ct_test tool_test
 
-UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_other.cc $~unittest_io.cc \
+UNITTEST_SRC:=$~unittest_bitops.cc $~unittest_loop.cc $~unittest_io.cc \
 	$~unittest_ab.cc $~unittest_compress.cc $~unittest_stat.cc
 
 $~unittest: LDFLAGS += -lboost_unit_test_framework
@@ -32,7 +32,7 @@ unittest: $~unittest
 	$^ --catch_system_errors=0
 
 currenttest: $~unittest
-	$^ --run_test=basic_engine_suite/rook_queen_test --log_level=all --catch_system_errors=0
+	$^ --run_test=alpha_beta_suite/alpha_beta_toy_test --log_level=all --catch_system_errors=0
 
 # $^ --run_test=basic_engine_suite/rook_queen_test --log_level=all --catch_system_errors=0
 # $^ --catch_system_errors=0

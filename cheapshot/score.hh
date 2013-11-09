@@ -38,17 +38,21 @@ namespace cheapshot
 
       constexpr int stalemate(side c) { return abs_score(c,val::stalemate); }
 
-      template<side S>
-      constexpr bool less_equal(int l, int r);
-
-      template<>
-      constexpr bool less_equal<side::white>(int l, int r) { return (l<=r); }
-
-      template<>
-      constexpr bool less_equal<side::black>(int l, int r) { return (l>=r); }
 
       template<side S>
-      constexpr int best(int l, int r) {return less_equal<S>(l,r)?r:l; }
+      constexpr bool less(int l, int r);
+
+      template<>
+      constexpr bool less<side::white>(int l, int r) { return (l<r); }
+
+      template<>
+      constexpr bool less<side::black>(int l, int r) { return (l>r); }
+
+      template<side S>
+      constexpr bool less_equal(int l, int r) { return !less<other_side(S)>(l,r);}
+
+      template<side S>
+      constexpr int best(int l, int r) {return less<S>(l,r)?r:l; }
 
       namespace detail
       {

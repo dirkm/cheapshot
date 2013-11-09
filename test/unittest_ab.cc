@@ -48,64 +48,108 @@ const char* to_string(toy n)
    return repr[idx(n)];
 }
 
-typedef std::array<std::pair<std::vector<toy>,int>,count<toy>()> tree_t;
+using tree_t=std::array<std::pair<std::vector<toy>,int>,count<toy>()>;
 
-typedef std::function<void (toy,const tree_t::value_type& v)> fun_init_t;
-typedef std::function<void (toy,toy,int,int)> fun_cutoff_t;
+struct prune_check_noop
+{
+   static void
+   on_reached(toy s, const tree_t::value_type& v){}
+
+   static void
+   is_cutoff(toy parent, toy child, bool cutoff){}
+
+   static void
+   is_increase(toy parent, toy child, bool is_increase){}
+};
 
 // freestanding implementation with inspection-functions
 //  base on wikipedia-article
+template<typename EventHandler>
 int
-ab_book(const tree_t& t, toy s,
-        fun_init_t finit, fun_cutoff_t fcutoff,
+ab_book(const tree_t& t, toy s, EventHandler& eh,
         int alpha=-score::limit(side::white),
         int beta=-score::limit(side::black))
 {
    const auto& v=t[idx(s)];
-   finit(s,v);
+   eh.on_reached(s,v);
    if(v.first.empty())
       alpha=v.second;
    else
       for(toy child: v.first)
       {
-         // int local_alpha=-ab(t,child,finit,fcutoff,-beta,-alpha);
-         alpha=std::max(alpha,-ab_book(t,child,finit,fcutoff,-beta,-alpha));
-         fcutoff(s,child,alpha,beta);
-         if(alpha>=beta)
+         int local_alpha=-ab_book(t,child,eh,-beta,-alpha);
+         bool increase=(local_alpha>alpha);
+         if(increase)
+            alpha=local_alpha;
+
+         BOOST_TEST_MESSAGE(" parent " << to_string(s)
+                            << " child " << to_string(child)
+                            << " alpha " << alpha
+                            << " local_alpha " << local_alpha
+                            << " beta " << beta
+                            << " increase " << increase );
+         bool cutoff=(alpha>=beta);
+         eh.is_cutoff(s,child,cutoff);
+         eh.is_increase(s,child,increase && !cutoff);
+         if(cutoff)
             break;
       }
    return alpha;
 }
 
-typedef std::function<void (toy,toy,bool)> fun_cutoff_prune_t;
 
-template<side S,typename Algo>
+// mimicking the implementation in cheapshot/loop.hh
+
+template<side S, typename EventHandler, typename Algo>
+__attribute__((warn_unused_result)) bool
+recurse_with_cutoff(const tree_t& t, toy s, toy child, EventHandler& eh, Algo& algo_data);
+
+template<side S, typename EventHandler, typename Algo>
 inline void
-prune(const tree_t& t, toy s,
-      fun_init_t finit, fun_cutoff_prune_t fcutoff,
-      Algo& algo_data)
+prune(const tree_t& t, toy s, EventHandler& eh, Algo& algo_data)
 {
    const auto& v=t[idx(s)];
-   finit(s,v);
-   typename Algo::template scoped_prune<S> sp(algo_data);
+   eh.on_reached(s,v);
+
    if(v.first.empty())
       algo_data.score=v.second;
    else
       for(toy child: v.first)
         {
-           prune<other_side(S)>(t,child,finit,fcutoff,algo_data);
-           bool is_cutoff=algo_data.template cutoff<other_side(S)>();
-           fcutoff(s,child,is_cutoff);
+           bool is_cutoff=recurse_with_cutoff<S>(t,s,child,eh,algo_data);
+           eh.is_cutoff(s,child,is_cutoff);
            if(is_cutoff)
               break;
         }
 }
 
+template<side S, typename EventHandler, typename Algo>
+__attribute__((warn_unused_result)) bool
+recurse_with_cutoff(const tree_t& t, toy s, toy child, EventHandler& eh, Algo& algo_data)
+{
+   bool increase;
+   {
+      typename Algo::template scoped_prune<S> sp(algo_data);
+      prune<other_side(S)>(t,child,eh,algo_data);
+      increase=sp.is_increase();
+      // ab only
+      // BOOST_TEST_MESSAGE(" side " << ((S==side::white)?"w":"b")
+      //                    << " parent " << to_string(s)
+      //                    << " child " << to_string(child)
+      //                    << " alpha " << algo_data.template treshold<S>()
+      //                    << " score " << algo_data.score
+      //                    << " beta " << algo_data.template treshold<other_side(S)>());
+   }
+   bool cutoff=algo_data.template cutoff<S>();
+   eh.is_increase(s,child,increase && !cutoff);
+   return cutoff;
+}
+
+
 BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 {
    constexpr int branch=std::numeric_limits<int>::min();
-
-   typedef std::vector<toy> vt;
+   using vt=std::vector<toy>;
 
    static const tree_t game_tree{{
       /*w0_0*/ {vt{toy::b1_0,toy::b1_1},branch},
@@ -134,61 +178,95 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
 
    constexpr toy init_state=toy::w0_0;
 
+   struct prune_check_mm: prune_check_noop
+   {
+      std::set<toy> reached_nodes;
+
+      void
+      on_reached(toy s, const tree_t::value_type& v)
+      {
+         auto ni=reached_nodes.insert(s);
+         BOOST_CHECK(ni.second);
+      }
+
+      void
+      is_increase(toy parent, toy child, int new_score) const
+      {
+      }
+   };
+
    static const std::set<toy> ignored_nodes{
       {toy::w4_8},
       {toy::w4_5}
-   };
-
-   auto finit=[](toy s, const tree_t::value_type& v){
-      BOOST_CHECK(ignored_nodes.find(s)==end(ignored_nodes));
    };
 
    static const std::set<std::pair<toy,toy> > beta_cutoffs{
       {toy::b3_1,toy::w4_2},
       {toy::b3_3,toy::w4_4},
       {toy::b3_5,toy::w4_7},
-      {toy::b1_1,toy::w2_3},
-      {toy::b3_1,toy::w4_2},
-      {toy::b3_3,toy::w4_4},
-      {toy::b3_5,toy::w4_7},
       {toy::b1_1,toy::w2_3}
    };
 
-   auto fcutoff=[](toy s,toy child, int alpha, int beta)
+   static const std::set<std::pair<toy,toy> > ab_increases{
+      {toy::b1_0,toy::w2_0},
+      {toy::b1_0,toy::w2_1},
+      {toy::b1_1,toy::w2_2},
+      {toy::b3_0,toy::w4_0},
+      {toy::b3_0,toy::w4_0},
+      {toy::b3_2,toy::w4_3},
+      {toy::b3_4,toy::w4_6},
+      {toy::w0_0,toy::b1_0},
+      {toy::w2_0,toy::b3_0},
+      {toy::w2_1,toy::b3_2},
+      {toy::w2_2,toy::b3_4}
+   };
+
+   struct prune_check_ab: prune_check_mm
    {
-      BOOST_CHECK_EQUAL(
-         beta_cutoffs.find({s,child})!=end(beta_cutoffs),
-         (alpha>=beta));
+      void
+      on_reached(toy s, const tree_t::value_type& v)
+      {
+         prune_check_mm::on_reached(s,v);
+         BOOST_CHECK(ignored_nodes.find(s)==end(ignored_nodes));
+      }
+
+      void
+      is_cutoff(toy parent, toy child, bool cutoff) const
+      {
+         BOOST_CHECK_EQUAL(
+            beta_cutoffs.find({parent,child})!=end(beta_cutoffs),
+            cutoff);
+      }
+
+      void
+      is_increase(toy parent, toy child, bool increase) const
+      {
+         if((ab_increases.find({parent,child})!=end(ab_increases))!=increase)
+            BOOST_TEST_MESSAGE("{toy::" << to_string(parent) << ",toy::" << to_string(child) << "}");
+
+         BOOST_CHECK_EQUAL(ab_increases.find({parent,child})!=end(ab_increases),increase);
+      }
    };
 
    {
-      int r=ab_book(game_tree,init_state,finit,fcutoff);
+      prune_check_ab pc;
+      int r=ab_book(game_tree,init_state,pc);
       BOOST_CHECK_EQUAL(r,3);
+      BOOST_CHECK_EQUAL(pc.reached_nodes.size()+ignored_nodes.size(),count<toy>());
    }
    {
-      std::set<toy> nodes;
-      auto finit_minimax=[&nodes](toy s, const tree_t::value_type& v){
-         auto ni=nodes.insert(s);
-         BOOST_CHECK(ni.second);
-      };
-
-      auto fcutoff_minimax=[](toy s,toy child, bool is_cutoff){};
-
-      cheapshot::control::minimax mm(side::black);
-      prune<side::black>(game_tree,init_state,finit_minimax,fcutoff_minimax,mm);
-      BOOST_CHECK_EQUAL(nodes.size(),count<toy>());
+      prune_check_mm pc;
+      cheapshot::control::minimax mm(side::white);
+      prune<side::white>(game_tree,init_state,pc,mm);
+      BOOST_CHECK_EQUAL(pc.reached_nodes.size(),count<toy>());
       BOOST_CHECK_EQUAL(mm.score,3);
    }
    {
-      cheapshot::control::alphabeta ab(side::black);
-      auto fcutoff_ab=[&fcutoff,&ab](toy s,toy child, bool is_cutoff){
-         BOOST_CHECK_EQUAL(
-            beta_cutoffs.find({s,child})!=end(beta_cutoffs),
-            is_cutoff);
-      };
-
-      prune<side::black>(game_tree,init_state,finit,fcutoff_ab,ab);
+      prune_check_ab pc;
+      cheapshot::control::alphabeta ab(side::white);
+      prune<side::white>(game_tree,init_state,pc,ab);
       BOOST_CHECK_EQUAL(ab.score,3);
+      BOOST_CHECK_EQUAL(pc.reached_nodes.size()+ignored_nodes.size(),count<toy>());
    }
 }
 

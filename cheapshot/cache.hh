@@ -10,13 +10,6 @@ namespace cheapshot
 {
    namespace control
    {
-      struct transposition_info
-      {
-         int score; // 20 bits
-         int ply_depth; // 12 bits
-         // compressed_move principal_move; // 32 bits
-      };
-
       inline bool
       is_shallow_cache(int engine_ply_depth,int cache_ply_depth)
       {
@@ -25,6 +18,13 @@ namespace cheapshot
 
       struct cache
       {
+         struct data
+         {
+            int score; // 20 bits
+            int ply_depth; // 12 bits
+            // compressed_move principal_move; // 32 bits
+         };
+
          // typedef cache_data // TODO
 
          cache()
@@ -34,7 +34,7 @@ namespace cheapshot
 
          struct hit_info
          {
-            transposition_info& val;
+            data& val;
             bool is_hit;
          };
 
@@ -89,7 +89,7 @@ namespace cheapshot
          //    uint64_t operator()(uint64_t n) const noexcept {return n;}
          // };
 
-         std::unordered_map<uint64_t,transposition_info> transposition_table;
+         std::unordered_map<uint64_t,data> transposition_table;
 
          cache(const cache&) = delete;
          cache& operator=(const cache&) = delete;
@@ -110,6 +110,8 @@ namespace cheapshot
 
       struct noop_cache
       {
+         struct data{};
+
          struct hit_info
          {
             static constexpr bool is_hit=false;
@@ -151,10 +153,10 @@ namespace cheapshot
    };
 
    template<side S, typename Controller, typename MI>
-   void on_alpha_cutoff(Controller& ec, const MI& mi){}
+   void on_score_increase(Controller& ec, const MI& mi){}
 
    template<side S, typename Controller>
-   void on_alpha_cutoff(Controller& ec, const move_with_promotion& mv_prom){}
+   void on_score_increase(Controller& ec, const move_with_promotion& mv_prom){}
 }
 
 #endif
