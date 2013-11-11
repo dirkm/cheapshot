@@ -141,7 +141,7 @@ namespace cheapshot
                                  const on_position_t& on_each_position=null_pos);
 
    extern std::ostream&
-   print_score(int score, std::ostream& os);
+   print_score(int_fast32_t score, std::ostream& os);
 
    // debugging aid
    extern void

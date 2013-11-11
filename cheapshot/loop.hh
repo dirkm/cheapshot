@@ -292,7 +292,7 @@ namespace cheapshot
       control::scoped_material<Controller> sc_material;
    };
 
-   inline int
+   inline int32_t
    potential_capture_material(const move_info2& mi2)
    {
       return (mi2[1].mask!=0_U64)?
@@ -300,7 +300,7 @@ namespace cheapshot
          0;
    }
 
-   inline int
+   inline int32_t
    promotion_material(const move_info2& mi2)
    {
       return
@@ -467,7 +467,7 @@ namespace cheapshot
 
       board_t& board=ec.state.board;
       board_metrics& bm=ec.state.bm;
-      int& score=ec.pruning.score;
+      int32_t& score=ec.pruning.score;
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
       auto basic_moves_end(begin(basic_moves));
@@ -503,7 +503,6 @@ namespace cheapshot
 
       extcontext<Controller> ectx{oldctx};
       ectx.ctx.ep_info=0_U64;
-      score=score::no_valid_move(S);
 
       // this scope closes hashes generated through make_hash below as well
       scoped_make_turn<Controller> scoped_turn(ec,ectx.ctx);
@@ -606,16 +605,13 @@ namespace cheapshot
    __attribute__((warn_unused_result)) bool
    recurse_with_cutoff(Controller& ec, extcontext<Controller>& ectx, const MoveInfo& mi)
    {
-      bool increase;
       {
          control::scoped_prune<Controller,S> prune_scope(ec);
          analyze_position<other_side(S)>(ec,ectx.ctx);
-         increase=prune_scope.is_increase();
+         if(prune_scope.is_increase())
+            on_score_increase<S>(ec,mi);
       }
-      bool cutoff=prune_cutoff<S>(ec);
-      if(increase && !cutoff)
-         on_score_increase<S>(ec,mi);
-      return cutoff;
+      return prune_cutoff<S>(ec);
    }
 
    template<typename Controller>

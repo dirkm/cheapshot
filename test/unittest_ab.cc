@@ -79,6 +79,7 @@ ab_book(const tree_t& t, toy s, EventHandler& eh,
       {
          int local_alpha=-ab_book(t,child,eh,-beta,-alpha);
          bool increase=(local_alpha>alpha);
+         eh.is_increase(s,child,increase);
          if(increase)
             alpha=local_alpha;
 
@@ -90,7 +91,6 @@ ab_book(const tree_t& t, toy s, EventHandler& eh,
                             << " increase " << increase );
          bool cutoff=(alpha>=beta);
          eh.is_cutoff(s,child,cutoff);
-         eh.is_increase(s,child,increase && !cutoff);
          if(cutoff)
             break;
       }
@@ -127,11 +127,10 @@ template<side S, typename EventHandler, typename Algo>
 __attribute__((warn_unused_result)) bool
 recurse_with_cutoff(const tree_t& t, toy s, toy child, EventHandler& eh, Algo& algo_data)
 {
-   bool increase;
    {
       typename Algo::template scoped_prune<S> sp(algo_data);
       prune<other_side(S)>(t,child,eh,algo_data);
-      increase=sp.is_increase();
+      eh.is_increase(s,child,sp.is_increase());
       // ab only
       // BOOST_TEST_MESSAGE(" side " << ((S==side::white)?"w":"b")
       //                    << " parent " << to_string(s)
@@ -140,9 +139,7 @@ recurse_with_cutoff(const tree_t& t, toy s, toy child, EventHandler& eh, Algo& a
       //                    << " score " << algo_data.score
       //                    << " beta " << algo_data.template treshold<other_side(S)>());
    }
-   bool cutoff=algo_data.template cutoff<S>();
-   eh.is_increase(s,child,increase && !cutoff);
-   return cutoff;
+   return algo_data.template cutoff<S>();
 }
 
 
@@ -190,9 +187,8 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       }
 
       void
-      is_increase(toy parent, toy child, int new_score) const
-      {
-      }
+      is_increase(toy parent, toy child, bool increase) const
+      {}
    };
 
    static const std::set<toy> ignored_nodes{
@@ -211,10 +207,13 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
       {toy::b1_0,toy::w2_0},
       {toy::b1_0,toy::w2_1},
       {toy::b1_1,toy::w2_2},
+      {toy::b1_1,toy::w2_3},
       {toy::b3_0,toy::w4_0},
-      {toy::b3_0,toy::w4_0},
+      {toy::b3_1,toy::w4_2},
       {toy::b3_2,toy::w4_3},
+      {toy::b3_3,toy::w4_4},
       {toy::b3_4,toy::w4_6},
+      {toy::b3_5,toy::w4_7},
       {toy::w0_0,toy::b1_0},
       {toy::w2_0,toy::b3_0},
       {toy::w2_1,toy::b3_2},

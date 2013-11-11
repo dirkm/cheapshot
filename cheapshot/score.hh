@@ -16,60 +16,67 @@ namespace cheapshot
       // stay clear of highest bit, because possible overflow when negating
       namespace val
       {
-         constexpr int limit=(std::numeric_limits<int>::max()/2)+1;
-         constexpr int no_valid_move=-(limit>>1); // TODO: can be set to -limit
-         constexpr int checkmate=(-no_valid_move)>>1;
-         constexpr int repeat=checkmate>>1;
-         constexpr int stalemate=repeat>>1;
+         constexpr int_fast32_t limit=(std::numeric_limits<int32_t>::max()/2)+1;
+         constexpr int_fast32_t no_valid_move=-(limit>>1); // TODO: can be set to -limit
+         constexpr int_fast32_t checkmate=(-no_valid_move)>>1;
+         constexpr int_fast32_t repeat=checkmate>>1;
+         constexpr int_fast32_t stalemate=repeat>>1;
       }
 
-      constexpr int abs_score(side c, int sc)
-      {
-         return (c==side::white)?sc:-sc;
-      }
+      constexpr int_fast32_t
+      abs_score(side c, int_fast32_t sc) { return (c==side::white)?sc:-sc; }
 
-      constexpr int limit(side c){ return abs_score(c,val::limit); }
+      constexpr int_fast32_t
+      limit(side c) { return abs_score(c,val::limit); }
 
-      constexpr int no_valid_move(side c){ return abs_score(c,val::no_valid_move); }
+      constexpr int_fast32_t
+      no_valid_move(side c) { return abs_score(c,val::no_valid_move); }
 
-      constexpr int repeat(){ return val::repeat; }
+      constexpr int_fast32_t
+      repeat() { return val::repeat; }
 
-      constexpr int checkmate(side c) { return abs_score(c,val::checkmate); }
+      constexpr int_fast32_t
+      checkmate(side c) { return abs_score(c,val::checkmate); }
 
-      constexpr int stalemate(side c) { return abs_score(c,val::stalemate); }
-
+      constexpr int_fast32_t
+      stalemate(side c) { return abs_score(c,val::stalemate); }
 
       template<side S>
-      constexpr bool less(int l, int r);
+      constexpr bool
+      less(int_fast32_t l, int_fast32_t r);
 
       template<>
-      constexpr bool less<side::white>(int l, int r) { return (l<r); }
+      constexpr bool
+      less<side::white>(int_fast32_t l, int_fast32_t r) { return (l<r); }
 
       template<>
-      constexpr bool less<side::black>(int l, int r) { return (l>r); }
+      constexpr bool
+      less<side::black>(int_fast32_t l, int_fast32_t r) { return (l>r); }
 
       template<side S>
-      constexpr bool less_equal(int l, int r) { return !less<other_side(S)>(l,r);}
+      constexpr bool
+      less_equal(int_fast32_t l, int_fast32_t r) { return !less<other_side(S)>(l,r);}
 
       template<side S>
-      constexpr int best(int l, int r) {return less<S>(l,r)?r:l; }
+      constexpr int_fast32_t
+      best(int_fast32_t l, int_fast32_t r) {return less<S>(l,r)?r:l; }
 
       namespace detail
       {
          // http://chessprogramming.wikispaces.com/Simplified+evaluation+function
-         constexpr int weight[count<piece_t>()-1]=
+         constexpr int_fast32_t weight[count<piece_t>()-1]=
          {
             100, 320, 330, 500, 900 /* kings are neved captured */
          };
       }
 
-      constexpr int
+      constexpr int_fast32_t
       weight(piece_t p)
       {
          return detail::weight[idx(p)];
       }
 
-      constexpr int
+      constexpr int_fast32_t
       weight(side c, piece_t p)
       {
          return (c==side::white)?
@@ -77,10 +84,10 @@ namespace cheapshot
             -detail::weight[idx(p)];
       }
 
-      inline int
+      inline int_fast32_t
       material(const board_t& b)
       {
-         int r=0;
+         int_fast32_t r=0;
          const board_side& white_side=b[idx(side::white)];
          const board_side& black_side=b[idx(side::black)];
          for(piece_t p=piece_t::pawn;p<piece_t::king;++p)

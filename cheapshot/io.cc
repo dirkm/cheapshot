@@ -1224,7 +1224,7 @@ namespace cheapshot
 
    // TODO: cleanup
    extern std::ostream&
-   print_score(int score, std::ostream& os)
+   print_score(int_fast32_t score, std::ostream& os)
    {
       const char* color_arg=sign_to_sidearg(score);
       const char* name;

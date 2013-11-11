@@ -27,7 +27,7 @@ namespace cheapshot
 
             template<typename Controller>
             scoped_material(Controller& ec, side c, piece_t p):
-               scoped_material(ec,(int (*)(side,piece_t))score::weight,c,p)
+               scoped_material(ec,(int_fast32_t (*)(side,piece_t))score::weight,c,p)
             {}
 
             ~scoped_material()
@@ -39,7 +39,7 @@ namespace cheapshot
             scoped_material& operator=(const scoped_material&) = delete;
          private:
             incremental_material& mat_cont;
-            int old_material;
+            int_fast32_t old_material;
          };
       };
 

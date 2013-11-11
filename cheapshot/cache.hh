@@ -1,6 +1,7 @@
 #ifndef CHEAPSHOT_CACHE_HH
 #define CHEAPSHOT_CACHE_HH
 
+#include "cheapshot/compress.hh"
 #include "cheapshot/score.hh"
 
 #include <limits>
@@ -18,15 +19,28 @@ namespace cheapshot
 
       struct cache
       {
-         struct data
+         struct compressed_data
          {
-            int score; // 20 bits
-            int ply_depth; // 12 bits
-            // compressed_move principal_move; // 32 bits
+            uint64_t score:20; // 20 bits
+            uint64_t ply_depth:12; // 12 bits
+            uint64_t principal_move:32; // 32 bits
          };
 
-         // typedef cache_data // TODO
+         static_assert(sizeof(compressed_data)==sizeof(uint64_t),
+                       "sizeof(compressed_data)>sizeof(uint64_t)");
 
+         struct data
+         {
+            // table_t::iterator cacheit;
+            int_fast32_t score;
+            int ply_depth;
+            compressed_move principal_move;
+         };
+
+         using table_t=std::unordered_map<uint64_t,data>;
+         table_t transposition_table;
+
+      public:
          cache()
          {
             transposition_table.reserve(1000000); // TODO
@@ -34,7 +48,7 @@ namespace cheapshot
 
          struct hit_info
          {
-            data& val;
+            table_t::iterator cacheit;
             bool is_hit;
          };
 
@@ -50,12 +64,9 @@ namespace cheapshot
          try_cache_hit(int& score, uint64_t hash, int ply_depth)
          {
             hit_info hi=insert(hash,ply_depth);
+            auto& v=hi.cacheit->second;
             if(hi.is_hit)
-            {
-               score=(hi.val.score!=score::repeat())?
-                  hi.val.score:
-                  score::stalemate(S);
-            }
+               score=(v.score!=score::repeat())?v.score:score::stalemate(S);
             return hi;
          }
 
@@ -64,32 +75,24 @@ namespace cheapshot
          {
          public:
             template<typename Controller>
-            cache_update(const Controller& ec, const context& ctx, hit_info& hi_):
-               hi(hi_),
+            cache_update(const Controller& ec, const context& ctx, hit_info& hi):
+               v(hi.cacheit->second),
                score(ec.pruning.score)
             {
-               hi.val.ply_depth=ec.max_plies-ctx.halfmove_count;
+               v.ply_depth=ec.max_plies-ctx.halfmove_count;
             }
 
             ~cache_update()
             {
-               hi.val.score=score;
+               v.score=score;
             }
          private:
-            hit_info& hi;
+            table_t::mapped_type& v;
             const int& score;
 
             cache_update(const cache_update&) = delete;
             cache_update& operator=(const cache_update&) = delete;
          };
-
-
-         // struct identity_hash
-         // {
-         //    uint64_t operator()(uint64_t n) const noexcept {return n;}
-         // };
-
-         std::unordered_map<uint64_t,data> transposition_table;
 
          cache(const cache&) = delete;
          cache& operator=(const cache&) = delete;
@@ -98,13 +101,13 @@ namespace cheapshot
          insert(uint64_t hash,int ply_depth)
          {
             // TODO: caching is not needed close to leave-nodes
-            // use find if depth less than constant value (maybe 3)
-            decltype(transposition_table)::iterator v;
+            // don't cache if remaining depth is less than constant value (maybe 3)
+            table_t::iterator it;
             bool is_new;
-            std::tie(v,is_new)=transposition_table.insert(
+            std::tie(it,is_new)=transposition_table.insert(
                {hash,{score::repeat(),std::numeric_limits<int>::max()}});
-            bool is_hit=!is_new && !is_shallow_cache(ply_depth,v->second.ply_depth);
-            return hit_info{v->second,is_hit};
+            bool is_hit=!is_new && !is_shallow_cache(ply_depth,it->second.ply_depth);
+            return hit_info{it,is_hit};
          }
       };
 
