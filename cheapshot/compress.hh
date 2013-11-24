@@ -33,7 +33,7 @@ namespace cheapshot
          return union_cast<uint16_t,compressed_poschange>(v);
       };
 
-      inline move_info
+      move_info
       uncompress_flippos(side s) const
       {
          uint64_t pos1=1_U64<<idx_origin;
@@ -41,7 +41,7 @@ namespace cheapshot
          return move_info{.turn=s,.piece=piece,.mask=pos1};
       }
 
-      inline move_info
+      move_info
       uncompress_movepos(side s) const
       {
          move_info mi=uncompress_flippos(s);
@@ -89,9 +89,11 @@ namespace cheapshot
    {
       compressed_move() = default;
 
-      compressed_move(const move_info& mi):
-         compressed_move(move_type::normal,compress_movepos(mi).to_value())
-      {}
+      static compressed_move
+      make_normal(const move_info& mi)
+      {
+         return compressed_move(move_type::normal,compress_movepos(mi).to_value());
+      }
 
       static compressed_move
       make_capture(move_type mt, const move_info2& mi)
@@ -102,20 +104,24 @@ namespace cheapshot
       }
 
       static compressed_move
-      make_castle(move_type mt, const move_info2& mi)
+      make_castle(const move_info2& mi)
       {
-         return compressed_move(mt,
+         return compressed_move(move_type::castling,
                                 compress_movepos(mi[0]).to_value(),
                                 compress_movepos(mi[1]).to_value());
       }
 
-      void
-      with_promotion(piece_t promotion)
+      static compressed_move
+      make_promotion(const move_info2& mi, piece_t promotion)
       {
-         type=idx(move_type::promotion);
-         compressed_poschange cp=compressed_poschange::from_value(p1);
+         compressed_move r(move_type::promotion,
+                           compress_movepos(mi[0]).to_value(),
+                           compress_flippos(mi[1]).to_value());
+         r.type=idx(move_type::promotion);
+         compressed_poschange cp=compressed_poschange::from_value(r.p1);
          cp.piecenr=idx(promotion);
-         p1=cp.to_value();
+         r.p1=cp.to_value();
+         return r;
       }
 
       template<typename OnUncompress>

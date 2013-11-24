@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(simple_compress_test)
 {
    move_info mi{.turn=side::white,.piece=piece_t::pawn,
          .mask=algpos('e',3)|algpos('e',4)};
-   compressed_move cm(mi);
+   compressed_move cm=compressed_move::make_normal(mi);
    uncompress_check check;
    check.checked_mi=mi;
    cm.uncompress_move(check,side::white);
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(castle_compress_test)
              .mask=algpos('h',8)|algpos('f',8)}
    };
 
-   compressed_move cm=compressed_move::make_castle(move_type::castling,castle_mi2);
+   compressed_move cm=compressed_move::make_castle(castle_mi2);
    uncompress_check check;
    check.checked_castle_mi2=castle_mi2;
    cm.uncompress_move(check,side::black);
@@ -122,12 +122,12 @@ BOOST_AUTO_TEST_CASE(castle_compress_test)
 
 BOOST_AUTO_TEST_CASE(simple_promotion_compress_test)
 {
-   move_info mi{.turn=side::white,.piece=piece_t::pawn,
-         .mask=algpos('e',7)|algpos('e',8)};
-   compressed_move cm(mi);
-   cm.with_promotion(piece_t::knight);
+   move_info2 mi{
+      move_info{.turn=side::white,.piece=piece_t::pawn,
+            .mask=algpos('e',7)|algpos('e',8)}};
+   compressed_move cm=compressed_move::make_promotion(mi,piece_t::knight);
    uncompress_check check;
-   check.checked_mi=mi;
+   check.checked_mi=mi[0];
    check.checked_promotion=piece_t::knight;
    cm.uncompress_move(check,side::white);
 }
@@ -143,8 +143,7 @@ BOOST_AUTO_TEST_CASE(capture_promotion_compress_test)
              }
    };
 
-   compressed_move cm=compressed_move::make_capture(move_type::normal,mi2);
-   cm.with_promotion(piece_t::queen);
+   compressed_move cm=compressed_move::make_promotion(mi2,piece_t::queen);
    uncompress_check check;
    check.checked_mi2=mi2;
    check.checked_promotion=piece_t::queen;

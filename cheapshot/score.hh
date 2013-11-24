@@ -7,6 +7,8 @@
 
 namespace cheapshot
 {
+   constexpr int scorebits=20;
+
    namespace score
    {
       // high scores mean a better position for the color with the move
@@ -16,7 +18,7 @@ namespace cheapshot
       // stay clear of highest bit, because possible overflow when negating
       namespace val
       {
-         constexpr int_fast32_t limit=(std::numeric_limits<int32_t>::max()/2)+1;
+         constexpr int_fast32_t limit=1<<(scorebits-1);
          constexpr int_fast32_t no_valid_move=-(limit>>1); // TODO: can be set to -limit
          constexpr int_fast32_t checkmate=(-no_valid_move)>>1;
          constexpr int_fast32_t repeat=checkmate>>1;

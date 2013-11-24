@@ -16,7 +16,7 @@ namespace cheapshot
          template<side S>
          static constexpr bool cutoff() { return false; }
 
-         int score;
+         int_fast32_t score;
 
          minimax(const minimax&) = delete;
          minimax& operator=(const minimax&) = delete;
@@ -62,15 +62,15 @@ namespace cheapshot
             score(score::checkmate(other_side(c))),
             beta(score::checkmate(side::white))
          {}
-         int alpha;
-         int score;
-         int beta;
+         int_fast32_t alpha;
+         int_fast32_t score;
+         int_fast32_t beta;
 
          template<side S>
-         int treshold() const;
+         int_fast32_t treshold() const;
 
          template<side S>
-         int& treshold();
+         int_fast32_t& treshold();
 
          template<side S>
          bool cutoff() const
@@ -119,26 +119,26 @@ namespace cheapshot
          private:
 
             alphabeta& m;
-            int level_treshold;
-            int level_score;
-            int level_treshold_other;
+            int_fast32_t level_treshold;
+            int_fast32_t level_score;
+            int_fast32_t level_treshold_other;
          };
       };
 
       template<>
-      inline int
+      inline int_fast32_t
       alphabeta::treshold<side::white>() const { return alpha; }
 
       template<>
-      inline int
+      inline int_fast32_t
       alphabeta::treshold<side::black>() const { return beta; }
 
       template<>
-      inline int&
+      inline int_fast32_t&
       alphabeta::treshold<side::white>() { return alpha; }
 
       template<>
-      inline int&
+      inline int_fast32_t&
       alphabeta::treshold<side::black>() { return beta; }
    }
 

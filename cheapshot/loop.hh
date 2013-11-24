@@ -26,12 +26,7 @@ namespace cheapshot
       using cache_update=typename decltype(Controller::cache)::cache_update;
    }
 
-   template<typename Controller>
-   using cache_data=typename decltype(Controller::cache)::data;
-
-   // helpers to apply bitops on the entire board
-
-   typedef uint64_t (*move_generator_t)(uint64_t p, uint64_t obstacles);
+   using move_generator_t=uint64_t (*)(uint64_t p, uint64_t obstacles);
 
    template<side S>
    constexpr std::array<move_generator_t,count<piece_t>()>
@@ -334,13 +329,28 @@ namespace cheapshot
    struct extcontext
    {
       context ctx;
-      cache_data<Controller> hi;
-// int max_score;
+      typename decltype(Controller::cache)::cacheref cacheref;
    };
 
-   template<side, typename Controller, typename MoveInfo>
-   bool
-   recurse_with_cutoff(Controller& ec, extcontext<Controller>& ctx, const MoveInfo& mi);
+   struct recurse_result
+   {
+     bool cutoff;
+     bool increase;
+   };
+
+   template<side, typename Controller>
+   __attribute__((warn_unused_result)) recurse_result
+   recurse_with_cutoff(Controller& ec, const context& ctx);
+
+   template<side S, typename Controller, typename CompressFun, typename... Args>
+   __attribute__((warn_unused_result)) bool
+   recurse_with_principal_move(Controller& ec, extcontext<Controller>& ectx,CompressFun cf, Args&&... args)
+   {
+      auto r=recurse_with_cutoff<S>(ec,ectx.ctx);
+      if(r.increase)
+         on_score_increase(ec,ectx,cf,std::forward<Args>(args)...);
+      return r.cutoff;
+   }
 
    template<side S,typename Controller>
    __attribute__((warn_unused_result)) bool
@@ -357,7 +367,7 @@ namespace cheapshot
          ctx.ep_info=capture_with_pawn<OS>(get_side<OS>(ec.state.board)[idx(piece_t::pawn)],ctx.ep_info);
          make_hash(ec,hhash_ep_change0,ctx.ep_info);
       }
-      if(recurse_with_cutoff<S>(ec,ectx,mv.mi))
+      if(recurse_with_principal_move<S>(ec,ectx,compressed_move::make_normal,mv.mi))
          return true;
       ctx.ep_info=0_U64;
       return false;
@@ -369,7 +379,7 @@ namespace cheapshot
    {
       auto mi=basic_capture_info<S>(ec.state.board,piece_t::pawn,ms.origin,dest);
       scoped_move_hash_material<Controller> mv(ec,mi);
-      return recurse_with_cutoff<S>(ec,ectx,mv.mi);
+      return recurse_with_principal_move<S>(ec,ectx,compressed_move::make_capture,move_type::normal,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -378,7 +388,7 @@ namespace cheapshot
    {
       const uint64_t ep_capture=en_passant_capture<S>(origin,ep_info);
       scoped_move_hash_material<Controller> mv(ec,en_passant_info<S>(origin,ep_capture));
-      return recurse_with_cutoff<S>(ec,ectx,mv.mi);
+      return recurse_with_principal_move<S>(ec,ectx,compressed_move::make_capture,move_type::ep_capture,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -392,7 +402,7 @@ namespace cheapshot
       {
          // all promotions
          scoped_move_hash_material<Controller> mv2(ec,promotion_material,promotion_info<S>(prom,dest));
-         if(recurse_with_cutoff<S>(ec,ectx,move_with_promotion{mv.mi,prom}))
+         if(recurse_with_principal_move<S>(ec,ectx,compressed_move::make_promotion,mv.mi,prom))
             return true;
       }
       return false;
@@ -403,7 +413,7 @@ namespace cheapshot
    move_with_cutoff(Controller& ec, extcontext<Controller>& ectx, const move_set& ms, uint64_t dest)
    {
       scoped_move_hash<Controller,move_info> mv(ec,basic_move_info<S>(ms.piece,ms.origin,dest));
-      return recurse_with_cutoff<S>(ec,ectx,mv.mi);
+      return recurse_with_principal_move<S>(ec,ectx,compressed_move::make_normal,mv.mi);
    }
 
    template<side S,typename Controller>
@@ -412,8 +422,16 @@ namespace cheapshot
    {
       auto mi=basic_capture_info<S>(ec.state.board,ms.piece,ms.origin,dest);
       scoped_move_hash_material<Controller> mv(ec,mi);
-      return recurse_with_cutoff<S>(ec,ectx,mv.mi);
+      return recurse_with_principal_move<S>(ec,ectx,compressed_move::make_capture,move_type::normal,mv.mi);
    }
+
+   template<side S,typename Controller>
+   __attribute__((warn_unused_result)) bool
+   castle_with_cutoff(Controller& ec, extcontext<Controller>& ectx, const castling_t& c)
+   {
+      scoped_move_hash<Controller,move_info2> mv(ec,castle_info<S>(c));
+      return recurse_with_principal_move<S>(ec,ectx,compressed_move::make_castle,mv.mi);
+   };
 
    template<side S,typename Controller>
    uint64_t
@@ -436,13 +454,6 @@ namespace cheapshot
             return true;
       return false;
    }
-
-   template<side S,typename Controller>
-   bool analyze_castle_with_cutoff(Controller& ec, extcontext<Controller>& ctx, const castling_t& c)
-   {
-      scoped_move_hash<Controller,move_info2> mv(ec,castle_info<S>(c));
-      return recurse_with_cutoff<S>(ec,ctx,mv.mi);
-   };
 
    // main program loop
 
@@ -467,7 +478,7 @@ namespace cheapshot
 
       board_t& board=ec.state.board;
       board_metrics& bm=ec.state.bm;
-      int32_t& score=ec.pruning.score;
+      int_fast32_t& score=ec.pruning.score;
 
       std::array<move_set,16> basic_moves; // 16 is the max nr of pieces per color
       auto basic_moves_end(begin(basic_moves));
@@ -501,7 +512,7 @@ namespace cheapshot
 
       uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
 
-      extcontext<Controller> ectx{oldctx};
+      extcontext<Controller> ectx{oldctx,hit_info.cacheref};
       ectx.ctx.ep_info=0_U64;
 
       // this scope closes hashes generated through make_hash below as well
@@ -528,7 +539,7 @@ namespace cheapshot
       // castling
       for(const auto& cit: castling_generators<S>())
          if(cit.castling_allowed(bm.own<S>()|ectx.ctx.castling_rights,own_under_attack))
-            if(analyze_castle_with_cutoff<S>(ec,ectx,cit))
+            if(castle_with_cutoff<S>(ec,ectx,cit))
                return;
 
       // checks
@@ -601,17 +612,18 @@ namespace cheapshot
       }
    }
 
-   template<side S, typename Controller, typename MoveInfo>
-   __attribute__((warn_unused_result)) bool
-   recurse_with_cutoff(Controller& ec, extcontext<Controller>& ectx, const MoveInfo& mi)
+   template<side S, typename Controller>
+   __attribute__((warn_unused_result)) recurse_result
+   recurse_with_cutoff(Controller& ec, const context& ctx)
    {
-      {
-         control::scoped_prune<Controller,S> prune_scope(ec);
-         analyze_position<other_side(S)>(ec,ectx.ctx);
-         if(prune_scope.is_increase())
-            on_score_increase<S>(ec,mi);
-      }
-      return prune_cutoff<S>(ec);
+     recurse_result r;
+     {
+       control::scoped_prune<Controller,S> prune_scope(ec);
+       analyze_position<other_side(S)>(ec,ctx);
+       r.increase=prune_scope.is_increase();
+     }
+     r.cutoff=prune_cutoff<S>(ec);
+     return r;
    }
 
    template<typename Controller>
