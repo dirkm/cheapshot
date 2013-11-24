@@ -192,8 +192,8 @@ BOOST_AUTO_TEST_CASE( alpha_beta_toy_test )
    };
 
    static const std::set<toy> ignored_nodes{
-      {toy::w4_8},
-      {toy::w4_5}
+      toy::w4_5,
+      toy::w4_8
    };
 
    static const std::set<std::pair<toy,toy> > beta_cutoffs{

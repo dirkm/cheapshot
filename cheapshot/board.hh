@@ -55,7 +55,7 @@ namespace cheapshot
       int halfmove_clock; // for 50 moves rule
 
       constexpr side
-      get_side()
+      get_side() const
       {
          return side(halfmove_count&1);
       }

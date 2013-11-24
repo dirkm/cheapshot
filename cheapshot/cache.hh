@@ -5,7 +5,6 @@
 #include "cheapshot/config.hh"
 #include "cheapshot/score.hh"
 
-#include <limits>
 #include <unordered_map>
 
 namespace cheapshot
@@ -17,6 +16,8 @@ namespace cheapshot
       {
          return engine_ply_depth > cache_ply_depth;
       }
+
+      constexpr uint64_t max_ply_depth=(1<<(32-scorebits))-1;
 
       struct cache
       {
@@ -104,7 +105,7 @@ namespace cheapshot
             // don't cache if remaining depth is less than constant value (maybe 3)
             table_t::iterator it;
             bool is_new;
-            std::tie(it,is_new)=transposition_table.insert({hash,{score::repeat(),std::numeric_limits<int>::max()}});
+            std::tie(it,is_new)=transposition_table.insert({hash,{score::repeat(),max_ply_depth}});
             bool is_hit=!is_new && !is_shallow_cache(ply_depth,it->second.ply_depth);
             return hit_info{is_hit,it->second};
          }

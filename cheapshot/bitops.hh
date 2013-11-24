@@ -5,7 +5,11 @@
 #include <cassert>
 
 #if defined(__clang__)
-# error "clang not supported yet"
+
+#define CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
+#if (CLANG_VERSION < 30400)
+# error "clang 3.4 required"
+#endif
 
 #elif defined(__GNUC__)
 

@@ -18,11 +18,12 @@ LDFLAGS := -Wl,--as-needed
 
 ## non-standard compilers (gcc 4.8 is the minimum)
 #CXX := g++
-#CXX := clang++
+CXX := clang++
+CFLAGS += -Wno-missing-braces
 #CXX := g++-4.7.1
 #CXX := g++-4.6
 #CXX := g++-trunk
-CXX := g++-4.8
+#CXX := g++-4.8
 #CXX := g++-4.8.1-pre
 export LD_LIBRARY_PATH=${HOME}/local/lib64
 #CXX := ${HOME}/local/clang+llvm-3.2-x86-linux-ubuntu-12.04/bin/clang++

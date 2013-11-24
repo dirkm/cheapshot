@@ -918,7 +918,7 @@ namespace cheapshot
       skip_optional_separator(const char*& s)
       {
          skip_whitespace(s);
-         return s!='\x0';
+         return *s!='\x0';
       }
 
       bool
