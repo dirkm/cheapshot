@@ -319,7 +319,7 @@ namespace
          {
             own_under_attack|=dests;
          });
-      return ci.castling_allowed(bm.own<S>(),own_under_attack);
+      return ci.castling_allowed(bm.all_pieces(),own_under_attack);
    }
 
 }
@@ -477,6 +477,18 @@ BOOST_AUTO_TEST_CASE(castle_test)
          "PPPP....\n"
          "R...Kn..\n");
       BOOST_CHECK(is_castling_allowed<side::white>(b,lci));
+   }
+   {
+      board_t b=scan_board(
+         "....k...\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "........\n"
+         "PPPP....\n"
+         "Rn..Kn..\n");
+      BOOST_CHECK(!is_castling_allowed<side::white>(b,lci));
    }
    {
       board_t b=scan_board(

@@ -537,10 +537,13 @@ namespace cheapshot
       make_hash(ec,hhash_castling_change,oldctx.castling_rights,ectx.ctx.castling_rights);
 
       // castling
-      for(const auto& cit: castling_generators<S>())
-         if(cit.castling_allowed(bm.own<S>()|ectx.ctx.castling_rights,own_under_attack))
-            if(castle_with_cutoff<S>(ec,ectx,cit))
-               return;
+      {
+         const uint64_t blockers=bm.all_pieces()|ectx.ctx.castling_rights;
+         for(const auto& cit: castling_generators<S>())
+            if(cit.castling_allowed(blockers,own_under_attack))
+               if(castle_with_cutoff<S>(ec,ectx,cit))
+                  return;
+      }
 
       // checks
       {

@@ -437,6 +437,12 @@ namespace
       "Nxb5 Kf7 42. Nbd4 Qd6 43. Qb7+ Qd7 44. Qa8 Nc4 45. Qb8 Ne5 46. h4 Ng4+ 47. Kg1\n"
       "Ne5 48. h5 Qd6 49. Qb3 Kg8 50. Nf5 Qd7 51. Qb4 Qf7 52. g4 Nf3+ 53. Kg2 Ng5 54.\n"
       "Ne7+ Kh8 55. Ng6+ Kg8 56. f4 Nh7 57. Ne7+ Kh8 58. Nd8 1-0\n";
+
+   const char pgn_invalid_castle[]=
+      "[Event \"testsuite invalid castling\"]\n"
+      "[Date \"2013.11.29\"]\n"
+      "\n"
+      "1.e4 e5 2.f4 Bc5 3.Nf3 Nf6 4. Bc4 O-O 5. O-O 1/2-1/2\n";
 }
 
 BOOST_AUTO_TEST_CASE(pgn_test)
@@ -551,6 +557,12 @@ BOOST_AUTO_TEST_CASE(pgn_test)
    {
       std::istringstream test_stream(pgn3);
       make_pgn_moves(test_stream,on_pos);
+   }
+   {
+      std::istringstream test_stream(pgn_invalid_castle);
+      BOOST_CHECK_EXCEPTION(
+         make_pgn_moves(test_stream,on_pos),cheapshot::io_error,
+         check_io_message("castling"));
    }
 }
 

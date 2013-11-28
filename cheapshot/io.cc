@@ -52,17 +52,33 @@ namespace cheapshot
          }
       }
 
+      char
+      boardpos_to_column(uint8_t bp)
+      {
+         return (char)('a'+(bp&'\x7'));
+      }
+
+      char
+      boardpos_to_row(uint8_t bp)
+      {
+         return (char)('0'+((bp>>3)+1));
+      }
+
       void
       print_algpos(uint64_t s, std::ostream& os)
       {
          uint8_t bp=get_board_pos(s);
-         os << (char)('a'+(bp&'\x7')) << ((bp>>3)+1);
+         os << boardpos_to_column(bp) << boardpos_to_row(bp);
       }
 
       void
-      print_partial_algpos(uint64_t p, uint64_t mask, std::ostream& os)
+      print_partial_algpos(uint64_t s, uint64_t possible_origins, std::ostream& os)
       {
-         // TODO
+         uint8_t bp=get_board_pos(s);
+         if(!is_single_bit(column(s)&possible_origins))
+            os << boardpos_to_column(bp);
+         if(!is_single_bit(row(s)&possible_origins))
+            os << boardpos_to_row(bp);
       }
 
       constexpr bool
@@ -534,29 +550,6 @@ namespace cheapshot
          game_status phase;
       };
 
-      std::ostream&
-      print_input_move(const input_move& im, std::ostream& os)
-      {
-         switch(im.type)
-         {
-            case move_type::castling:
-               os << ((im.castling_params==castling_type::long_castling)?
-                      long_castling_notation:short_castling_notation);
-               break;
-            default:
-               const normal_input_params& nip=im.params;
-               print_algpos(nip.origin,os);
-               os << (nip.is_capture?'x':'-');
-               print_algpos(nip.destination,os);
-               if(im.type==move_type::ep_capture)
-                  os << ep_notation;
-               else if(im.type==move_type::promotion)
-                  os << "="<<repr_pieces_white[idx(nip.promoting_piece)];
-               break;
-         };
-         return os;
-      }
-
       bool
       skip_string(const char*& s, const char* s2)
       {
@@ -759,7 +752,7 @@ namespace cheapshot
       make_castling_move(board_t& board, board_metrics& bm, const context& ctx, const castling_t& c)
       {
          uint64_t own_under_attack=generate_own_under_attack<S>(board,bm);
-         if(!c.castling_allowed(bm.own<S>()|ctx.castling_rights,own_under_attack))
+         if(!c.castling_allowed(bm.all_pieces()|ctx.castling_rights,own_under_attack))
             throw io_error("castling not allowed");
          move_info2 mi2=castle_info<S>(c);
          for(auto m: mi2)
@@ -1213,6 +1206,77 @@ namespace cheapshot
          skip_move_separator(ls);
       }
    }
+
+   // TODO: WIP
+   move_printer::move_printer(board_t& board_, std::ostream& os_):
+      board(board_),
+      os(os_)
+   {}
+   
+   void
+   move_printer::on_simple(const move_info& mi)
+   {
+      uint64_t origins=board[idx(mi.turn)][idx(mi.piece)];
+      if(mi.piece==piece_t::pawn)
+         print_algpos(mi.mask&~origins,os);
+      else
+      {
+         print_partial_algpos(mi.mask&origins,origins,os);
+         print_algpos(mi.mask&~origins,os);
+      }
+   }
+
+   void
+   move_printer::on_capture(const move_info2& mi2)
+   {
+      uint64_t origins=board[idx(mi2[0].turn)][idx(mi2[0].piece)];
+      if(mi2[0].piece==piece_t::pawn)
+      {
+         os << boardpos_to_column(mi2[0].mask&origins) << "x";
+         print_algpos(mi2[0].mask&~origins,os);
+      }
+      else
+      {
+         print_partial_algpos(mi2[0].mask,origins,os);
+         os << "x";
+         print_algpos(mi2[0].mask&origins,os);
+      }
+   }
+
+   void
+   move_printer::on_castling(const move_info2& mi)
+   {}
+
+   void
+   move_printer::on_ep_capture(const move_info2& mi)
+   {}
+
+   void
+   move_printer::with_promotion(piece_t promotion)
+   {}
+
+   // std::ostream&
+   // print_input_move(const input_move& im, std::ostream& os)
+   // {
+   //    switch(im.type)
+   //    {
+   //       case move_type::castling:
+   //          os << ((im.castling_params==castling_type::long_castling)?
+   //                 long_castling_notation:short_castling_notation);
+   //          break;
+   //       default:
+   //          const normal_input_params& nip=im.params;
+   //          print_algpos(nip.origin,os);
+   //          os << (nip.is_capture?'x':'-');
+   //          print_algpos(nip.destination,os);
+   //          if(im.type==move_type::ep_capture)
+   //             os << ep_notation;
+   //          else if(im.type==move_type::promotion)
+   //             os << "="<<repr_pieces_white[idx(nip.promoting_piece)];
+   //          break;
+   //    };
+   //    return os;
+   // }
 
    namespace
    {

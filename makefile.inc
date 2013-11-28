@@ -17,9 +17,9 @@ LDFLAGS := -Wl,--as-needed
 #CFLAGS := -O3 -g -I. -std=c++0x -Wsuggest-attribute=const -Wsuggest-attribute=pure -march=native -mtune=native -Wall
 
 ## non-standard compilers (gcc 4.8 is the minimum)
-#CXX := g++
-CXX := clang++
-CFLAGS += -Wno-missing-braces
+CXX := g++
+#CXX := clang++
+#CFLAGS += -Wno-missing-braces
 #CXX := g++-4.7.1
 #CXX := g++-4.6
 #CXX := g++-trunk

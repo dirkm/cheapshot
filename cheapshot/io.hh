@@ -140,6 +140,31 @@ namespace cheapshot
    make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game,
                                  const on_position_t& on_each_position=null_pos);
 
+   class move_printer
+   {
+   public:
+      move_printer(board_t& board, std::ostream& os);
+
+      void
+      on_simple(const move_info& mi);
+
+      void
+      on_capture(const move_info2& mi);
+
+      static void
+      on_castling(const move_info2& mi);
+
+      static void
+      on_ep_capture(const move_info2& mi);
+
+      static void
+      with_promotion(piece_t promotion);
+
+   private:
+      board_t& board;
+      std::ostream& os;
+   };
+
    extern std::ostream&
    print_score(int_fast32_t score, std::ostream& os);
 
