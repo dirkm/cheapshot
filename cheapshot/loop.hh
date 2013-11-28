@@ -67,7 +67,7 @@ namespace cheapshot
    on_piece_moves(const board_t& board, const board_metrics& bm, const Op& op)
    {
       const uint64_t all_pieces=bm.all_pieces();
-      auto p=std::begin(get_side<S>(board))+1;
+      auto p=begin(get_side<S>(board))+1;
       auto t=piece_t::knight;
       for(auto movegen: basic_piece_move_generators())
       {
@@ -548,7 +548,7 @@ namespace cheapshot
       // checks
       {
          uint64_t origins_with_check=pawn_origins_with_check<S>(ec);
-         for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+         for(decltype(basic_moves)::iterator msit=begin(basic_moves);msit!=pawn_moves_end;++msit)
          {
             // promotions
             const uint64_t promotions=cut_mask(msit->destinations,promoting_pawns<S>(msit->destinations));
@@ -579,7 +579,7 @@ namespace cheapshot
       }
 
       // captures
-      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+      for(decltype(basic_moves)::iterator msit=begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
          uint64_t captures=cut_mask(msit->destinations,bm.opposing<S>());
          if(iterate_with_cutoff<S>(captures,pawn_capture_with_cutoff<S,Controller>,ec,ectx,*msit))
@@ -594,7 +594,7 @@ namespace cheapshot
       }
 
       // moves
-      for(decltype(basic_moves)::iterator msit=std::begin(basic_moves);msit!=pawn_moves_end;++msit)
+      for(decltype(basic_moves)::iterator msit=begin(basic_moves);msit!=pawn_moves_end;++msit)
       {
          if(iterate_with_cutoff<S>(msit->destinations,pawn_move_with_cutoff<S,Controller>,ec,ectx,*msit))
             return;

@@ -31,8 +31,7 @@ namespace
          all_analyzed(false),
          boards{b}
       {
-         std::copy(std::begin(additional_boards),std::end(additional_boards),
-                   std::back_inserter(boards));
+         boards.insert(end(boards),begin(additional_boards),end(additional_boards));
       }
 
       move_checker(board_t& b, context ctx, const std::vector<const char*>& input_moves):
