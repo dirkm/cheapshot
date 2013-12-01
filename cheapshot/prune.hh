@@ -51,7 +51,7 @@ namespace cheapshot
             scoped_prune& operator=(const scoped_prune&) = delete;
          private:
             minimax& m;
-            int level_score;
+            int_fast32_t level_score;
          };
       };
 
@@ -73,7 +73,8 @@ namespace cheapshot
          int_fast32_t& treshold();
 
          template<side S>
-         bool cutoff() const
+         bool 
+         cutoff() const
          {
             return score::less_equal<S>(treshold<other_side(S)>(),score);
          }

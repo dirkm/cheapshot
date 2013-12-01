@@ -715,6 +715,29 @@ namespace cheapshot
          return (own_under_attack & get_side<S>(board)[idx(piece_t::king)]) != 0_U64;
       }
 
+      // returns all valid origins, possibly including the current move
+      // as a side-effect the board setup is changed to a valid origin, if one exists
+      // optimized for typically small origin-sets
+      template<side S>
+      uint64_t
+      exclude_selfchecks(board_t& board, board_metrics& bm, move_info mi, bit_iterator itremaining)
+      {
+         uint64_t r=(!is_king_under_attack<S>(board,bm))?mi.mask:0ULL;
+         for(;itremaining!=bit_iterator();++itremaining)
+         {
+            mi.mask|=*itremaining;
+            make_move(board,bm,mi);
+            if(!is_king_under_attack<S>(board,bm))
+            {
+               mi.mask=*itremaining;
+               r|=mi.mask;
+            }
+            else
+               make_move(board,bm,mi);
+         }
+         return r;
+      }
+
       // TODO: stop with stalemate as well
       template<side S>
       void
@@ -778,7 +801,7 @@ namespace cheapshot
                possible_origins_ep<S>(nip);
             narrow_origin<S>(nip,board,origins);
             bit_iterator originit(nip.origin);
-            nip.origin=*originit;
+            nip.origin=*originit; // for now
             if(im.type==move_type::ep_capture)
             {
                if(nip.destination!=ctx.ep_info)
@@ -814,22 +837,13 @@ namespace cheapshot
                      make_move(board,bm,m);
                }
             }
-            bool valid_position=!is_king_under_attack<S>(board,bm);
-            for(++originit;originit!=bit_iterator();++originit)
-            {
-               auto mi=move_info{.turn=S,.piece=nip.piece,.mask=nip.origin|*originit};
-               make_move(board,bm,mi);
-               if(is_king_under_attack<S>(board,bm))
-                  make_move(board,bm,mi);
-               else
-               {
-                  if(valid_position)
-                     throw io_error("piece origin not uniquely defined");
-                  valid_position=true;
-               }
-            }
-            if(!valid_position)
+            move_info mi{.turn=S,.piece=nip.piece,.mask=*originit};
+            ++originit;
+            uint64_t corrected_origin=exclude_selfchecks<S>(board,bm,mi,originit);
+            if(!corrected_origin)
                throw io_error("move-attempt results in self-check");
+            if(!is_single_bit(corrected_origin))
+               throw io_error("piece origin not uniquely defined");
          }
          ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece_t::pawn)]);
          ctx.castling_rights|=castling_block_mask<S>(
@@ -1212,7 +1226,7 @@ namespace cheapshot
       board(board_),
       os(os_)
    {}
-   
+
    void
    move_printer::on_simple(const move_info& mi)
    {
