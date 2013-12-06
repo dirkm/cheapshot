@@ -587,4 +587,22 @@ BOOST_AUTO_TEST_CASE(pgn_time_test)
    time_op.time_report("parse pgn games",ops);
 }
 
+BOOST_AUTO_TEST_CASE(move_printer_test)
+{
+   board_t b=scan_board(initial_canvas);
+   board_metrics bm(b);
+   boost::test_tools::output_test_stream ots;
+   move_printer<side::white> mp(b,bm,ots);
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('e',2)|algpos('e',4)};
+      mp.on_simple(mi);
+      BOOST_CHECK(ots.is_equal("e4"));
+   }
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::knight,.mask=algpos('g',1)|algpos('f',3)};
+      mp.on_simple(mi);
+      BOOST_CHECK(ots.is_equal("Nf3"));
+   }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

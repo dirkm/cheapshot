@@ -69,17 +69,18 @@ namespace cheapshot
    extern void
    print_fen(const board_t& board, const context& ctx, std::ostream& os);
 
+   enum class move_format { long_algebraic, short_algebraic, flexible};
+   enum class ep_format { annotated, implicit};
+
    struct format
    {
-      enum class move { long_algebraic, short_algebraic, flexible};
-      enum class ep { annotated, implicit};
-      move move_fmt;
-      ep ep_fmt;
+      move_format move_fmt;
+      ep_format ep_fmt;
    };
 
-   constexpr format long_algebraic={format::move::long_algebraic,format::ep::annotated};
-   constexpr format short_algebraic={format::move::short_algebraic,format::ep::annotated};
-   constexpr format pgn_format={format::move::short_algebraic,format::ep::implicit};
+   constexpr format long_algebraic={move_format::long_algebraic,ep_format::annotated};
+   constexpr format short_algebraic={move_format::short_algebraic,ep_format::annotated};
+   constexpr format pgn_format={move_format::short_algebraic,ep_format::implicit};
 
    enum class game_status { normal, check, checkmate};
 
@@ -88,7 +89,7 @@ namespace cheapshot
 
    // typedef void (*on_position_t)(board_t& board, context& ctx); // TODO: look at function pointer speed
    using on_position_t=const std::function<void (board_t& board, context& ctx)>;
-   const auto null_pos=[](board_t& board, context& ctx){};
+   inline void null_pos(board_t& board, context& ctx){};
 
    extern void
    make_input_moves(board_t& board, context& ctx,
@@ -134,16 +135,17 @@ namespace cheapshot
    make_pgn_moves(std::istream& is, const on_position_t& on_each_position=null_pos);
 
    using on_game_t=std::function<void ()>;
-   const auto null_game=[](){};
+   inline void null_game(){};
 
    extern void
-   make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game,
+   make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game=null_game,
                                  const on_position_t& on_each_position=null_pos);
 
+   template<side S>
    class move_printer
    {
    public:
-      move_printer(board_t& board, std::ostream& os);
+      move_printer(board_t& board, board_metrics& bm, std::ostream& os);
 
       void
       on_simple(const move_info& mi);
@@ -162,8 +164,14 @@ namespace cheapshot
 
    private:
       board_t& board;
+      board_metrics& bm;
       std::ostream& os;
+      void
+      print_move(const move_info& mi, const char* sep);
    };
+
+   extern template class move_printer<side::white>;
+   extern template class move_printer<side::black>;
 
    extern std::ostream&
    print_score(int_fast32_t score, std::ostream& os);

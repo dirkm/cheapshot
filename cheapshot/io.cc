@@ -75,8 +75,12 @@ namespace cheapshot
       print_partial_algpos(uint64_t s, uint64_t possible_origins, std::ostream& os)
       {
          uint8_t bp=get_board_pos(s);
-         if(!is_single_bit(column(s)&possible_origins))
+         uint64_t c=column(s);
+         if(!is_single_bit(c&possible_origins))
+         {
             os << boardpos_to_column(bp);
+            possible_origins&=c;
+         }
          if(!is_single_bit(row(s)&possible_origins))
             os << boardpos_to_row(bp);
       }
@@ -609,7 +613,7 @@ namespace cheapshot
             im.params.piece=character_to_moved_piece(*s);
             if(im.params.piece!=piece_t::pawn)
                ++s;
-            if(fmt.move_fmt!=format::move::long_algebraic)
+            if(fmt.move_fmt!=move_format::long_algebraic)
             {
                uint64_t pos1=scan_partial_algpos(s);
                if(is_single_bit(pos1))
@@ -637,13 +641,13 @@ namespace cheapshot
                   im.params.is_capture=true;
                   break;
                case '-':
-                  if(fmt.move_fmt!=format::move::short_algebraic)
+                  if(fmt.move_fmt!=move_format::short_algebraic)
                      ++s;
                   else
                      throw io_error("'-' as separator not allowed in short algebraic format");
                   break;
                default:
-                  if(fmt.move_fmt==format::move::long_algebraic)
+                  if(fmt.move_fmt==move_format::long_algebraic)
                   {
                      std::stringstream oss;
                      oss << "expected '-' or 'x' as separator, got: '" << sep << "'";
@@ -652,7 +656,7 @@ namespace cheapshot
                   break;
             }
             im.params.destination=scan_algpos(s);
-            if((fmt.ep_fmt==format::ep::annotated) &&
+            if((fmt.ep_fmt==ep_format::annotated) &&
                (im.params.piece==piece_t::pawn) &&
                im.params.is_capture &&
                skip_string(s,ep_notation))
@@ -674,25 +678,25 @@ namespace cheapshot
 
       template<side S>
       uint64_t
-      possible_origins(const board_t& board, const board_metrics& bm, const normal_input_params& nip)
+      possible_origins(const board_t& board, const board_metrics& bm, piece_t p, uint64_t destination)
       {
          const uint64_t obstacles=bm.all_pieces();
-         if(nip.piece==piece_t::pawn)
+         if(p==piece_t::pawn)
          {
-            if(nip.destination&bm.opposing<S>())
-               return reverse_capture_with_pawn<S>(nip.destination);
+            if(destination&bm.opposing<S>())
+               return reverse_capture_with_pawn<S>(destination);
             else
-               return reverse_move_pawn<S>(nip.destination,obstacles);
+               return reverse_move_pawn<S>(destination,obstacles);
          }
          else
-            return basic_piece_move_generators()[idx(nip.piece)-1](nip.destination,obstacles);
+            return basic_piece_move_generators()[idx(p)-1](destination,obstacles);
       }
 
       template<side S>
       uint64_t
-      possible_origins_ep(const normal_input_params& nip)
+      possible_origins_ep(uint64_t destination)
       {
-         return reverse_capture_with_pawn<S>(nip.destination);
+         return reverse_capture_with_pawn<S>(destination);
       }
 
       template<side S>
@@ -716,20 +720,22 @@ namespace cheapshot
       }
 
       // returns all valid origins, possibly including the current move
-      // as a side-effect the board setup is changed to a valid origin, if one exists
+      // the original board is returned if valid
+      // a valid origin is returned, if one exists
       // optimized for typically small origin-sets
       template<side S>
       uint64_t
-      exclude_selfchecks(board_t& board, board_metrics& bm, move_info mi, bit_iterator itremaining)
+      exclude_selfchecks(board_t& board, board_metrics& bm, move_info mi, uint64_t alternatives)
       {
-         uint64_t r=(!is_king_under_attack<S>(board,bm))?mi.mask:0ULL;
-         for(;itremaining!=bit_iterator();++itremaining)
+         uint64_t r=(!is_king_under_attack<S>(board,bm))?mi.mask&alternatives:0ULL;
+         for(bit_iterator it(alternatives&~mi.mask);it!=bit_iterator();++it)
          {
-            mi.mask|=*itremaining;
+            mi.mask|=*it;
             make_move(board,bm,mi);
             if(!is_king_under_attack<S>(board,bm))
             {
-               mi.mask=*itremaining;
+               if(!(r&mi.mask))
+                  mi.mask=*it;
                r|=mi.mask;
             }
             else
@@ -797,8 +803,8 @@ namespace cheapshot
          {
             normal_input_params& nip=im.params;
             uint64_t origins=(im.type!=move_type::ep_capture)?
-               possible_origins<S>(board,bm,nip):
-               possible_origins_ep<S>(nip);
+               possible_origins<S>(board,bm,nip.piece,nip.destination):
+               possible_origins_ep<S>(nip.destination);
             narrow_origin<S>(nip,board,origins);
             bit_iterator originit(nip.origin);
             nip.origin=*originit; // for now
@@ -838,8 +844,7 @@ namespace cheapshot
                }
             }
             move_info mi{.turn=S,.piece=nip.piece,.mask=*originit};
-            ++originit;
-            uint64_t corrected_origin=exclude_selfchecks<S>(board,bm,mi,originit);
+            uint64_t corrected_origin=exclude_selfchecks<S>(board,bm,mi,nip.origin);
             if(!corrected_origin)
                throw io_error("move-attempt results in self-check");
             if(!is_single_bit(corrected_origin))
@@ -860,7 +865,7 @@ namespace cheapshot
          try
          {
             input_move im=scan_input_move(s,fmt);
-            if(fmt.ep_fmt==format::ep::implicit)
+            if(fmt.ep_fmt==ep_format::implicit)
                detect_ep_capture(im,ctx);
 
             if(ctx.get_side()==side::white)
@@ -1222,52 +1227,71 @@ namespace cheapshot
    }
 
    // TODO: WIP
-   move_printer::move_printer(board_t& board_, std::ostream& os_):
+   template<cheapshot::side S>
+   move_printer<S>::move_printer(board_t& board_, board_metrics& bm_, std::ostream& os_):
       board(board_),
+      bm(bm_),
       os(os_)
    {}
 
+   template<cheapshot::side S>
    void
-   move_printer::on_simple(const move_info& mi)
+   move_printer<S>::on_simple(const move_info& mi)
    {
-      uint64_t origins=board[idx(mi.turn)][idx(mi.piece)];
+      print_move(mi,"");
+   }
+
+   template<cheapshot::side S>
+   void
+   move_printer<S>::on_capture(const move_info2& mi2)
+   {
+      print_move(mi2[0],"x");
+   }
+
+   template<cheapshot::side S>
+   void
+   move_printer<S>::on_castling(const move_info2& mi2)
+   {
+   }
+
+   template<cheapshot::side S>
+   void
+   move_printer<S>::on_ep_capture(const move_info2& mi2)
+   {
+   }
+
+   template<cheapshot::side S>
+   void
+   move_printer<S>::with_promotion(piece_t promotion)
+   {
+   }
+
+   template<cheapshot::side S>
+   void
+   move_printer<S>::print_move(const move_info& mi, const char* sep)
+   {
+      uint64_t origins=get_side<S>(board)[idx(mi.piece)];
+      uint64_t origin=mi.mask&origins;
+      uint64_t destination=mi.mask^origin;
       if(mi.piece==piece_t::pawn)
-         print_algpos(mi.mask&~origins,os);
-      else
       {
-         print_partial_algpos(mi.mask&origins,origins,os);
-         print_algpos(mi.mask&~origins,os);
-      }
-   }
-
-   void
-   move_printer::on_capture(const move_info2& mi2)
-   {
-      uint64_t origins=board[idx(mi2[0].turn)][idx(mi2[0].piece)];
-      if(mi2[0].piece==piece_t::pawn)
-      {
-         os << boardpos_to_column(mi2[0].mask&origins) << "x";
-         print_algpos(mi2[0].mask&~origins,os);
+         make_move(board,bm,mi);
+         print_algpos(destination,os);
       }
       else
       {
-         print_partial_algpos(mi2[0].mask,origins,os);
-         os << "x";
-         print_algpos(mi2[0].mask&origins,os);
+         os << repr_pieces_white[idx(mi.piece)];
+         uint64_t alternatives=possible_origins<S>(board,bm, mi.piece,destination)&origins;
+         make_move(board,bm,mi);
+         alternatives=exclude_selfchecks<S>(board,bm,mi,alternatives);
+         print_partial_algpos(origin,alternatives,os);
+         os << sep;
+         print_algpos(destination,os);
       }
    }
 
-   void
-   move_printer::on_castling(const move_info2& mi)
-   {}
-
-   void
-   move_printer::on_ep_capture(const move_info2& mi)
-   {}
-
-   void
-   move_printer::with_promotion(piece_t promotion)
-   {}
+   template class move_printer<side::white>;
+   template class move_printer<side::black>;
 
    // std::ostream&
    // print_input_move(const input_move& im, std::ostream& os)
