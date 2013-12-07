@@ -744,6 +744,17 @@ namespace cheapshot
          return r;
       }
 
+      template<side S>
+      void
+      update_context(context& ctx, const board_t& board, uint64_t oldpawnloc)
+      {
+         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece_t::pawn)]);
+         ctx.castling_rights|=castling_block_mask<S>(
+            get_side<S>(board)[idx(piece_t::rook)],
+            get_side<S>(board)[idx(piece_t::king)]);
+         ++ctx.halfmove_count;
+      }
+
       // TODO: stop with stalemate as well
       template<side S>
       void
@@ -813,8 +824,7 @@ namespace cheapshot
                if(nip.destination!=ctx.ep_info)
                   throw io_error("en passant capture not allowed");
                move_info2 mi2=en_passant_info<S>(nip.origin,nip.destination);
-               for(auto m: mi2)
-                  make_move(board,bm,m);
+               make_move(board,bm,mi2);
             }
             else
             {
@@ -824,8 +834,7 @@ namespace cheapshot
                   if(!destination_occupied)
                      throw io_error("trying to capture a missing piece");
                   move_info2 mi2=basic_capture_info<S>(board,nip.piece,nip.origin,nip.destination);
-                  for(auto m: mi2)
-                     make_move(board,bm,m);
+                  make_move(board,bm,mi2);
                }
                else
                {
@@ -839,8 +848,7 @@ namespace cheapshot
                   if(!promoting_pawns<S>(nip.destination))
                      throw io_error("promotion only allowed on last row");
                   move_info2 mi2=promotion_info<S>(nip.promoting_piece,nip.destination);
-                  for(auto m: mi2)
-                     make_move(board,bm,m);
+                  make_move(board,bm,mi2);
                }
             }
             move_info mi{.turn=S,.piece=nip.piece,.mask=*originit};
@@ -850,11 +858,7 @@ namespace cheapshot
             if(!is_single_bit(corrected_origin))
                throw io_error("piece origin not uniquely defined");
          }
-         ctx.ep_info=en_passant_mask<S>(oldpawnloc,get_side<S>(board)[idx(piece_t::pawn)]);
-         ctx.castling_rights|=castling_block_mask<S>(
-            get_side<S>(board)[idx(piece_t::rook)],
-            get_side<S>(board)[idx(piece_t::king)]);
-         ++ctx.halfmove_count;
+         update_context<S>(ctx,board,oldpawnloc);
          check_game_state<S>(board,bm,ctx,im);
       }
 
@@ -1226,11 +1230,21 @@ namespace cheapshot
       }
    }
 
+   namespace
+   {
+      const move_info&
+      get_origin_move(const move_info& mi) {return mi;}
+
+      const move_info&
+      get_origin_move(const move_info2& mi) {return mi[0];}
+   }
+
    // TODO: WIP
    template<cheapshot::side S>
-   move_printer<S>::move_printer(board_t& board_, board_metrics& bm_, std::ostream& os_):
+   move_printer<S>::move_printer(board_t& board_, board_metrics& bm_, context& ctx_, std::ostream& os_):
       board(board_),
       bm(bm_),
+      ctx(ctx_),
       os(os_)
    {}
 
@@ -1238,14 +1252,14 @@ namespace cheapshot
    void
    move_printer<S>::on_simple(const move_info& mi)
    {
-      print_move(mi,"");
+      print(mi,false);
    }
 
    template<cheapshot::side S>
    void
    move_printer<S>::on_capture(const move_info2& mi2)
    {
-      print_move(mi2[0],"x");
+      print(mi2,true);
    }
 
    template<cheapshot::side S>
@@ -1258,36 +1272,46 @@ namespace cheapshot
    void
    move_printer<S>::on_ep_capture(const move_info2& mi2)
    {
+      print(mi2,true);
+      os << ep_notation;
    }
 
    template<cheapshot::side S>
    void
    move_printer<S>::with_promotion(piece_t promotion)
    {
+      os << '=' << repr_pieces_white[idx(promotion)];
    }
 
    template<cheapshot::side S>
+   template<typename MI>
    void
-   move_printer<S>::print_move(const move_info& mi, const char* sep)
+   move_printer<S>::print(const MI& mi, bool capture)
    {
-      uint64_t origins=get_side<S>(board)[idx(mi.piece)];
-      uint64_t origin=mi.mask&origins;
-      uint64_t destination=mi.mask^origin;
-      if(mi.piece==piece_t::pawn)
+      const auto& omi=get_origin_move(mi);
+      uint64_t origins=get_side<S>(board)[idx(omi.piece)];
+      uint64_t oldpawnloc=get_side<S>(board)[idx(piece_t::pawn)];
+
+      uint64_t origin=omi.mask&origins;
+      uint64_t destination=omi.mask^origin;
+      uint64_t alternatives; // erroneous warning in gcc
+      if(omi.piece!=piece_t::pawn)
       {
-         make_move(board,bm,mi);
-         print_algpos(destination,os);
+         os << repr_pieces_white[idx(omi.piece)];
+         alternatives=possible_origins<S>(board,bm, omi.piece,destination)&origins;
       }
-      else
+      else if(capture)
+         os << boardpos_to_column(get_board_pos(origin));
+      make_move(board,bm,mi);
+      update_context<S>(ctx,board,oldpawnloc);
+      if(omi.piece!=piece_t::pawn)
       {
-         os << repr_pieces_white[idx(mi.piece)];
-         uint64_t alternatives=possible_origins<S>(board,bm, mi.piece,destination)&origins;
-         make_move(board,bm,mi);
-         alternatives=exclude_selfchecks<S>(board,bm,mi,alternatives);
+         alternatives=exclude_selfchecks<S>(board,bm,omi,alternatives);
          print_partial_algpos(origin,alternatives,os);
-         os << sep;
-         print_algpos(destination,os);
       }
+      if(capture)
+         os << "x";
+      print_algpos(destination,os);
    }
 
    template class move_printer<side::white>;

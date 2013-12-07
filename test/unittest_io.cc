@@ -591,18 +591,35 @@ BOOST_AUTO_TEST_CASE(move_printer_test)
 {
    board_t b=scan_board(initial_canvas);
    board_metrics bm(b);
+   context ctx=start_context;
    boost::test_tools::output_test_stream ots;
-   move_printer<side::white> mp(b,bm,ots);
+   move_printer<side::white> mpwhite(b,bm,ctx,ots);
+   move_printer<side::black> mpblack(b,bm,ctx,ots);
    {
       move_info mi{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('e',2)|algpos('e',4)};
-      mp.on_simple(mi);
+      mpwhite.on_simple(mi);
       BOOST_CHECK(ots.is_equal("e4"));
    }
    {
-      move_info mi{.turn=side::white,.piece=piece_t::knight,.mask=algpos('g',1)|algpos('f',3)};
-      mp.on_simple(mi);
-      BOOST_CHECK(ots.is_equal("Nf3"));
+      move_info mi{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('d',7)|algpos('d',5)};
+      mpblack.on_simple(mi);
+      BOOST_CHECK(ots.is_equal("d5"));
    }
+   {
+      move_info2 mi2{
+         move_info{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('e',4)|algpos('d',5)},
+         move_info{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('d',5)}};
+      mpwhite.on_capture(mi2);
+      BOOST_CHECK(ots.is_equal("exd5"));
+   }
+   {
+      move_info2 mi2{
+         move_info{.turn=side::black,.piece=piece_t::queen,.mask=algpos('d',8)|algpos('d',5)},
+         move_info{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('d',5)}};
+      mpblack.on_capture(mi2);
+      BOOST_CHECK(ots.is_equal("Qxd5"));
+   }
+   // TODO: more tests
 }
 
 BOOST_AUTO_TEST_SUITE_END()

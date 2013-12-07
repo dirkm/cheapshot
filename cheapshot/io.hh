@@ -71,16 +71,18 @@ namespace cheapshot
 
    enum class move_format { long_algebraic, short_algebraic, flexible};
    enum class ep_format { annotated, implicit};
+   enum class sep_format { with, without};
 
    struct format
    {
       move_format move_fmt;
       ep_format ep_fmt;
+      sep_format sep_fmt; // TODO
    };
 
-   constexpr format long_algebraic={move_format::long_algebraic,ep_format::annotated};
-   constexpr format short_algebraic={move_format::short_algebraic,ep_format::annotated};
-   constexpr format pgn_format={move_format::short_algebraic,ep_format::implicit};
+   constexpr format long_algebraic{move_format::long_algebraic,ep_format::annotated};
+   constexpr format short_algebraic{move_format::short_algebraic,ep_format::annotated};
+   constexpr format pgn_format{move_format::short_algebraic,ep_format::implicit};
 
    enum class game_status { normal, check, checkmate};
 
@@ -145,7 +147,7 @@ namespace cheapshot
    class move_printer
    {
    public:
-      move_printer(board_t& board, board_metrics& bm, std::ostream& os);
+      move_printer(board_t& board, board_metrics& bm, context& ctx, std::ostream& os);
 
       void
       on_simple(const move_info& mi);
@@ -156,18 +158,20 @@ namespace cheapshot
       static void
       on_castling(const move_info2& mi);
 
-      static void
+      void
       on_ep_capture(const move_info2& mi);
 
-      static void
+      void
       with_promotion(piece_t promotion);
 
    private:
       board_t& board;
       board_metrics& bm;
+      context& ctx;
       std::ostream& os;
+      template<typename MI>
       void
-      print_move(const move_info& mi, const char* sep);
+      print(const MI& mi, bool capture);
    };
 
    extern template class move_printer<side::white>;
