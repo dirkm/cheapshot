@@ -259,7 +259,7 @@ namespace cheapshot
    class scoped_move_hash: public scoped_move<MoveInfo>
    {
    private:
-      typedef uint64_t(*hash_fun_t)(board_t& board, const MoveInfo& mi);
+      using hash_fun_t=uint64_t(*)(board_t& board, const MoveInfo& mi);
    public:
       scoped_move_hash(Controller& ec, const MoveInfo& mi):
          scoped_move<MoveInfo>(ec,mi),

@@ -76,8 +76,8 @@ namespace cheapshot
       return __builtin_ctzll(s);
    }
 
-   typedef uint_fast8_t (*BoardPosFunction)(uint64_t);
-   using board_iterator=boost::transform_iterator<BoardPosFunction, bit_iterator>;
+   using boardposfun=uint_fast8_t (*)(uint64_t);
+   using board_iterator=boost::transform_iterator<boardposfun, bit_iterator>;
 
    inline board_iterator
    make_board_iterator(uint64_t val)

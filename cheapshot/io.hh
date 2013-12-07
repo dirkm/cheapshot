@@ -12,7 +12,7 @@
 
 namespace cheapshot
 {
-   typedef std::array<char,64> canvas_t;
+   using canvas_t=std::array<char,64>;
 
    extern char
    to_char(side t);
@@ -89,7 +89,6 @@ namespace cheapshot
    extern void
    make_input_move(board_t& board, context& ctx, const char* s, format fmt);
 
-   // typedef void (*on_position_t)(board_t& board, context& ctx); // TODO: look at function pointer speed
    using on_position_t=const std::function<void (board_t& board, context& ctx)>;
    inline void null_pos(board_t& board, context& ctx){};
 
@@ -169,6 +168,7 @@ namespace cheapshot
       board_metrics& bm;
       context& ctx;
       std::ostream& os;
+
       template<typename MI>
       void
       print(const MI& mi, bool capture);

@@ -24,7 +24,7 @@ namespace
    template<typename... ControlsTail>
    struct move_checker: public max_ply_cutoff_noop<minimax,ControlsTail...>
    {
-      typedef max_ply_cutoff_noop<minimax,ControlsTail...> parent;
+      using parent=max_ply_cutoff_noop<minimax,ControlsTail...>;
 
       move_checker(board_t& b, const context& ctx, const std::vector<board_t>& additional_boards):
          parent(b,ctx,additional_boards.size()+1),
@@ -65,12 +65,12 @@ namespace
       std::vector<board_t> boards;
    };
 
-   typedef std::function<void (const board_t&, const context&) > funpos;
+   using funpos=std::function<void (const board_t&, const context&) >;
 
    template<typename... Controls>
    class do_until_ply_cutoff: public max_ply_cutoff_noop<Controls...>
    {
-      typedef max_ply_cutoff_noop<Controls...> parent;
+      using parent=max_ply_cutoff_noop<Controls...>;
    public:
       do_until_ply_cutoff(board_t& board, const context& ctx, int max_depth, const funpos& fun_):
          parent(board,ctx,max_depth),

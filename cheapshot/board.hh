@@ -32,11 +32,11 @@ namespace cheapshot
       return rs;
    }
 
-   typedef std::array<uint64_t,count<piece_t>()> board_side;
+   using board_side=std::array<uint64_t,count<piece_t>()>;
 
    // total size 8 bytes * 6 * 2 = 96 bytes/board (uint64_t)
    // extended format
-   typedef std::array<board_side,2> board_t;
+   using board_t=std::array<board_side,2>;
 
    template<side S>
    inline board_side&
@@ -207,7 +207,7 @@ namespace cheapshot
    }
 
    // 2 move_infos are enough for castling, captures but not for promotions
-   typedef std::array<move_info,2> move_info2;
+   using move_info2=std::array<move_info,2>;
 
    enum class move_type { normal, castling, promotion, ep_capture};
    enum class castling_type {short_castling, long_castling};

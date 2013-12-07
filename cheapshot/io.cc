@@ -12,7 +12,7 @@ namespace cheapshot
 {
    namespace
    {
-      typedef std::array<char,count<piece_t>()> piece_to_character_t;
+      using piece_to_character_t=std::array<char,count<piece_t>()>;
 
       constexpr piece_to_character_t repr_pieces_white{'P','N','B','R','Q','K'};
       constexpr piece_to_character_t repr_pieces_black{'p','n','b','r','q','k'};
