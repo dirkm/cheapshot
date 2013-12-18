@@ -596,12 +596,12 @@ namespace cheapshot
       scan_input_move(const char*& s, const format fmt)
       {
          input_move im;
-         if(skip_string(s,"O-O-O"))
+         if(skip_string(s,long_castling_notation))
          {
             im.type=move_type::castling;
             im.castling_params=castling_type::long_castling;
          }
-         else if(skip_string(s,"O-O"))
+         else if(skip_string(s,short_castling_notation))
          {
             im.type=move_type::castling;
             im.castling_params=castling_type::short_castling;
@@ -1239,54 +1239,60 @@ namespace cheapshot
       get_origin_move(const move_info2& mi) {return mi[0];}
    }
 
-   // TODO: WIP
-   template<cheapshot::side S>
-   move_printer<S>::move_printer(board_t& board_, board_metrics& bm_, context& ctx_, std::ostream& os_):
+   alg_printer::alg_printer(board_t& board_, board_metrics& bm_, context& ctx_, std::ostream& os_):
       board(board_),
       bm(bm_),
       ctx(ctx_),
       os(os_)
    {}
 
-   template<cheapshot::side S>
    void
-   move_printer<S>::on_simple(const move_info& mi)
+   alg_printer::on_simple(const move_info& mi)
    {
-      print(mi,false);
+      print(mi,move::simple);
    }
 
-   template<cheapshot::side S>
    void
-   move_printer<S>::on_capture(const move_info2& mi2)
+   alg_printer::on_capture(const move_info2& mi2)
    {
-      print(mi2,true);
+      print(mi2,move::capture);
    }
 
-   template<cheapshot::side S>
    void
-   move_printer<S>::on_castling(const move_info2& mi2)
+   alg_printer::on_castling(const move_info2& mi2)
    {
+      os << (mi2[1].mask&row_with_number(0)?
+             long_castling_notation:short_castling_notation);
    }
 
-   template<cheapshot::side S>
    void
-   move_printer<S>::on_ep_capture(const move_info2& mi2)
+   alg_printer::on_ep_capture(const move_info2& mi2)
    {
-      print(mi2,true);
+      on_capture(mi2);
       os << ep_notation;
    }
 
-   template<cheapshot::side S>
    void
-   move_printer<S>::with_promotion(piece_t promotion)
+   alg_printer::with_promotion(piece_t promotion)
    {
+      // TODO: promotion has to be made as well
       os << '=' << repr_pieces_white[idx(promotion)];
    }
 
-   template<cheapshot::side S>
    template<typename MI>
    void
-   move_printer<S>::print(const MI& mi, bool capture)
+   alg_printer::print(const MI& mi, move type)
+   {
+      const auto& omi=get_origin_move(mi);
+      if(omi.turn==side::white)
+         print<side::white>(mi,type);
+      else
+         print<side::black>(mi,type);
+   }
+
+   template<side S, typename MI>
+   void
+   alg_printer::print(const MI& mi, move type)
    {
       const auto& omi=get_origin_move(mi);
       uint64_t origins=get_side<S>(board)[idx(omi.piece)];
@@ -1300,7 +1306,7 @@ namespace cheapshot
          os << repr_pieces_white[idx(omi.piece)];
          alternatives=possible_origins<S>(board,bm, omi.piece,destination)&origins;
       }
-      else if(capture)
+      else if(type==move::capture)
          os << boardpos_to_column(get_board_pos(origin));
       make_move(board,bm,mi);
       update_context<S>(ctx,board,oldpawnloc);
@@ -1309,36 +1315,88 @@ namespace cheapshot
          alternatives=exclude_selfchecks<S>(board,bm,omi,alternatives);
          print_partial_algpos(origin,alternatives,os);
       }
-      if(capture)
+      if(type==move::capture)
          os << "x";
       print_algpos(destination,os);
    }
 
-   template class move_printer<side::white>;
-   template class move_printer<side::black>;
+   uci_printer::uci_printer(board_t& board_, board_metrics& bm_, context& ctx_, std::ostream& os_):
+      board(board_),
+      bm(bm_),
+      ctx(ctx_),
+      os(os_)
+   {}
 
-   // std::ostream&
-   // print_input_move(const input_move& im, std::ostream& os)
-   // {
-   //    switch(im.type)
-   //    {
-   //       case move_type::castling:
-   //          os << ((im.castling_params==castling_type::long_castling)?
-   //                 long_castling_notation:short_castling_notation);
-   //          break;
-   //       default:
-   //          const normal_input_params& nip=im.params;
-   //          print_algpos(nip.origin,os);
-   //          os << (nip.is_capture?'x':'-');
-   //          print_algpos(nip.destination,os);
-   //          if(im.type==move_type::ep_capture)
-   //             os << ep_notation;
-   //          else if(im.type==move_type::promotion)
-   //             os << "="<<repr_pieces_white[idx(nip.promoting_piece)];
-   //          break;
-   //    };
-   //    return os;
-   // }
+   void
+   uci_printer::on_simple(const move_info& mi)
+   {
+      print(mi);
+      make_move(mi);
+   }
+
+   void
+   uci_printer::on_capture(const move_info2& mi2)
+   {
+      print(mi2);
+      make_move(mi2);
+   }
+
+   void
+   uci_printer::on_castling(const move_info2& mi2)
+   {
+      print(mi2);
+      make_move(mi2);
+   }
+
+   void
+   uci_printer::on_ep_capture(const move_info2& mi2)
+   {
+      on_capture(mi2);
+      make_move(mi2);
+   }
+
+   void
+   uci_printer::with_promotion(piece_t promotion)
+   {
+      // TODO: promotion has to be made as well
+      os << repr_pieces_black[idx(promotion)];
+   }
+
+   template<side S, typename MI>
+   void
+   uci_printer::make_move(const MI& mi)
+   {
+      uint64_t oldpawnloc=get_side<S>(board)[idx(piece_t::pawn)];
+      cheapshot::make_move(board,bm,mi);
+      update_context<S>(ctx,board,oldpawnloc);
+   }
+
+   template<typename MI>
+   void
+   uci_printer::make_move(const MI& mi)
+   {
+      const auto& omi=get_origin_move(mi);
+      if(omi.turn==side::white)
+         make_move<side::white>(mi);
+      else
+         make_move<side::black>(mi);
+   }
+
+   void
+   uci_printer::print(const move_info& mi)
+   {
+      // undefined behaviour, unless mi is a simple move
+      bit_iterator it(mi.mask);
+      print_algpos(*it,os);
+      ++it;
+      print_algpos(*it,os);
+   }
+
+   void
+   uci_printer::print(const move_info2& mi2)
+   {
+      print(get_origin_move(mi2));
+   }
 
    namespace
    {

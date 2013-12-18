@@ -142,11 +142,10 @@ namespace cheapshot
    make_pgn_moves_multiple_games(std::istream& is, const on_game_t& on_game=null_game,
                                  const on_position_t& on_each_position=null_pos);
 
-   template<side S>
-   class move_printer
+   class alg_printer
    {
    public:
-      move_printer(board_t& board, board_metrics& bm, context& ctx, std::ostream& os);
+      alg_printer(board_t& board, board_metrics& bm, context& ctx, std::ostream& os);
 
       void
       on_simple(const move_info& mi);
@@ -154,7 +153,7 @@ namespace cheapshot
       void
       on_capture(const move_info2& mi);
 
-      static void
+      void
       on_castling(const move_info2& mi);
 
       void
@@ -162,7 +161,42 @@ namespace cheapshot
 
       void
       with_promotion(piece_t promotion);
+   private:
+      board_t& board;
+      board_metrics& bm;
+      context& ctx;
+      std::ostream& os;
 
+      enum class move {simple, capture};
+
+      template<typename MI>
+      void
+      print(const MI& mi, move type);
+
+      template<side S, typename MI>
+      void
+      print(const MI& mi, move type);
+   };
+
+   class uci_printer
+   {
+   public:
+      uci_printer(board_t& board, board_metrics& bm, context& ctx, std::ostream& os);
+
+      void
+      on_simple(const move_info& mi);
+
+      void
+      on_capture(const move_info2& mi);
+
+      void
+      on_castling(const move_info2& mi);
+
+      void
+      on_ep_capture(const move_info2& mi);
+
+      void
+      with_promotion(piece_t promotion);
    private:
       board_t& board;
       board_metrics& bm;
@@ -171,11 +205,18 @@ namespace cheapshot
 
       template<typename MI>
       void
-      print(const MI& mi, bool capture);
-   };
+      make_move(const MI& mi);
 
-   extern template class move_printer<side::white>;
-   extern template class move_printer<side::black>;
+      template<side S, typename MI>
+      void
+      make_move(const MI& mi);
+
+      void
+      print(const move_info& mi);
+
+      void
+      print(const move_info2& mi2);
+   };
 
    extern std::ostream&
    print_score(int_fast32_t score, std::ostream& os);
