@@ -587,43 +587,121 @@ BOOST_AUTO_TEST_CASE(pgn_time_test)
    time_op.time_report("parse pgn games",ops);
 }
 
-BOOST_AUTO_TEST_CASE(move_printer_test)
+struct move_printer_result
 {
+   const char* e4;
+   const char* d5;
+   const char* exd5;
+   const char* Qxd5;
+   const char* Nc3;
+   const char* Ne2;
+   const char* dxe5ep;
+   const char* oo;
+};
+
+template<typename PrinterType>
+void
+printer_test(const move_printer_result& r)
+{
+   // 1. e4 d5 2. exd5 Qd5 3. Nc3 Qa5 4. d4 Nf6 5. Ne2  Na6 6. d5 e5 7.dxe6 Bb4 8. Qd3 O-O
+   //  promotion still fails
    board_t b=scan_board(initial_canvas);
    board_metrics bm(b);
    context ctx=start_context;
    boost::test_tools::output_test_stream ots;
-   alg_printer mp(b,bm,ctx,ots);
+   PrinterType printer(b,bm,ctx,ots);
    {
       move_info mi{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('e',2)|algpos('e',4)};
-      mp.on_simple(mi);
-      BOOST_CHECK(ots.is_equal("e4"));
+      printer.on_simple(mi);
+      BOOST_CHECK(ots.is_equal(r.e4));
    }
    {
       move_info mi{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('d',7)|algpos('d',5)};
-      mp.on_simple(mi);
-      BOOST_CHECK(ots.is_equal("d5"));
+      printer.on_simple(mi);
+      BOOST_CHECK(ots.is_equal(r.d5));
    }
    {
       move_info2 mi2{
          move_info{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('e',4)|algpos('d',5)},
          move_info{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('d',5)}};
-      mp.on_capture(mi2);
-      BOOST_CHECK(ots.is_equal("exd5"));
+      printer.on_capture(mi2);
+      BOOST_CHECK(ots.is_equal(r.exd5));
    }
    {
       move_info2 mi2{
          move_info{.turn=side::black,.piece=piece_t::queen,.mask=algpos('d',8)|algpos('d',5)},
          move_info{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('d',5)}};
-      mp.on_capture(mi2);
-      BOOST_CHECK(ots.is_equal("Qxd5"));
+      printer.on_capture(mi2);
+      BOOST_CHECK(ots.is_equal(r.Qxd5));
    }
    {
       move_info mi{.turn=side::white,.piece=piece_t::knight,.mask=algpos('b',1)|algpos('c',3)};
-      mp.on_simple(mi);
-      BOOST_CHECK(ots.is_equal("Nc3"));
+      printer.on_simple(mi);
+      BOOST_CHECK(ots.is_equal(r.Nc3));
    }
-   // TODO castle, ep, multi-choice
+   {
+      move_info mi{.turn=side::black,.piece=piece_t::queen,.mask=algpos('d',5)|algpos('a',5)};
+      printer.on_simple(mi);
+   }
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('d',2)|algpos('d',4)};
+      printer.on_simple(mi);
+   }
+   {
+      move_info mi{.turn=side::black,.piece=piece_t::knight,.mask=algpos('g',8)|algpos('f',6)};
+      printer.on_simple(mi);
+      ots.flush();
+   }
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::knight,.mask=algpos('g',1)|algpos('e',2)};
+      printer.on_simple(mi);
+      BOOST_CHECK(ots.is_equal(r.Ne2));
+   }
+   {
+      move_info mi{.turn=side::black,.piece=piece_t::knight,.mask=algpos('b',8)|algpos('h',6)};
+      printer.on_simple(mi);
+   }
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('d',5)|algpos('d',6)};
+      printer.on_simple(mi);
+   }
+   {
+      move_info mi{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('d',7)|algpos('d',5)};
+      printer.on_simple(mi);
+      ots.flush();
+   }
+   {
+      move_info2 mi2{
+         move_info{.turn=side::white,.piece=piece_t::pawn,.mask=algpos('d',5)|algpos('e',6)},
+         move_info{.turn=side::black,.piece=piece_t::pawn,.mask=algpos('e',5)}};
+      printer.on_ep_capture(mi2);
+      BOOST_CHECK(ots.is_equal(r.dxe5ep));
+   }
+   {
+      move_info mi{.turn=side::white,.piece=piece_t::queen,.mask=algpos('d',1)|algpos('d',3)};
+      printer.on_simple(mi);
+      ots.flush();
+   }
+   {
+      move_info2 mi2{
+         move_info{.turn=side::black,.piece=piece_t::king,.mask=algpos('e',8)|algpos('h',8)},
+         move_info{.turn=side::black,.piece=piece_t::rook,.mask=algpos('h',8)|algpos('f',8)}};
+      printer.on_castling(mi2);
+      BOOST_CHECK(ots.is_equal(r.oo));
+   }
+}
+
+BOOST_AUTO_TEST_CASE(move_printer_test)
+{
+   constexpr move_printer_result ap_results{
+      .e4="e4",.d5="d5",.exd5="exd5",.Qxd5="Qxd5",.Nc3="Nc3",.Ne2="Ne2",
+         .dxe5ep="dxe6ep",.oo="O-O"};
+   printer_test<alg_printer>(ap_results);
+
+   constexpr move_printer_result uci_results{
+      .e4="e2e4",.d5="d7d5",.exd5="e4d5",.Qxd5="d8d5",.Nc3="b1c3",.Ne2="g1e2",
+         .dxe5ep="d5e6",.oo="e8h8"};
+   printer_test<uci_printer>(uci_results);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

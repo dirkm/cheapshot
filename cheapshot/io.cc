@@ -1386,10 +1386,9 @@ namespace cheapshot
    uci_printer::print(const move_info& mi)
    {
       // undefined behaviour, unless mi is a simple move
-      bit_iterator it(mi.mask);
-      print_algpos(*it,os);
-      ++it;
-      print_algpos(*it,os);
+      uint64_t origin=mi.mask&board[idx(mi.turn)][idx(mi.piece)];
+      print_algpos(origin,os);
+      print_algpos(mi.mask^origin,os);
    }
 
    void
