@@ -9,6 +9,9 @@
 
 namespace cheapshot
 {
+   template<typename Controller>
+   struct extcontext;
+
    namespace control
    {
       inline bool
@@ -34,7 +37,6 @@ namespace cheapshot
          using table_t=std::unordered_map<uint64_t,data>;
          table_t transposition_table;
 
-      public:
          cache()
          {
             transposition_table.reserve(config::initial_cache_size);
@@ -54,9 +56,10 @@ namespace cheapshot
          }
 
          template<typename CompressFun, typename... Args>
-         void on_score_increase(cacheref ref, CompressFun cf, Args&&... args)
+         void
+         on_score_increase(cacheref ref, CompressFun cf, Args&&... args)
          {
-            ref.principal_move=cf(std::forward<Args>(args)...).to_value();
+            ref.principal_move=uint32_t(cf(std::forward<Args>(args)...));
          }
 
          // template<typename DataHandler>
@@ -119,12 +122,14 @@ namespace cheapshot
             std::tie(it,is_new)=transposition_table.insert({hash,{score::repeat(),max_ply_depth}});
             bool is_hit=!is_new && !is_shallow_cache(ply_depth,it->second.ply_depth);
             return hit_info{is_hit,it->second};
+
          }
       };
 
       struct noop_cache
       {
-         struct data{};
+
+         struct data {};
 
          using cacheref=data;
 
@@ -142,7 +147,8 @@ namespace cheapshot
          }
 
          template<typename CompressFun, typename... Args>
-         void on_score_increase(cacheref ref, CompressFun cf, Args&&... args) {}
+         void
+         on_score_increase(cacheref ref, CompressFun cf, Args&&... args) {}
 
          // template<typename DataHandler>
          // constexpr static bool

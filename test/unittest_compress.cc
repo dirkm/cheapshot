@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(simple_compress_test)
    compressed_move cm=compressed_move::make_normal(mi);
    uncompress_check check;
    check.checked_mi=mi;
-   cm.uncompress_move(check,side::white);
+   cm.uncompress(check,side::white);
 }
 
 BOOST_AUTO_TEST_CASE(capture_compress_test)
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(capture_compress_test)
    compressed_move cm=compressed_move::make_capture(move_type::normal,mi2);
    uncompress_check check;
    check.checked_mi2=mi2;
-   cm.uncompress_move(check,side::white);
+   cm.uncompress(check,side::white);
 }
 
 BOOST_AUTO_TEST_CASE(ep_capture_compress_test)
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(ep_capture_compress_test)
    compressed_move cm=compressed_move::make_capture(move_type::ep_capture,ep_mi2);
    uncompress_check check;
    check.checked_ep_mi2=ep_mi2;
-   cm.uncompress_move(check,side::white);
+   cm.uncompress(check,side::white);
 }
 
 BOOST_AUTO_TEST_CASE(castle_compress_test)
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(castle_compress_test)
    compressed_move cm=compressed_move::make_castle(castle_mi2);
    uncompress_check check;
    check.checked_castle_mi2=castle_mi2;
-   cm.uncompress_move(check,side::black);
+   cm.uncompress(check,side::black);
 }
 
 BOOST_AUTO_TEST_CASE(simple_promotion_compress_test)
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(simple_promotion_compress_test)
    uncompress_check check;
    check.checked_mi=mi[0];
    check.checked_promotion=piece_t::knight;
-   cm.uncompress_move(check,side::white);
+   cm.uncompress(check,side::white);
 }
 
 BOOST_AUTO_TEST_CASE(capture_promotion_compress_test)
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(capture_promotion_compress_test)
    uncompress_check check;
    check.checked_mi2=mi2;
    check.checked_promotion=piece_t::queen;
-   cm.uncompress_move(check,side::black);
+   cm.uncompress(check,side::black);
 }
 
 struct volatile_check: on_uncompress
@@ -187,8 +187,8 @@ BOOST_AUTO_TEST_CASE(time_compress_uncompress_cycle)
       volatile move_type mt=move_type::normal;
       for(long i=0;i<ops;++i)
       {
-         x=compressed_move::make_capture(mt,mi2).to_value();
-         compressed_move::from_value(x).uncompress_move(handler,side::black);
+         x=uint32_t(compressed_move::make_capture(mt,mi2));
+         compressed_move(x).uncompress(handler,side::black);
       }
       time_op.time_report("compress uncompress cycle",ops);
    }

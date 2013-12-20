@@ -16,6 +16,7 @@ namespace cheapshot
       // the engine strives to maximize the score for each color per turn
 
       // stay clear of highest bit, because possible overflow when negating
+
       namespace val
       {
          constexpr int_fast32_t limit=1<<(scorebits-1);

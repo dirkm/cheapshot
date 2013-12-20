@@ -219,8 +219,8 @@ namespace cheapshot
       print(const move_info2& mi2);
    };
 
-   void
-   print_primary_line(const control::cache::table& t, ostream& os);
+   // void
+   // print_primary_line(const control::cache::table& t, ostream& os);
 
    // template<>
    // walk_cache()

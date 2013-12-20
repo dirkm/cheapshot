@@ -474,7 +474,7 @@ namespace cheapshot
       if(hit_info.is_hit)
          return;
 
-      control::cache_update<Controller> scoped_caching(ec,oldctx,hit_info);
+      control::cache_update<Controller> scoped_caching(ec,oldctx,hit_info); // this might move down
 
       board_t& board=ec.state.board;
       board_metrics& bm=ec.state.bm;
