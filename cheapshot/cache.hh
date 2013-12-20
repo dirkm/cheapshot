@@ -59,6 +59,17 @@ namespace cheapshot
             ref.principal_move=cf(std::forward<Args>(args)...).to_value();
          }
 
+         // template<typename DataHandler>
+         // bool
+         // on_cache_entry(uint64_t hash, side s, DataHandler& cb) const
+         // {
+         //    auto it=transposition_table.find(hash);
+         //    if(it==end(transposition_table))
+         //       return false;
+         //    compressed_move::from_value(it->second.principal_move).uncompress_move(cb,s);
+         //    return true;
+         // }
+
       private:
          template<side S>
          hit_info
@@ -133,6 +144,13 @@ namespace cheapshot
          template<typename CompressFun, typename... Args>
          void on_score_increase(cacheref ref, CompressFun cf, Args&&... args) {}
 
+         // template<typename DataHandler>
+         // constexpr static bool
+         // on_cache_entry(uint64_t hash, side s, DataHandler& cb)
+         // {
+         //    return false;
+         // }
+
          struct cache_update
          {
             template<typename Controller>
@@ -150,7 +168,8 @@ namespace cheapshot
    }
 
    template<side S, typename Controller>
-   auto try_cache_hit(Controller& ec, const context& ctx) -> typename decltype(ec.cache)::hit_info
+   auto
+   try_cache_hit(Controller& ec, const context& ctx) -> typename decltype(ec.cache)::hit_info
    {
       return ec.cache.template try_cache_hit<S>(ec,ctx);
    }
@@ -159,10 +178,18 @@ namespace cheapshot
    struct extcontext;
 
    template<typename Controller, typename CompressFun, typename... Args>
-   void on_score_increase(Controller& ec, extcontext<Controller>& ectx, CompressFun cf, Args&&... args)
+   void
+   on_score_increase(Controller& ec, extcontext<Controller>& ectx, CompressFun cf, Args&&... args)
    {
       return ec.cache.template on_score_increase(ectx.cacheref,cf,std::forward<Args>(args)...);
    }
+
+   // template<typename Controller, typename DataHandler>
+   // bool
+   // on_cache_entry(Controller& ec, side s, uint64_t hash, DataHandler& cb)
+   // {
+   //    return ec.cache.template on_cache_entry(hash,s,cb);
+   // }
 }
 
 #endif

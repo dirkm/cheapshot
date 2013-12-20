@@ -604,7 +604,7 @@ void
 printer_test(const move_printer_result& r)
 {
    // 1. e4 d5 2. exd5 Qd5 3. Nc3 Qa5 4. d4 Nf6 5. Ne2  Na6 6. d5 e5 7.dxe6 Bb4 8. Qd3 O-O
-   //  promotion still fails
+   //  TODO: promotion still not tested
    board_t b=scan_board(initial_canvas);
    board_metrics bm(b);
    context ctx=start_context;

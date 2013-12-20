@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cheapshot/board.hh"
+#include "cheapshot/cache.hh"
 
 namespace cheapshot
 {
@@ -217,6 +218,13 @@ namespace cheapshot
       void
       print(const move_info2& mi2);
    };
+
+   void
+   print_primary_line(const control::cache::table& t, ostream& os);
+
+   // template<>
+   // walk_cache()
+   //       using table_t=std::unordered_map<uint64_t,data>;
 
    extern std::ostream&
    print_score(int_fast32_t score, std::ostream& os);
